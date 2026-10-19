@@ -12,11 +12,15 @@ craftz began as a new repository, not a rename, so the repositories kept working
 
 The rules, the survey and the settings checks are in [src/](../src/), and the files they compare with are in [reference/](../reference/README.md). [The rules](rules.md) are craftz's own doc, published in its nav and in the package. `craftz rules [id]` prints them from the installed version, and every finding from `pnpm drift` names its rule as `see: craftz rules <id>`. drift's findings matched the ones from before the move, on every repository and on a clone made to drift.
 
+### align, new and release
+
+`pnpm align`, `pnpm new` and `pnpm release` moved here, calling the same rules as drift. align moves the reference first, then craftz and the others with it, and `--local` keeps a run on the laptop. new builds from the reference, and its test checks four new repositories against the survey.
+
 ## Next, in order
 
 Each step works in one repository before the next starts.
 
-1. **One rule, one check, one fix.** Bring `align`, `new` and `release` here, calling the same rules as drift. Then the `craftz` command runs `check` and `fix` in a repository.
+1. **One rule, one check, one fix.** The `craftz` command runs `check` and `fix` in a repository.
 2. **`fix` and `settings`.** Make them predictable, as [the design](design.md#settings-never-secrets) says, with a check that only reads and a report of what changed.
 3. **`craftz()`.** Keep it thin, with the test that it never overrides the repository.
 4. **The release cycle.** A hard gate before any real repository moves. From a clean checkout, release craftz's first version. Then `craftz new` makes a test repository, which passes its full `verify` and deploys through `craftz deploy`.

@@ -37,7 +37,10 @@
     "gone": "node scripts/gone.ts",
     "prepack": "pnpm run build",
     "drift": "node src/drift.ts",
-    "craftz": "node src/cli.ts"
+    "craftz": "node src/cli.ts",
+    "align": "node src/align.ts",
+    "new": "node src/new.ts",
+    "release": "node src/release.ts"
   },
   "devDependencies": {
     "@amitkaps/prose": "^0.8.0",

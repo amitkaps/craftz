@@ -1,6 +1,6 @@
 # Usage
 
-craftz is used through its commands. Today that's `craftz rules`, to read the rules, and `pnpm drift` in this repository, to check every repository against them. The other commands in [the design](design.md#the-commands) come as [the plan](plan.md) builds them, and this page grows with them.
+craftz is used through its commands. Today that's `craftz rules`, to read the rules, and four scripts in this repository: `pnpm drift` checks every repository, `pnpm align` brings them in line, `pnpm new` starts one and `pnpm release` releases a package. The other commands in [the design](design.md#the-commands) come as [the plan](plan.md) builds them, and this page grows with them.
 
 ## Install
 
@@ -32,9 +32,38 @@ Each repository gets a line, ✓ or ✗, with what has drifted below it, and eac
 
 drift only reads, so it's safe to run any time.
 
+## Aligning every repository
+
+```sh
+pnpm align                 # craftz first, then every repository
+pnpm align markz           # one repository, against this checkout's reference
+pnpm align markz --local   # the same, but nothing leaves the laptop
+```
+
+align clones each repository's `main` into a temporary folder, runs every fix, installs and runs `verify`. It opens a pull request with auto-merge on, writes the GitHub and Worker settings, and waits for the merges. When craftz is in the run, it goes first and moves [the reference](../reference/README.md) to the newest versions, so the others take them in the same run. A repository already in line gets no pull request, and a failed one keeps its clone and log for a look.
+
+`--local` stops before the push, so a clone can be read or compared with another run. It writes no settings either.
+
+## Starting a repository
+
+```sh
+pnpm new example --package --description "What it is, in a sentence."
+pnpm new example --site --internal --description "…" --push
+```
+
+`--package` starts an npm package, `--site` a site on Cloudflare, and `--tool` scripts run on a laptop. `--internal` makes a site or a tool private. new writes `./example` in the folder it's run from, installs, runs `verify` and makes the first commit. `--push` also creates the repository on GitHub and writes its settings. It ends with a list of what's left by hand, like connecting the Worker.
+
+## Releasing a package
+
+```sh
+pnpm release sitez 0.5.0 --notes "What this release is about."
+```
+
+release opens the `v0.5.0` pull request on GitHub, with `version` set and auto-merge on, so no checkout is needed. Without `--notes` it opens your editor for the summary. Once it merges, approve the staged version on npmjs.com.
+
 ## Logins
 
-The commands use the logins `gh` and `cf` already have, so there's no token to keep. drift runs without them, and reads less.
+The commands use the logins `gh` and `cf` already have, so there's no token to keep. drift runs without them, and reads less. align, release and `new --push` need `gh`, and align writes the Worker settings only with `cf`.
 
 `gh auth login` logs in to GitHub, as the owner, which drift needs for the merge settings. `pnpm exec cf auth login` logs in to Cloudflare, which it needs for the Workers' build settings. When the login sees more than one account, craftz uses the one named like the GitHub owner, and `CLOUDFLARE_ACCOUNT_ID` overrides it. A `pnpm ship` by hand picks none, so set the variable there.
 

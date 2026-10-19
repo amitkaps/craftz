@@ -1070,8 +1070,8 @@ export const RULES: Rule[] = [
       const drift: string[] = [];
       if (pkg.scripts?.prepack !== "pnpm run build")
         drift.push(`prepack is ${pkg.scripts?.prepack}, not pnpm run build`);
-      if (JSON.stringify(pkg.files) !== '["dist"]')
-        drift.push(`files is ${JSON.stringify(pkg.files)}, not ["dist"]`);
+      if (pkg.files?.[0] !== "dist")
+        drift.push(`files is ${JSON.stringify(pkg.files)}, not "dist" first`);
       if (pkg.publishConfig?.access !== "public") drift.push("publishConfig.access isn't public");
       if (!deps.publint) drift.push("no publint dev dependency");
       if (!/publint:\s*\{[^}]*strict:\s*true/.test(files["vite.config.ts"] ?? "")) {
@@ -1086,7 +1086,7 @@ export const RULES: Rule[] = [
         const pkg = readPkg(dir);
         if (pkg.private) return;
         pkg.scripts = { ...pkg.scripts, prepack: "pnpm run build" };
-        pkg.files = ["dist"];
+        pkg.files = ["dist", ...(pkg.files ?? []).filter((file) => file !== "dist")];
         pkg.publishConfig = { ...pkg.publishConfig, access: "public" };
         const publint = versionsIn(std)["publint"];
         if (publint && !pkg.dependencies?.["publint"]) {
