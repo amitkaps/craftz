@@ -8,15 +8,21 @@
  *
  * Each one depends on craftz at this checkout's version, which npm doesn't have while it's being
  * released. An override in its pnpm settings installs this checkout instead, so the test runs
- * the craftz it's testing, and `package.json` stays as `new` wrote it.
+ * the craftz it's testing, and `package.json` stays as `new` wrote it. It's built first, since
+ * its exports are the build, and `verify` builds after the tests.
  */
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { expect, test } from "vite-plus/test";
+import { beforeAll, expect, test } from "vite-plus/test";
 import { type Start, write } from "../src/new.ts";
 import { checkFolder } from "../src/survey.ts";
+
+const here = resolve(import.meta.dirname, "..");
+beforeAll(() => {
+  execFileSync("pnpm", ["run", "build"], { cwd: here, stdio: "pipe" });
+}, 120_000);
 
 const starts: [string, Start][] = [
   ["a package", { package: true, site: false, private: false, internal: false }],
@@ -39,7 +45,7 @@ for (const [what, start] of starts) {
     if (worker) expect([worker.workersDev, worker.previewUrls]).toEqual([false, false]);
     expect(worker?.deploys).toBe(start.site ? "static" : undefined);
     const settings = join(dir, "pnpm-workspace.yaml");
-    const craftz = `  "@amitkaps/craftz": "link:${resolve(import.meta.dirname, "..")}"`;
+    const craftz = `  "@amitkaps/craftz": "link:${here}"`;
     writeFileSync(
       settings,
       readFileSync(settings, "utf8").replace(/^overrides:\n/m, `$&${craftz}\n`),
