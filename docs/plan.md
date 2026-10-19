@@ -52,12 +52,27 @@ What's live, read in one command: CI on `main`, the open pull requests, npm's ve
 
 0.1.1 is the first release that wasn't published by hand. The release pull request merged, the workflow staged it on npm and tagged it, and it was approved. Its CI failed twice first, since `new`'s test installed a version npm didn't have yet, so the test now builds and installs this checkout. craftz-test moved to it with `craftz fix`, and its check, `verify`, deploy and `craftz status` pass on the published package.
 
+### The repositories, on 0.1.1
+
+markz, prose, sitez, pagez, the app and a private repository depend on craftz 0.1.1, each through a pull request with `craftz fix` and a trim of its `vite.config.ts` by hand. Each passes `verify`, and `craftz status` reads its CI, npm and site as live. One private site waits, since `craftz()` breaks its build, as 0.1.2 says.
+
 ## Next, in order
 
 Each step works in one repository before the next starts.
 
-1. **The repositories.** Move one real repository, then the rest, with `craftz align`. Each one's shared files, like the `AGENTS.md` sections and the workflows, come from craftz's reference and point at craftz, and `craftz fix` writes "craftz" over the old "Standard" section. `craftz fix` points `pr` and `gone` at `craftz pr` and `craftz gone`, and deletes the copied `scripts/pr.ts` and `scripts/gone.ts`.
-2. **The old repository retires.** The one that kept the rules before craftz is archived with its history, and its site redirects to craftz's, since every `AGENTS.md` links to it until step 1 has moved them.
+1. **0.1.2.** The moves turned up eight small issues. None is urgent, since every moved repository builds and deploys, so they wait to go out together in one release, and every repository moves once more. Each says what to do until then.
+
+   - **A site's `publicDir` is the repository's.** With `cloudflare.config.ts`, cf uploads Vite's output, and `publicDir` is how a repository puts finished files into it, since the config has no `assets.directory`. `craftz()` sets `.prose` for a static site without an `index.html`, and fails a config that sets anything else. A site Vite builds itself, with its files in `public/`, can't build. `.prose` stays the default, and a repository's own `publicDir` wins. The `fmt` and `lint` rules keep failing on a conflict. Until then, only the waiting private site needs it.
+   - **`.wrangler/` is ignored.** A site's build leaves `.wrangler/tmp` behind, and only the app's `.gitignore` names it. The reference's `.gitignore` adds it. Until then, leave the folder out of a commit.
+   - **The plugins fix formats what it writes.** When a config's `plugins` list spans lines, the `toolchain-craftz` fix leaves `plugins: [craftz(), ` on a line of its own, which `vp check` fails. Until then, run `vp fmt` after the fix.
+   - **The plugins fix trims what `craftz()` sets.** A config's own `fmt` and `lint` keep the rules `craftz()` now sets, like `proseWrap` and the lint plugins. The fix leaves them, so each was trimmed by hand to what's the repository's own, like its `ignorePatterns`. An equal value passes, so one left over only repeats craftz. Until then, trim by hand.
+   - **`craftz deploy` reads the config file.** It runs cf for a static site and wrangler for an app, chosen by the deploy axis. The file decides which tool can read it, `cloudflare.config.ts` for cf and `wrangler.toml` for wrangler. Every static site is on cf now, so nothing goes wrong yet.
+   - **`craftz status` says when cf isn't there.** The app has wrangler and no cf, so its status reads "cf isn't logged in" and marks the build `✗`. It should say cf isn't installed. Until then, read the app's build in Cloudflare's dashboard.
+   - **The old name goes.** Docs and comments in the moved repositories still say they follow the old repository's standard, and no rule finds it. A rule that does, with its fix, belongs before step 3. Until then, the old site still answers, so the links work.
+   - **align's list.** align's repositories still include the old one, which retires, and leave out craftz-test. Until then, name the repositories on the command line.
+
+2. **The private site moves on Pagez.** It builds its site with Sitez and its stories with Pagez, in a second Vite build to its own folder. cf uploads one Vite build's output, so the stories would need glue to get there. Once Pagez builds several folders in one build, the site becomes one Pagez build and moves to craftz and `cloudflare.config.ts` together, with no wrangler. Until then, it stays on the old standard, and its work so far is kept on a branch.
+3. **The old repository retires.** The one that kept the rules before craftz is archived with its history, and its site redirects to craftz's, since every `AGENTS.md` links to it until step 2 has moved them all.
 
 If craftz doesn't work out, this repository is deleted, and the repositories carry on as they are.
 
