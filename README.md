@@ -11,6 +11,7 @@ Every repository makes the same choices, like its toolchain, versions, workflows
 | `craftz check` | checks the repository against every rule, as part of its `verify` |
 | `craftz fix` | writes every fix that can be automated |
 | `craftz settings` | checks and writes what lives outside the files, on GitHub and Cloudflare |
+| `craftz status` | reads what's live: CI, pull requests, npm, and a site's latest build and addresses |
 | `craftz deploy` | deploys a site the way its Worker config says |
 | `craftz pr`, `craftz gone` | open a pull request that merges itself once CI passes, and delete the branches that merged |
 | `craftz rules [id]` | prints the rules, or one rule, from the installed version |

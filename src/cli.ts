@@ -22,6 +22,10 @@
  * `--yes` where there's no one to ask. It needs `gh` logged in as the owner, and `cf` for a
  * Worker.
  *
+ * `craftz status` reads what's live: CI on `main`, the open pull requests, a package's version on
+ * npm, and a site's latest build and addresses, as [status.ts](status.ts) says. `--log` prints the
+ * latest build's log too. It exits 1 when anything has failed.
+ *
  * `craftz deploy` deploys a site that's already built, as its `ship` script, which the Worker's
  * deploy command runs. What it runs follows from [the deploy axis](../docs/rules.md#axes). A
  * static site uploads the Build Output with `cf deploy --prebuilt`, and an app runs
@@ -39,6 +43,7 @@ import { createInterface } from "node:readline/promises";
 import { type Target, checkSettings, writeSettings } from "./apply.ts";
 import { gone } from "./gone.ts";
 import { pr } from "./pr.ts";
+import { buildLog, status } from "./status.ts";
 import { OWNER, type Pkg, here } from "./reference.ts";
 import { fixFiles } from "./rules.ts";
 import { cloudflareLogin, githubLogin, hasClassic } from "./settings.ts";
@@ -53,6 +58,8 @@ const HELP = `Usage: craftz <command>
   fix [dir]    writes every fix, then checks what's left
   settings [dir] [--check] [--yes]
                writes the settings on GitHub and Cloudflare, then reads them back
+  status [dir] [--log]
+               reads what's live: CI, pull requests, npm, the site's build and addresses
   deploy       deploys the site the current folder built, as its ship script
   pr "<title>" [--label <label>] [--body <text>] [--wait]
                opens a pull request that merges itself once CI passes
@@ -117,6 +124,20 @@ function deploy(dir: string): number {
   }
   console.log(`craftz deploy: ${site.name}, ${site.deploys}, with ${tool} ${args.join(" ")}`);
   return spawnSync(bin, args, { cwd: dir, stdio: "inherit" }).status ?? 1;
+}
+
+// Prints what's live for a repository, and returns whether anything has failed.
+async function live(dir: string, log: boolean): Promise<boolean> {
+  const { repo, pkg, site } = target(dir);
+  const { lines, build } = await status(repo, pkg, site);
+  const failed = lines.some((line) => !line.ok);
+  console.log(failed ? `✗ ${repo}` : `✓ ${repo}`);
+  const width = Math.max(...lines.map((line) => line.what.length));
+  for (const line of lines) {
+    console.log(`    ${line.ok ? "✓" : "✗"} ${line.what.padEnd(width)}  ${line.found}`);
+  }
+  if (log && build) console.log(`\n${buildLog(build).join("\n")}`);
+  return failed;
 }
 
 async function ask(question: string): Promise<boolean> {
@@ -188,6 +209,14 @@ if (command === "rules" && !rest.length) {
     flags.includes("--yes"),
   );
   process.exitCode = off ? 1 : 0;
+} else if (command === "status") {
+  const flags = [arg, ...rest].filter((it) => it?.startsWith("--"));
+  const dirs = [arg, ...rest].filter((it) => it !== undefined && !it.startsWith("--"));
+  if (dirs.length > 1 || flags.some((f) => f !== "--log")) {
+    console.error(HELP);
+    process.exit(1);
+  }
+  process.exitCode = (await live(resolve(dirs[0] ?? "."), flags.includes("--log"))) ? 1 : 0;
 } else if (command === "deploy" && !arg) {
   process.exitCode = deploy(process.cwd());
 } else if (command === "pr") {

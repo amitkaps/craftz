@@ -170,7 +170,7 @@ export function cloudflareLogin(): string | undefined {
 }
 
 // craftz's own cf, or, where craftz is installed without it, the repository's, which a site has.
-function cf(...args: string[]): unknown {
+export function cf(...args: string[]): unknown {
   const own = join(root, "node_modules", ".bin", "cf");
   const bin = existsSync(own) ? own : join(process.cwd(), "node_modules", ".bin", "cf");
   const out = execFileSync(bin, args, {
@@ -203,12 +203,16 @@ type Builds = {
   previews_enabled?: boolean;
 };
 
-let workers: { id: string; name: string }[] | undefined;
+let workers: { id: string; name: string; subdomain?: { url?: string } }[] | undefined;
 
-function tag(name: string): string | undefined {
-  workers ??= cf("workers", "list") as { id: string; name: string }[];
-  return workers.find((w) => w.name === name)?.id;
+/** A Worker's id on Cloudflare, by name, and its `workers.dev` address. */
+export function workerTag(name: string): { id: string; dev?: string } | undefined {
+  workers ??= cf("workers", "list") as typeof workers;
+  const found = workers?.find((w) => w.name === name);
+  return found && { id: found.id, dev: found.subdomain?.url };
 }
+
+const tag = (name: string): string | undefined => workerTag(name)?.id;
 
 // A Worker that isn't connected to its repository has no build settings, and Cloudflare says so
 // with error 12040.
