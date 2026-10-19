@@ -1,0 +1,24 @@
+# @prose
+# # Release notes
+#
+# The headings of a release's generated notes, by the one label each pull request carries. Tests,
+# tooling, site and lessons are `internal`, and left out. CI won't merge a pull request without
+# one of these labels, so Other only catches a label changed after the merge. This file is the same in
+# every package, copied from ship's `package/` folder.
+changelog:
+  exclude:
+    labels:
+      - internal
+  categories:
+    - title: Breaking
+      labels: [breaking]
+    - title: Added
+      labels: [added]
+    - title: Fixed
+      labels: [fixed]
+    - title: Faster and smaller
+      labels: [improved]
+    - title: Documentation
+      labels: [docs]
+    - title: Other
+      labels: ["*"]

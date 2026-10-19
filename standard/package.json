@@ -1,0 +1,49 @@
+{
+  "name": "ship",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "prose",
+    "build": "vp build",
+    "preview": "vp preview",
+    "check": "vp check",
+    "fix": "vp check --fix",
+    "test": "vp test --run",
+    "verify": "pnpm check && pnpm prose check && pnpm test && pnpm prose build && pnpm dashboard && pnpm build",
+    "ship": "cf deploy --prebuilt",
+    "prose": "prose",
+    "pr": "node scripts/pr.ts",
+    "gone": "node scripts/gone.ts",
+    "drift": "node scripts/drift.ts",
+    "align": "node scripts/align.ts",
+    "release": "node scripts/release.ts",
+    "new": "node scripts/new.ts",
+    "dashboard": "node scripts/dashboard.ts"
+  },
+  "devDependencies": {
+    "@amitkaps/markz": "^0.6.0",
+    "@amitkaps/prose": "^0.8.0",
+    "@cloudflare/vite-plugin": "2.0.0-beta.v.1",
+    "@mdn/browser-compat-data": "^8.1.6",
+    "@types/node": "^26.6.5",
+    "cf": "1.0.0-beta.18",
+    "vite-plus": "1.3.0"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.13.0",
+      "onFail": "download"
+    },
+    "runtime": {
+      "name": "node",
+      "version": ">=26",
+      "onFail": "error"
+    }
+  },
+  "engines": {
+    "node": ">=26"
+  },
+  "packageManager": "pnpm@12.13.0"
+}

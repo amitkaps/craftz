@@ -1,0 +1,61 @@
+# @prose
+# # CI
+#
+# Checks every pull request and every push to `main` with `pnpm run verify`, the same script
+# Cloudflare runs before each deploy. It doesn't deploy. The Worker's Git integration does
+# that. The job is named `ci`, the check that branch protection requires.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  # A label added or taken off runs it again, for the check below.
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # Reads the pnpm version from package.json's `packageManager`.
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: package.json
+          cache: pnpm
+
+      # @prose
+      # # One label
+      #
+      # A package's release notes are grouped by the label on each pull request, so a pull request
+      # without one can't merge. The labels are the ones its `.github/release.yml` names, which only
+      # a package has, so a site or a tool skips this. It runs before the install, to fail fast.
+      - name: Label
+        if: github.event_name == 'pull_request' && hashFiles('.github/release.yml') != ''
+        env:
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: |
+          node -e '
+            const notes = require("node:fs").readFileSync(".github/release.yml", "utf8");
+            const known = [...notes.matchAll(/labels: \[(\w+)\]|^ +- (\w+)$/gm)].map((m) => m[1] ?? m[2]);
+            const have = JSON.parse(process.env.LABELS).filter((label) => known.includes(label));
+            if (have.length !== 1) {
+              const found = have.length ? have.join(", ") : "none";
+              console.error(`::error::Label this pull request with one of ${known.join(", ")}. It has ${found}.`);
+              process.exit(1);
+            }
+          '
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Verify
+        run: pnpm run verify

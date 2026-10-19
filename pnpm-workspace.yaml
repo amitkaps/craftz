@@ -23,3 +23,9 @@ peerDependencyRules:
 # a release needs no change here.
 minimumReleaseAgeExclude:
   - "@amitkaps/*"
+
+# @prose
+# Dependencies allowed to run install scripts. workerd is a native binary, the local Cloudflare
+# runtime, which `cf` brings along when it reads the Workers' build settings.
+allowBuilds:
+  workerd: true
