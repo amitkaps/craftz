@@ -19,7 +19,16 @@
  */
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
-import { OWNER, type Pkg, VERSIONS, here, read, standard, versionsIn } from "./reference.ts";
+import {
+  CRAFTZ,
+  OWNER,
+  type Pkg,
+  VERSIONS,
+  here,
+  read,
+  standard,
+  versionsIn,
+} from "./reference.ts";
 import { writeLabels, writeRuleset } from "./settings.ts";
 import { BROWSERS, COMPATIBILITY_DATE } from "./pinned.ts";
 import { stated } from "./stated.ts";
@@ -127,6 +136,50 @@ function pin(dir: string, std: string, name: string): void {
     if (deps?.[name]) deps[name] = want;
   }
   writePkg(dir, pkg);
+}
+
+/** @prose
+ * # Using craftz
+ *
+ * `toolchain-craftz`'s fix adds craftz to the dev dependencies, and `craftz()` to the front of
+ * the config's plugins. Then the config holds only what's the repository's own.
+ *
+ * craftz goes in at the version the rules ask for, and the plugin is imported from the package.
+ * The `fmt` and `lint` blocks go, each with the comments above it, where they're the ones the
+ * plugin sets. A block that differs stays,
+ * and the plugin then fails the config, naming each key to settle by hand. craftz's own config
+ * imports the plugin from source, so it's left alone.
+ */
+const IMPORT = /^import \{ defineConfig \} from "vite-plus";\n/m;
+const RULED_FMT = /(?:^[ \t]*\/\/.*\n)*^[ \t]*fmt: \{ proseWrap: "never" \},\n(?:[ \t]*\n)?/m;
+const RULED_LINT = new RegExp(
+  String.raw`(?:^[ \t]*//.*\n)*^[ \t]*lint: \{\s*plugins: \["typescript", "unicorn", "import"\],\s*` +
+    String.raw`categories: \{ correctness: "error" \},\s*` +
+    String.raw`options: \{ typeAware: true, typeCheck: true \},\s*\},\n(?:[ \t]*\n)?`,
+  "m",
+);
+
+function useCraftz(dir: string, std: string): void {
+  const pkg = readPkg(dir);
+  if (ownCraftz(pkg)) return;
+  const want = versionsIn(std)[CRAFTZ];
+  if (want && !pkg.dependencies?.[CRAFTZ] && !pkg.devDependencies?.[CRAFTZ]) {
+    const deps = { ...pkg.devDependencies, [CRAFTZ]: want };
+    pkg.devDependencies = Object.fromEntries(
+      Object.entries(deps).sort(([a], [b]) => a.localeCompare(b)),
+    );
+    writePkg(dir, pkg);
+  }
+  const file = join(dir, "vite.config.ts");
+  const text = read(file);
+  if (!text || PLUGIN.test(text) || !IMPORT.test(text)) return;
+  const used = text
+    .replace(IMPORT, (line) => `${line}import { craftz } from "${CRAFTZ}";\n`)
+    .replace(/\bplugins:\s*\[/, "plugins: [craftz(), ");
+  const plugged = PLUGIN.test(used)
+    ? used
+    : used.replace(/defineConfig\(\{\n/, "defineConfig({\n  plugins: [craftz()],\n\n");
+  writeFileSync(file, plugged.replace(RULED_FMT, "").replace(RULED_LINT, ""));
 }
 
 /** @prose
@@ -473,7 +526,7 @@ const onVitePlus = (pkg: Pkg): boolean =>
  * when nothing of the repository's own is left in it.
  */
 const COMMAND_SCRIPTS = ["pr", "gone"];
-const ownCraftz = (pkg: Pkg): boolean => pkg.name === "@amitkaps/craftz";
+const ownCraftz = (pkg: Pkg): boolean => pkg.name === CRAFTZ;
 
 function leaveScripts(dir: string): void {
   const folder = join(dir, "scripts");
@@ -596,6 +649,7 @@ export const RULES: Rule[] = [
   version("versions-typescript", "typescript"),
   version("versions-prose", "@amitkaps/prose"),
   version("versions-markz", "@amitkaps/markz"),
+  version("versions-craftz", CRAFTZ),
   version("versions-cf", "cf"),
   version("versions-cf-vite-plugin", "@cloudflare/vite-plugin"),
   {
@@ -705,6 +759,18 @@ export const RULES: Rule[] = [
         writeFileSync(file, wrapped);
       },
     },
+  },
+  {
+    id: "toolchain-craftz",
+    wants: VERSIONS[CRAFTZ],
+    check: ({ pkg, files, deps, vitePlus: own }) => {
+      if (!own) return undefined;
+      const drift: string[] = [];
+      if (!ownCraftz(pkg) && !deps[CRAFTZ]) drift.push(`doesn't depend on ${CRAFTZ}`);
+      if (!PLUGIN.test(files["vite.config.ts"] ?? "")) drift.push("vite.config.ts has no craftz()");
+      return drifted(drift);
+    },
+    fix: { in: "files", apply: (dir, std) => useCraftz(dir, std) },
   },
   {
     id: "toolchain-browsers",

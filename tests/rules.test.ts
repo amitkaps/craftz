@@ -13,7 +13,7 @@ import { BROWSERS } from "../src/browsers.ts";
 import { COMPATIBILITY_DATE } from "../src/runtime.ts";
 import { BETA, RULES } from "../src/rules.ts";
 import { parts, stated } from "../src/stated.ts";
-import { here, standard } from "../src/reference.ts";
+import { CRAFTZ, VERSIONS, here, standard } from "../src/reference.ts";
 import { CHECKS, type Repo, worker } from "../src/survey.ts";
 
 const checked = RULES.map((rule) => rule.id);
@@ -95,6 +95,79 @@ test("a config with craftz() has the format and lint the rules set", () => {
     expect(drift(id, "plugins: [sveltekit(), craftz()],")).toEqual([]);
     expect(drift(id, "// craftz() isn't used yet")).not.toEqual([]);
   }
+});
+
+test("every repository but craftz depends on craftz and uses craftz()", () => {
+  const rule = RULES.find((r) => r.id === "toolchain-craftz");
+  const drift = (name: string, deps: Record<string, string>, vite: string) =>
+    rule?.check({
+      pkg: { name },
+      deps,
+      files: { "vite.config.ts": vite },
+      vitePlus: "1",
+    } as unknown as Repo)?.drift;
+  const used = "plugins: [craftz()],";
+  expect(drift("x", { [CRAFTZ]: "^0.1.0" }, used)).toEqual([]);
+  expect(drift(CRAFTZ, {}, used)).toEqual([]);
+  expect(drift("x", {}, "")).toEqual([
+    `doesn't depend on ${CRAFTZ}`,
+    "vite.config.ts has no craftz()",
+  ]);
+});
+
+test("craftz's version is its own, as a caret range", () => {
+  const own = JSON.parse(readFileSync(join(here, "..", "package.json"), "utf8")) as {
+    version: string;
+  };
+  expect(VERSIONS[CRAFTZ]).toBe(`^${own.version}`);
+});
+
+test("the fix adds craftz, and takes out the blocks the plugin sets", () => {
+  const dir = mkdtempSync(join(tmpdir(), "craftz-use-"));
+  writeFileSync(
+    join(dir, "package.json"),
+    JSON.stringify({ name: "x", devDependencies: { "vite-plus": "1.3.0" } }),
+  );
+  writeFileSync(
+    join(dir, "vite.config.ts"),
+    `import { defineConfig } from "vite-plus";
+import { cloudflare } from "@cloudflare/vite-plugin";
+
+export default defineConfig({
+  plugins: [cloudflare({ assetsOnly: true })],
+
+  // oxfmt's defaults, with each Markdown paragraph on one line.
+  fmt: { proseWrap: "never" },
+
+  // Type-aware lint that also type-checks.
+  lint: {
+    plugins: ["typescript", "unicorn", "import"],
+    categories: { correctness: "error" },
+    options: { typeAware: true, typeCheck: true },
+  },
+
+  test: { include: ["tests/**/*.test.ts"] },
+});
+`,
+  );
+  const fix = RULES.find((r) => r.id === "toolchain-craftz")?.fix;
+  if (fix?.in === "files") fix.apply(dir, here);
+  const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as {
+    devDependencies: Record<string, string>;
+  };
+  expect(Object.keys(pkg.devDependencies)).toEqual([CRAFTZ, "vite-plus"]);
+  expect(pkg.devDependencies[CRAFTZ]).toBe(VERSIONS[CRAFTZ]);
+  expect(readFileSync(join(dir, "vite.config.ts"), "utf8"))
+    .toBe(`import { defineConfig } from "vite-plus";
+import { craftz } from "@amitkaps/craftz";
+import { cloudflare } from "@cloudflare/vite-plugin";
+
+export default defineConfig({
+  plugins: [craftz(), cloudflare({ assetsOnly: true })],
+
+  test: { include: ["tests/**/*.test.ts"] },
+});
+`);
 });
 
 test("a Worker answers on its domain only, at the runtime's date, and the fixes write both", () => {

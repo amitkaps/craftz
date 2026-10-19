@@ -18,8 +18,9 @@
  * and a first version of each doc. So it can't follow the rules any less than `align` does,
  * and a rule's fix reaches the next repository with no second copy here. What it does write is
  * built from [the reference](../reference/README.md) where it can be, like the strict options
- * from `tsconfig.json`. What the reference doesn't hold, like the `lint` block, comes from
- * craftz's own files. `pnpm test` checks the result against the survey.
+ * from `tsconfig.json`. What the reference doesn't hold comes from craftz's own files. The
+ * format and lint the rules ask for, and a site's build target, aren't written at all: the
+ * config uses `craftz()`, which sets them from the version the repository installs. `pnpm test` checks the result against the survey.
  *
  * `--push` also creates the repository on GitHub, pushes the first commit and writes its GitHub
  * settings, as `pnpm align` does. That first push is the only one to `main` the rules allow, since
@@ -29,10 +30,9 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { BROWSERS } from "./browsers.ts";
 import { COMPATIBILITY_DATE } from "./runtime.ts";
 import { type Shape, fixFiles, listed, shipping } from "./rules.ts";
-import { OWNER, VERSIONS, here, root } from "./reference.ts";
+import { CRAFTZ, OWNER, VERSIONS, here, root } from "./reference.ts";
 import { writeSettings } from "./apply.ts";
 
 /** What `new` starts: the axes it reads, with the repository's visibility and the site's audience. */
@@ -48,14 +48,6 @@ type Pkg = {
 };
 const reference = JSON.parse(read("package.json")) as Pkg;
 
-// The lint block `toolchain-lint` asks for. craftz's own config gets it from `craftz()`, which a
-// new repository can use once craftz is released, and then this block goes.
-const lint = `  lint: {
-    plugins: ["typescript", "unicorn", "import"],
-    categories: { correctness: "error" },
-    options: { typeAware: true, typeCheck: true },
-  },`;
-
 async function packageJson(name: string, shape: Shape, description: string): Promise<string> {
   const npm = (tool: string): string => {
     const version = VERSIONS[tool];
@@ -68,6 +60,7 @@ async function packageJson(name: string, shape: Shape, description: string): Pro
     Object.fromEntries(names.map((script) => [script, reference.scripts[script]]));
   const site = shape.site ? ours("@cloudflare/vite-plugin", "cf") : {};
   const devDependencies = {
+    "@amitkaps/craftz": npm(CRAFTZ),
     "@amitkaps/prose": npm("@amitkaps/prose"),
     ...ours("@types/node", "vite-plus"),
     ...site,
@@ -168,6 +161,7 @@ function viteConfig(shape: Shape): string {
   ]);
   const why = [
     `One Vite+ config ${what}.`,
+    "`craftz()` sets the format, lint and build the rules ask for, so this config holds only what's its own.",
     ...(shape.package
       ? [
           "`vp pack` writes ESM with its types, and runs publint, which fails the build on a package npm would serve badly.",
@@ -182,10 +176,7 @@ function viteConfig(shape: Shape): string {
       ? []
       : ["There's nothing to build or serve, so Vite+ is here for its checks and tests."]),
   ];
-  const site = `  plugins: [cloudflare({ assetsOnly: true })],
-
-  // The browsers the rules name, from craftz's browser-compat-data.
-  build: { target: ${JSON.stringify(BROWSERS).replaceAll(",", ", ")} },
+  const plugins = `  plugins: [craftz()${shape.site ? ", cloudflare({ assetsOnly: true })" : ""}],
 `;
   const pack = `  pack: {
     entry: ["src/index.ts"],
@@ -205,14 +196,10 @@ function viteConfig(shape: Shape): string {
  * ${wrapped(why.join(" ")).join("\n * ")}
  */
 import { defineConfig } from "vite-plus";
+import { craftz } from "@amitkaps/craftz";
 ${shape.site ? `import { cloudflare } from "@cloudflare/vite-plugin";\n` : ""}
 export default defineConfig({
-${[...(shape.site ? [site] : []), ...(shape.package ? [pack] : [])].join("\n")}${shape.package || shape.site ? "\n" : ""}  // oxfmt's defaults, with each Markdown paragraph on one line.
-  fmt: { proseWrap: "never" },
-
-  // Type-aware lint that also type-checks, so \`pnpm check\` needs no separate \`tsc\`.
-${lint}
-
+${[plugins, ...(shape.package ? [pack] : [])].join("\n")}
   test: {
     expect: { requireAssertions: true },
     include: ["tests/**/*.test.ts"],
