@@ -115,6 +115,19 @@ test("every repository but craftz depends on craftz and uses craftz()", () => {
   ]);
 });
 
+test("a site ships through craftz deploy", () => {
+  const rule = RULES.find((r) => r.id === "scripts-ship");
+  const drift = (name: string, ship: string, site = true) =>
+    rule?.check({ pkg: { name, scripts: { ship } }, worker: site || undefined } as unknown as Repo)
+      ?.drift;
+  expect(drift("x", "craftz deploy")).toEqual([]);
+  expect(drift(CRAFTZ, "node src/cli.ts deploy")).toEqual([]);
+  expect(drift("x", "cf deploy --prebuilt")).toEqual([
+    "ship is cf deploy --prebuilt, not craftz deploy",
+  ]);
+  expect(drift("x", "cf deploy --prebuilt", false)).toBeUndefined();
+});
+
 test("craftz's version is its own, as a caret range", () => {
   const own = JSON.parse(readFileSync(join(here, "..", "package.json"), "utf8")) as {
     version: string;

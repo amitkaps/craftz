@@ -33,7 +33,7 @@ import { writeLabels, writeRuleset } from "./settings.ts";
 import { BROWSERS, COMPATIBILITY_DATE } from "./pinned.ts";
 import { stated } from "./stated.ts";
 import type { BranchRule, Finding, Repo } from "./survey.ts";
-import type { Worker } from "./worker.ts";
+import { type Worker, workerIn } from "./worker.ts";
 
 export type Fix =
   | { in: "files"; apply: (dir: string, std: string) => void }
@@ -934,6 +934,20 @@ export const RULES: Rule[] = [
   commandScript("scripts-pr", "pr"),
   commandScript("scripts-gone", "gone"),
   commandScript("scripts-craftz", "craftz"),
+  {
+    id: "scripts-ship",
+    check: ({ pkg, worker: site }) => {
+      const ship = pkg.scripts?.ship;
+      // A site without one is scripts-required's, and a folder with no site has nothing to ship.
+      if (!site || !ship) return undefined;
+      const want = ownCraftz(pkg) ? "node src/cli.ts deploy" : standardScripts.ship;
+      return drifted(ship === want ? [] : [`ship is ${ship}, not ${want}`]);
+    },
+    fix: {
+      in: "files",
+      apply: (dir, std) => setScript(dir, std, "ship", (pkg) => !ownCraftz(pkg) && !!workerIn(dir)),
+    },
+  },
   {
     id: "cloudflare-config",
     check: ({ worker: site }) => {

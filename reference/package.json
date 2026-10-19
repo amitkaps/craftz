@@ -9,7 +9,7 @@
     "check": "vp check",
     "fix": "vp check --fix",
     "test": "vp test --run",
-    "ship": "cf deploy --prebuilt",
+    "ship": "craftz deploy",
     "prose": "prose",
     "pr": "craftz pr",
     "gone": "craftz gone",

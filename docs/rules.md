@@ -134,10 +134,11 @@ Every repository uses these names, and runs them with `pnpm run …` in anything
 | `fix`     | writes the format and lint fixes: `vp check --fix`                        |
 | `test`    | the tests, when there are any                                             |
 | `verify`  | `check`, `prose check`, `test` and `build`, then the site if there is one |
-| `ship`    | uploads what `verify` built: `cf deploy --prebuilt`, or `wrangler deploy` |
+| `ship`    | uploads what `verify` built: `craftz deploy`                              |
 | `prose`   | reads the repository as a document: `prose`, so `pnpm prose build` works  |
 | `pr`      | opens a pull request that merges itself once CI passes                    |
 | `gone`    | deletes the local branches that merged                                    |
+| `craftz`  | runs craftz, so `pnpm craftz rules` works                                 |
 
 - [`scripts-required`]{#scripts-required}: `check`, `fix`, `verify` and `prose` are in every repository, `dev` and `build` in every site and package, and `ship` in every site. A tool has nothing to serve or build, so its `verify` is `check`, `prose check` and `test`. `test` is there when there are tests.
 - [`scripts-check`]{#scripts-check}: on Vite+, `check` runs `vp check`. A framework can add its own steps around it, like SvelteKit's `svelte-kit sync` before and `svelte-check` after.
@@ -149,6 +150,7 @@ Every repository uses these names, and runs them with `pnpm run …` in anything
 - [`scripts-pr`]{#scripts-pr}: `pr` is `craftz pr`, and there's no `scripts/pr.ts`. `pnpm pr "<title>"` starts a branch when it's on `main`, commits, runs `verify`, pushes, opens the pull request and turns on auto-merge. A package's pull request takes `--label <label>`, and stops without one, before anything is committed. `--wait` waits for the merge, updating the branch when another merge leaves it behind `main`, then switches to `main` and pulls. craftz's own repository runs it from source.
 - [`scripts-gone`]{#scripts-gone}: `gone` is `craftz gone`, and there's no `scripts/gone.ts`. It deletes each local branch whose branch on GitHub is gone, which is each one that merged, and works where no git alias is set, like an agent's machine. craftz's own repository runs it from source.
 - [`scripts-craftz`]{#scripts-craftz}: `craftz` is exactly `craftz`, so `pnpm craftz rules`, `pnpm craftz check` and the rest work, as `pnpm prose` does for prose. craftz's own repository runs it from source.
+- [`scripts-ship`]{#scripts-ship}: a site's `ship` is `craftz deploy`, which reads the Worker config and runs `cf deploy --prebuilt` for a static site, or `wrangler deploy` for an app. The Worker's deploy command is `pnpm run ship`, so how a site deploys moves with craftz, not with each repository. craftz's own repository runs it from source.
 - [`scripts-pnpm-names`]{#scripts-pnpm-names}: no script is named `deploy`, `publish`, `audit`, `ci`, `pipeline` or `pack`. Those are pnpm's own commands, and `pnpm <name>` skips a script by one of those names.
 
 Text the repository didn't write, like a test corpus or a fixture that's wrong on purpose, is marked `linguist-vendored` in `.gitattributes`, and `prose check` skips it. Any other script is the repository's own, like a package's `size` or `fuzz`.
@@ -194,7 +196,7 @@ With `craftz()` in the plugins, the `publicDir` line goes, since the plugin sets
 
 - [`cloudflare-prose-site`]{#cloudflare-prose-site}: a prose site serves `.prose` as Vite's `publicDir` through the Cloudflare plugin with `assetsOnly`, `verify` builds it after `prose build`, and `.gitignore` leaves out `.cloudflare`. With no `index.html` at the root, the plugin builds an empty entry and deletes it, so only the folder's files are deployed.
 
-In a site, the build after `prose build` is `pnpm build`, which is `vp build`. In a package, `build` is `vp pack`, so `verify` ends with `vp build` itself. Anything that adds to the site, like markz's Quality page, runs before it. `ship` is `cf deploy --prebuilt`, which uploads `.cloudflare/output/`. craftz's own `ship` runs `craftz deploy`, which runs the same command, and every site's will once the repositories move to craftz.
+In a site, the build after `prose build` is `pnpm build`, which is `vp build`. In a package, `build` is `vp pack`, so `verify` ends with `vp build` itself. Anything that adds to the site, like markz's Quality page, runs before it. `ship` is `craftz deploy`, which runs `cf deploy --prebuilt` to upload `.cloudflare/output/`.
 
 ### An app
 

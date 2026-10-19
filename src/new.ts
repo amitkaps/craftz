@@ -169,7 +169,7 @@ function viteConfig(shape: Shape): string {
       : []),
     ...(shape.site
       ? [
-          "The Cloudflare plugin writes an assets-only Build Output, which `cf deploy --prebuilt` uploads as it is. The Worker itself is in [cloudflare.config.ts](cloudflare.config.ts).",
+          "The Cloudflare plugin writes an assets-only Build Output, which `pnpm ship` uploads as it is, through `craftz deploy`. The Worker itself is in [cloudflare.config.ts](cloudflare.config.ts).",
         ]
       : []),
     ...(shape.package || shape.site
