@@ -432,9 +432,10 @@ const onVitePlus = (pkg: Pkg): boolean =>
 /** @prose
  * # A shared script
  *
- * A script every repository runs the same way, from a file this repository holds, as `pnpm pr`
- * runs `scripts/pr.ts`. Each repository has the script and the file word for word, and the fix
- * copies both.
+ * A script every repository runs the same way, from a file craftz holds, as `pnpm pr` runs
+ * `scripts/pr.ts`. Each repository has the script and the file word for word, and the fix copies
+ * both. The file is craftz's own, beside its reference, since craftz runs it too and a second copy
+ * in `reference/` would only be kept the same.
  *
  * A `scripts/` folder the fix starts gets a `README.md` too, which prose asks of every folder. The
  * repository can add its own scripts beside them.
@@ -458,7 +459,9 @@ const sharedScript = (id: string, name: string): Rule => ({
       );
     }
     if (!files[file]) drift.push(`no ${file}`);
-    else if (files[file] !== read(join(here, file))) drift.push(`${file} differs from craftz's`);
+    else if (files[file] !== read(join(dirname(here), file))) {
+      drift.push(`${file} differs from craftz's`);
+    }
     return drifted(drift);
   },
   fix: {
@@ -466,7 +469,7 @@ const sharedScript = (id: string, name: string): Rule => ({
     apply: (dir, std) => {
       const file = join("scripts", `${name}.ts`);
       mkdirSync(join(dir, "scripts"), { recursive: true });
-      writeFileSync(join(dir, file), readFileSync(join(std, file)));
+      writeFileSync(join(dir, file), readFileSync(join(dirname(std), file)));
       const readme = join(dir, "scripts", "README.md");
       if (!existsSync(readme)) writeFileSync(readme, SCRIPTS_README);
       const pkg = readPkg(dir);

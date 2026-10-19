@@ -13,7 +13,9 @@
   "files": [
     "dist",
     "docs/rules.md",
-    "reference"
+    "reference",
+    "scripts/pr.ts",
+    "scripts/gone.ts"
   ],
   "type": "module",
   "exports": {
