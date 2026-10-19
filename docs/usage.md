@@ -8,15 +8,16 @@ Any repository has `craftz rules`, `craftz check`, `craftz fix`, `craftz setting
 
 ```sh
 pnpm add -D @amitkaps/craftz
+pnpm exec craftz fix
 ```
 
-It needs Node 26 or newer, the Node it's built and tested on.
+It needs Node 26 or newer, the Node it's built and tested on. The first fix writes the `craftz` script, among the rest, so every command after it is `pnpm craftz <command>`, as `pnpm prose` runs prose.
 
 ## Reading the rules
 
 ```sh
-pnpm exec craftz rules                 # every rule
-pnpm exec craftz rules scripts-verify  # one rule, with the part it's under
+pnpm craftz rules                 # every rule
+pnpm craftz rules scripts-verify  # one rule, with the part it's under
 ```
 
 `craftz rules` prints [the rules](rules.md) from the installed version, so a repository reads the rules it's checked against, and nothing is fetched. A finding names its rule as `see: craftz rules <id>`, so the line to run is the one printed.
@@ -24,9 +25,9 @@ pnpm exec craftz rules scripts-verify  # one rule, with the part it's under
 ## Checking one repository
 
 ```sh
-pnpm exec craftz check          # this folder
-pnpm exec craftz check ../markz # another one
-pnpm exec craftz fix            # write every fix, then check again
+pnpm craftz check          # this folder
+pnpm craftz check ../markz # another one
+pnpm craftz fix            # write every fix, then check again
 ```
 
 `craftz check` runs every rule on the folder's files, with the installed version's rules, and prints what has drifted, each with its `see:` line. It exits 1 when anything has. It reads no settings, so it needs no login. It only asks GitHub whether the repository is private, under the folder's name.
@@ -61,7 +62,7 @@ export default defineConfig({
 ## Deploying a site
 
 ```sh
-pnpm exec craftz deploy
+pnpm craftz deploy
 ```
 
 `craftz deploy` deploys the site the folder has built, and a site's `ship` script runs it, which is the Worker's deploy command. A static site uploads its Build Output with `cf deploy --prebuilt`. An app runs `wrangler deploy`, until cf can deploy one. To see what would go up without uploading it, run `pnpm exec cf deploy --prebuilt --dry-run` after the build.
@@ -79,8 +80,8 @@ A repository's `pr` and `gone` scripts run `craftz pr` and `craftz gone`, and ev
 ## Writing the settings
 
 ```sh
-pnpm exec craftz settings --check  # read them, and write nothing
-pnpm exec craftz settings          # write what has drifted, then read it back
+pnpm craftz settings --check  # read them, and write nothing
+pnpm craftz settings          # write what has drifted, then read it back
 ```
 
 `craftz settings` writes what the rules set outside the files, for the repository the folder's `origin` names. That's the merge settings, the `main` ruleset and a package's labels on GitHub, and a site's Worker build settings on Cloudflare. It writes only what has drifted, then reads it back, and lists each setting as `fixed`, `still off`, `failed` or `left`. It exits 1 unless everything is fixed. Running it again finishes what a failed run left.
@@ -140,5 +141,5 @@ The commands use the logins `gh` and `cf` already have, so there's no token to k
 What an agent working in a repository that uses craftz should know, as a snippet to copy into its instructions.
 
 ```md
-Run `pnpm exec craftz rules` before changing how this repository builds, checks, deploys or releases, and `pnpm exec craftz rules <id>` for the rule a finding names. Don't change the toolchain, scripts, versions or deploys in this repository alone. They come from craftz.
+Run `pnpm craftz rules` before changing how this repository builds, checks, deploys or releases, and `pnpm craftz rules <id>` for the rule a finding names. Don't change the toolchain, scripts, versions or deploys in this repository alone. They come from craftz.
 ```

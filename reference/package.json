@@ -12,7 +12,8 @@
     "ship": "cf deploy --prebuilt",
     "prose": "prose",
     "pr": "craftz pr",
-    "gone": "craftz gone"
+    "gone": "craftz gone",
+    "craftz": "craftz"
   },
   "devDependencies": {
     "@amitkaps/markz": "^0.6.0",

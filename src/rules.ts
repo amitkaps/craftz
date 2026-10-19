@@ -521,9 +521,11 @@ const onVitePlus = (pkg: Pkg): boolean =>
  * # A shared command
  *
  * `pnpm pr` and `pnpm gone` run craftz's commands, so every repository takes the same steps from
- * the version it installs. craftz's own repository runs them from source. They were once files
- * each repository copied into `scripts/`, so the fix deletes those copies, and the folder too
- * when nothing of the repository's own is left in it.
+ * the version it installs, and `pnpm craftz` runs any of them, as `pnpm prose` runs prose.
+ * craftz's own repository runs them from source.
+ *
+ * `pr` and `gone` were once files each repository copied into `scripts/`, so the fix deletes
+ * those copies, and the folder too when nothing of the repository's own is left in it.
  */
 const COMMAND_SCRIPTS = ["pr", "gone"];
 const ownCraftz = (pkg: Pkg): boolean => pkg.name === CRAFTZ;
@@ -542,12 +544,15 @@ const commandScript = (id: string, name: string): Rule => ({
   id,
   check: ({ pkg, files }) => {
     const drift: string[] = [];
-    const want = ownCraftz(pkg) ? `node src/cli.ts ${name}` : standardScripts[name];
+    const own = name === "craftz" ? "node src/cli.ts" : `node src/cli.ts ${name}`;
+    const want = ownCraftz(pkg) ? own : standardScripts[name];
     const script = pkg.scripts?.[name];
     if (script !== want)
       drift.push(script ? `${name} is ${script}, not ${want}` : `no ${name} script`);
     const file = `scripts/${name}.ts`;
-    if (files[file]) drift.push(`has ${file}, which craftz ${name} replaces`);
+    if (COMMAND_SCRIPTS.includes(name) && files[file]) {
+      drift.push(`has ${file}, which craftz ${name} replaces`);
+    }
     return drifted(drift);
   },
   fix: {
@@ -928,6 +933,7 @@ export const RULES: Rule[] = [
   },
   commandScript("scripts-pr", "pr"),
   commandScript("scripts-gone", "gone"),
+  commandScript("scripts-craftz", "craftz"),
   {
     id: "cloudflare-config",
     check: ({ worker: site }) => {
