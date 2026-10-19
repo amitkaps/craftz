@@ -80,6 +80,10 @@ async function fromGitHub(repo: string): Promise<Files> {
  * So is whether it turns off `workers.dev` and preview URLs, each on unless the config says
  * otherwise. cf's config names them `workersDev` and `previewUrls`, and wrangler's `workers_dev`
  * and `preview_urls`.
+ *
+ * And what it deploys, the deploy axis in [the rules](../docs/rules.md#axes). A Worker with code
+ * of its own, cf's `entrypoint` or wrangler's `main`, is an app, and one without is a static
+ * site, whatever builds its files.
  */
 export type Worker = {
   file: string;
@@ -87,8 +91,7 @@ export type Worker = {
   domain?: string;
   workersDev: boolean;
   previewUrls: boolean;
-  // Set for a private repository's site, whose Access is then looked up.
-  privateRepo?: boolean;
+  deploys: "static" | "app";
 };
 
 const off = (text: string, key: string): boolean =>
@@ -101,7 +104,8 @@ export function worker(files: Files): Worker | undefined {
     const domain = /(?:domains"?\s*:\s*\[\s*|"?pattern"?\s*[:=]\s*)"([^"]+)"/.exec(text)?.[1];
     const workersDev = !off(text, "workersDev") && !off(text, "workers_dev");
     const previewUrls = !off(text, "previewUrls") && !off(text, "preview_urls");
-    if (name) return { file, name, domain, workersDev, previewUrls };
+    const deploys = /^\s*"?(?:entrypoint|main)"?\s*[:=]/m.test(text) ? "app" : "static";
+    if (name) return { file, name, domain, workersDev, previewUrls, deploys };
   }
   return undefined;
 }
@@ -166,27 +170,6 @@ export const branchRules = (repo: string) =>
   github(`${repo}/rules/branches/main`) as Promise<BranchRule[] | Error>;
 
 /** @prose
- * # Internal sites
- *
- * Every site on cf turns off `workers.dev` and preview URLs, so those no longer say whether
- * it's internal. Access does. A private repository's site is looked up in Access, and it's
- * internal when an application covers its domain, and public when none does. A private
- * repository can have a public site.
- *
- * The listed repositories are public, since the home page names them, so only a folder is
- * looked up on GitHub. GitHub answers 404 for a private repository it won't show, the same as
- * for one that isn't there, so without a login a folder is taken as public.
- */
-type Visibility = "public" | "private" | Error | undefined;
-
-async function visibility(repo: string): Promise<Visibility> {
-  const found = (await github(repo)) as { private?: boolean } | Error;
-  if (!(found instanceof Error)) return found.private ? "private" : "public";
-  if (found instanceof RateLimit) return found;
-  return found.message.endsWith("HTTP 404") ? undefined : found;
-}
-
-/** @prose
  * # Labels
  *
  * A package's labels, for `releases-labels`. GitHub shows a public repository's labels to anyone.
@@ -204,7 +187,6 @@ export type Repo = {
   worker?: Worker;
   // Left out for a folder that isn't on GitHub yet.
   rules?: BranchRule[] | Error;
-  visibility?: Visibility;
   labels?: string[] | Error;
 };
 
@@ -363,18 +345,14 @@ export async function survey(): Promise<Result[]> {
  *
  * A listed
  * repository's holds apply, found by the folder's name. Branch rules and labels aren't read,
- * since `pnpm align` writes them and `pnpm drift` reads them from GitHub. Whether it's private is
- * read from GitHub, under the folder's name. Its Worker comes back too, marked private when the
- * repository is private, so `pnpm drift <folder>` can check its settings.
+ * since `pnpm align` writes them and `pnpm drift` reads them from GitHub. Its Worker comes back
+ * too, so `pnpm drift <folder>` can check its settings and look up its Access.
  */
 /** A folder's files, read as the checks read a repository, for `pnpm align`'s fixes. */
 
 export async function checkFolder(dir: string): Promise<{ findings: Finding[]; worker?: Worker }> {
   const repo = basename(dir);
   const it = repoOf(fromDisk(dir));
-  it.visibility = await visibility(repo);
-  const seen = it.visibility;
   const findings = CHECKS.flatMap((c) => hold(repo, c, c.run(it)) ?? []);
-  if (it.worker) it.worker.privateRepo = seen === "private";
   return { findings, worker: it.worker };
 }

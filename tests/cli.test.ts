@@ -19,7 +19,12 @@ const craftz = (...args: string[]) =>
 
 test("check finds what fix puts back", { timeout: 60_000 }, async () => {
   const dir = join(mkdtempSync(join(tmpdir(), "craftz-cli-")), "example");
-  await write(dir, "example", "package", "An example, from craftz's test.");
+  await write(
+    dir,
+    "example",
+    { package: true, site: false, private: false, internal: false },
+    "An example, from craftz's test.",
+  );
   const file = join(dir, "package.json");
   const pkg = JSON.parse(readFileSync(file, "utf8")) as { scripts: Record<string, string> };
   delete pkg.scripts["prepack"];

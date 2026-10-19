@@ -84,10 +84,10 @@ align clones each repository's `main` into a temporary folder, runs every fix, i
 
 ```sh
 pnpm new example --package --description "What it is, in a sentence."
-pnpm new example --site --internal --description "…" --push
+pnpm new example --site static --internal --description "…" --push
 ```
 
-`--package` starts an npm package, `--site` a site on Cloudflare, and `--tool` scripts run on a laptop. `--internal` makes a site or a tool private. new writes `./example` in the folder it's run from, installs, runs `verify` and makes the first commit. `--push` also creates the repository on GitHub and writes its settings. It ends with a list of what's left by hand, like connecting the Worker.
+`--package` publishes it to npm, and `--site static` deploys a static site on Cloudflare. Either, both or neither, which is scripts run on a laptop. An app starts from base. `--private` makes the GitHub repository private, and `--internal` puts a site behind Cloudflare Access. [The axes](rules.md#axes) say what each means. new writes `./example` in the folder it's run from, installs, runs `verify` and makes the first commit. `--push` also creates the repository on GitHub and writes its settings. It ends with a list of what's left by hand, like connecting the Worker.
 
 ## Releasing a package
 
