@@ -32,12 +32,16 @@ The plugin sets `fmt` and `lint`, and fails a config that sets either differentl
 
 Both read the deploy axis from the Worker config. `craftz()` sets a static site's `publicDir` or `build.target`, and `craftz deploy` runs cf or wrangler. craftz's own docs are its site, built by `verify` and deployed by `craftz deploy` from source. A dry run reads every file, and the Worker for craftz.amitkaps.com is still to be created and connected by hand.
 
+### `craftz pr` and `craftz gone`
+
+The scripts every repository copied are craftz's commands now, and `pnpm pr` and `pnpm gone` run them. Their fix deletes the copies, and the `scripts/` folders here and in the reference went. They're in before the first release, so 0.1.0 is the end state, and no repository moves twice.
+
 ## Next, in order
 
 Each step works in one repository before the next starts.
 
-1. **The release cycle.** A hard gate before any real repository moves. First, craftz's site goes live at craftz.amitkaps.com through `craftz deploy`. From a clean checkout, release craftz's first version. Then `craftz new`, writing `craftz()` in place of the `fmt` and `lint` blocks, makes a test repository, which passes its full `verify` and deploys through `craftz deploy`.
-2. **The repositories.** Move one real repository, then the rest, with `craftz align`. Each one's shared files, like the `AGENTS.md` sections and the workflows, come from craftz's reference and point at craftz, and `craftz fix` writes "craftz" over the old "Standard" section. `pr` and `gone` become `craftz pr` and `craftz gone`, so no repository copies `scripts/pr.ts` or `scripts/gone.ts`, and both `scripts/` folders here go.
+1. **The release cycle.** A hard gate before any real repository moves. First, craftz's site goes live at craftz.amitkaps.com through `craftz deploy`. From a clean checkout, release craftz's first version. Then `craftz new`, writing `craftz()` in place of the `fmt` and `lint` blocks and depending on craftz, which `pnpm pr` now runs, makes a test repository, which passes its full `verify` and deploys through `craftz deploy`.
+2. **The repositories.** Move one real repository, then the rest, with `craftz align`. Each one's shared files, like the `AGENTS.md` sections and the workflows, come from craftz's reference and point at craftz, and `craftz fix` writes "craftz" over the old "Standard" section. `craftz fix` points `pr` and `gone` at `craftz pr` and `craftz gone`, and deletes the copied `scripts/pr.ts` and `scripts/gone.ts`.
 3. **The old repository retires.** The one that kept the rules before craftz is archived with its history, and its site redirects to craftz's, since every `AGENTS.md` links to it until step 2 has moved them.
 
 If craftz doesn't work out, this repository is deleted, and the repositories carry on as they are.

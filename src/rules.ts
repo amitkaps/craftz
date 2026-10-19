@@ -465,49 +465,43 @@ const onVitePlus = (pkg: Pkg): boolean =>
   Boolean(pkg.dependencies?.["vite-plus"] ?? pkg.devDependencies?.["vite-plus"]);
 
 /** @prose
- * # A shared script
+ * # A shared command
  *
- * A script every repository runs the same way, from a file this repository holds, as `pnpm pr`
- * runs `scripts/pr.ts`. Each repository has the script and the file word for word, and the fix
- * copies both.
- *
- * A `scripts/` folder the fix starts gets a `README.md` too, which prose asks of every folder. The
- * repository can add its own scripts beside them.
+ * `pnpm pr` and `pnpm gone` run craftz's commands, so every repository takes the same steps from
+ * the version it installs. craftz's own repository runs them from source. They were once files
+ * each repository copied into `scripts/`, so the fix deletes those copies, and the folder too
+ * when nothing of the repository's own is left in it.
  */
-const SCRIPTS_README = `# Scripts
+const COMMAND_SCRIPTS = ["pr", "gone"];
+const ownCraftz = (pkg: Pkg): boolean => pkg.name === "@amitkaps/craftz";
 
-Scripts this repository runs with Node, which reads TypeScript as it is. [pr.ts](pr.ts) and
-[gone.ts](gone.ts) are the same file in every repository, copied from
-[craftz](https://craftz.amitkaps.com/docs/rules.md#scripts), so change them there.
-`;
+function leaveScripts(dir: string): void {
+  const folder = join(dir, "scripts");
+  for (const name of COMMAND_SCRIPTS) rmSync(join(folder, `${name}.ts`), { force: true });
+  if (!existsSync(folder)) return;
+  const left = readdirSync(folder);
+  const readme = join(folder, "README.md");
+  const copied = existsSync(readme) && readFileSync(readme, "utf8").includes("[pr.ts](pr.ts)");
+  if (!left.length || (left.length === 1 && copied)) rmSync(folder, { recursive: true });
+}
 
-const sharedScript = (id: string, name: string): Rule => ({
+const commandScript = (id: string, name: string): Rule => ({
   id,
   check: ({ pkg, files }) => {
-    const file = `scripts/${name}.ts`;
     const drift: string[] = [];
+    const want = ownCraftz(pkg) ? `node src/cli.ts ${name}` : standardScripts[name];
     const script = pkg.scripts?.[name];
-    if (script !== standardScripts[name]) {
-      drift.push(
-        script ? `${name} is ${script}, not ${standardScripts[name]}` : `no ${name} script`,
-      );
-    }
-    if (!files[file]) drift.push(`no ${file}`);
-    else if (files[file] !== read(join(here, file))) drift.push(`${file} differs from craftz's`);
+    if (script !== want)
+      drift.push(script ? `${name} is ${script}, not ${want}` : `no ${name} script`);
+    const file = `scripts/${name}.ts`;
+    if (files[file]) drift.push(`has ${file}, which craftz ${name} replaces`);
     return drifted(drift);
   },
   fix: {
     in: "files",
     apply: (dir, std) => {
-      const file = join("scripts", `${name}.ts`);
-      mkdirSync(join(dir, "scripts"), { recursive: true });
-      writeFileSync(join(dir, file), readFileSync(join(std, file)));
-      const readme = join(dir, "scripts", "README.md");
-      if (!existsSync(readme)) writeFileSync(readme, SCRIPTS_README);
-      const pkg = readPkg(dir);
-      const want = readPkg(std).scripts?.[name];
-      if (want) pkg.scripts = { ...pkg.scripts, [name]: want };
-      writePkg(dir, pkg);
+      leaveScripts(dir);
+      setScript(dir, std, name, (pkg) => !ownCraftz(pkg));
     },
   },
 });
@@ -866,8 +860,8 @@ export const RULES: Rule[] = [
         ),
       ),
   },
-  sharedScript("scripts-pr", "pr"),
-  sharedScript("scripts-gone", "gone"),
+  commandScript("scripts-pr", "pr"),
+  commandScript("scripts-gone", "gone"),
   {
     id: "cloudflare-config",
     check: ({ worker: site }) => {

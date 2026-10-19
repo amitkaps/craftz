@@ -2,7 +2,7 @@
 
 craftz is used through its commands and its plugin.
 
-Any repository has `craftz rules`, `craftz check`, `craftz fix`, `craftz settings`, `craftz deploy` and the `craftz()` plugin. This repository adds four scripts: `pnpm drift` checks every repository, `pnpm align` brings them in line, `pnpm new` starts one and `pnpm release` releases a package. The other commands in [the design](design.md#the-commands) come as [the plan](plan.md) builds them, and this page grows with them.
+Any repository has `craftz rules`, `craftz check`, `craftz fix`, `craftz settings`, `craftz deploy`, `craftz pr`, `craftz gone` and the `craftz()` plugin. This repository adds four scripts: `pnpm drift` checks every repository, `pnpm align` brings them in line, `pnpm new` starts one and `pnpm release` releases a package. The other commands in [the design](design.md#the-commands) come as [the plan](plan.md) builds them, and this page grows with them.
 
 ## Install
 
@@ -65,6 +65,16 @@ pnpm exec craftz deploy
 ```
 
 `craftz deploy` deploys the site the folder has built, and a site's `ship` script runs it, which is the Worker's deploy command. A static site uploads its Build Output with `cf deploy --prebuilt`. An app runs `wrangler deploy`, until cf can deploy one. To see what would go up without uploading it, run `pnpm exec cf deploy --prebuilt --dry-run` after the build.
+
+## Pull requests
+
+```sh
+pnpm pr "<title>" --label added   # commit, verify, push, and merge once CI passes
+pnpm pr "<title>" --wait          # and wait for the merge, then switch to main
+pnpm gone                         # delete the branches that merged
+```
+
+A repository's `pr` and `gone` scripts run `craftz pr` and `craftz gone`, and every change reaches `main` this way. A package's pull request takes one label for the release notes, and stops without one before anything is committed. A site or a tool takes none.
 
 ## Writing the settings
 
