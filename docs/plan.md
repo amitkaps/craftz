@@ -27,7 +27,7 @@ Each step works in one repository before the next starts.
 1. **`fix` and `settings`.** Make them predictable, as [the design](design.md#settings-never-secrets) says, with a check that only reads and a report of what changed.
 2. **`craftz()`.** Keep it thin, with the test that it never overrides the repository.
 3. **The release cycle.** A hard gate before any real repository moves. From a clean checkout, release craftz's first version. Then `craftz new` makes a test repository, which passes its full `verify` and deploys through `craftz deploy`.
-4. **The repositories.** Move one real repository, then the rest, with `craftz align`. The files every repository shares word for word, like the `AGENTS.md` sections and the workflows, change here, and their "Standard" section becomes "Rules", pointing at `craftz rules`.
+4. **The repositories.** Move one real repository, then the rest, with `craftz align`. The files every repository shares word for word, like the `AGENTS.md` sections and the workflows, change here, and their "Standard" section becomes "Rules", pointing at `craftz rules`. `pr` and `gone` become `craftz pr` and `craftz gone`, so no repository copies `scripts/pr.ts` or `scripts/gone.ts`, and both `scripts/` folders here go.
 5. **The old repository retires.** The one that kept the rules before craftz is archived with its history, and its site redirects to craftz's, since every `AGENTS.md` links to it until step 4 has moved them.
 
 If craftz doesn't work out, this repository is deleted, and the repositories carry on as they are.
