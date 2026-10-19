@@ -1,9 +1,9 @@
 /** @prose
  * # The rules' test
  *
- * Holds [the standard](../standard/docs/standard.md) and [rules.ts](../src/rules.ts) to the same ids, so a rule
+ * Holds [the rules](../docs/rules.md) and [rules.ts](../src/rules.ts) to the same ids, so a rule
  * can't be stated without a check, or checked without being stated. Every check, with an id or
- * not yet, is under one of the standard's parts, which is how the dashboard groups it.
+ * not yet, is under one of the doc's parts.
  */
 import { expect, test } from "vite-plus/test";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
@@ -11,7 +11,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { BROWSERS } from "../src/browsers.ts";
 import { COMPATIBILITY_DATE } from "../src/runtime.ts";
-import { BETA, RULES, parts, stated } from "../src/rules.ts";
+import { BETA, RULES } from "../src/rules.ts";
+import { parts, stated } from "../src/stated.ts";
 import { standard } from "../src/reference.ts";
 import { CHECKS, type Repo, worker } from "../src/survey.ts";
 
@@ -23,11 +24,11 @@ test("each rule has one id", () => {
   expect(new Set(statedIds).size).toBe(statedIds.length);
 });
 
-test("the standard states every rule that's checked, and only those", () => {
+test("the rules doc states every rule that's checked, and only those", () => {
   expect([...statedIds].sort()).toEqual([...checked].sort());
 });
 
-test("a rule's link goes to its own id", () => {
+test("a rule points to its own id", () => {
   const markdown =
     "## Scripts and Node\n\n- [`scripts-x`]{#scripts-x}: a rule.\n\n```md\n- [`scripts-y`]{#scripts-y}: an example.\n```\n";
   expect(stated(markdown)).toEqual([
@@ -35,7 +36,7 @@ test("a rule's link goes to its own id", () => {
       id: "scripts-x",
       text: "a rule.",
       part: "Scripts and Node",
-      link: "https://ship.amitkaps.com/docs/standard.md#scripts-x",
+      see: "craftz rules scripts-x",
     },
   ]);
 });
@@ -45,7 +46,7 @@ test("the survey runs every rule", () => {
   expect(checked.filter((id) => !names.has(id))).toEqual([]);
 });
 
-test("every check is under a part of the standard", () => {
+test("every check is under a part of the rules", () => {
   const found = parts();
   for (const check of CHECKS) expect(found, check.name).toContain(check.group);
 });
@@ -54,7 +55,7 @@ test("a part is its second-level heading", () => {
   expect(parts("## Scripts\n\n### The editor\n\n```md\n## An example\n```\n")).toEqual(["Scripts"]);
 });
 
-test("only the standard's betas are on a pre-release, each an exact build", () => {
+test("only the rules' betas are on a pre-release, each an exact build", () => {
   const rule = RULES.find((r) => r.id === "versions-beta");
   const drift = (deps: Record<string, string>) => rule?.check({ deps } as Repo)?.drift;
   const [beta = ""] = BETA;
@@ -105,7 +106,7 @@ test("a Worker answers on its domain only, at the runtime's date, and the fixes 
     "cloudflare.config.ts doesn't turn off preview URLs",
     `compatibilityDate is 2026-09-09, not ${COMPATIBILITY_DATE}`,
   ]);
-  const dir = mkdtempSync(join(tmpdir(), "ship-worker-"));
+  const dir = mkdtempSync(join(tmpdir(), "craftz-worker-"));
   writeFileSync(join(dir, "cloudflare.config.ts"), config);
   for (const r of RULES)
     if (r.id.startsWith("cloudflare-") && r.fix?.in === "files") r.fix.apply(dir, dir);
@@ -119,7 +120,7 @@ test("a Worker answers on its domain only, at the runtime's date, and the fixes 
   ).toContain("sets a Node.js compatibility flag");
 });
 
-test("the betas this repository is on are the ones the standard names", () => {
+test("the betas this repository is on are the ones the rules name", () => {
   const deps = { ...standard.dependencies, ...standard.devDependencies };
   const pre = Object.keys(deps).filter((name) => /^\d+\.\d+\.\d+-/.test(deps[name] ?? ""));
   expect(pre.sort()).toEqual([...BETA].sort());

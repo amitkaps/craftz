@@ -1,8 +1,8 @@
 /** @prose
  * # Drift
  *
- * Prints where each repository has drifted from the standard, and exits 1 when anything has. It
- * only reads. [align.ts](https://github.com/amitkaps/ship/blob/main/scripts/align.ts), still in ship, is what writes.
+ * Prints where each repository has drifted from the rules, and exits 1 when anything has. It
+ * only reads. `align`, which comes next, is what writes.
  *
  * Each repository's files come from what [survey.ts](survey.ts) finds, read from GitHub's `main`,
  * as the site does. The settings outside the files come from [settings.ts](settings.ts): the merge
@@ -10,17 +10,17 @@
  * drift says once what it couldn't check, rather than calling it drift, so a run with no logins
  * still checks every file. A held check is printed with its reason, and doesn't count as drift.
  * A rule with an id, like `scripts-verify`, prints it before each line it drifted on, and once
- * below them, a link to where [the standard](../standard/docs/standard.md) states it.
+ * below them, the `craftz rules` command that prints it from [the rules](../docs/rules.md).
  *
  * A folder named on the command line, like `pnpm drift ../markz`, is checked from disk in place
  * of the repositories. That checks a fix before it's pushed, with a listed repository's holds
- * found by the folder's name. It also checks one that follows the standard without being in
- * `REPOS`, such as a private repository, which the public dashboard shouldn't name. The folder's
+ * found by the folder's name. It also checks one that follows the rules without being in
+ * `REPOS`, such as a private repository, which a public page shouldn't name. The folder's
  * name is taken as the repository's on GitHub, and a private
  * repository's site has its Access checked too.
  */
 import { basename, resolve } from "node:path";
-import { stated } from "./rules.ts";
+import { stated } from "./stated.ts";
 import { type Finding, checkFolder, survey } from "./survey.ts";
 import { accessDrift, cloudflareLogin, githubLogin, mergeDrift, workerDrift } from "./settings.ts";
 
@@ -38,7 +38,7 @@ function settings(repo: string, worker?: { name: string }): string[] {
   ];
 }
 
-const links = new Map(stated().map((s) => [s.id, s.link]));
+const sees = new Map(stated().map((s) => [s.id, s.see]));
 const lines = (f: Finding): string[] => f.drift.map((d) => (f.rule ? `${f.rule}: ${d}` : d));
 
 function print(name: string, drift: string[], findings: Finding[], notes: string[] = []): boolean {
@@ -46,8 +46,8 @@ function print(name: string, drift: string[], findings: Finding[], notes: string
   for (const line of drift) console.log(`    ${line}`);
   for (const line of notes) console.log(`    ${line}`);
   const read = findings.filter((f) => f.rule && !f.held && f.drift.length);
-  for (const link of new Set(read.map((f) => links.get(f.rule ?? "")))) {
-    console.log(`    read: ${link}`);
+  for (const see of new Set(read.map((f) => sees.get(f.rule ?? "")))) {
+    console.log(`    see: ${see}`);
   }
   for (const f of findings.filter((f) => f.held)) {
     console.log(`    held: ${lines(f).join("; ")}\n      ${f.held}`);

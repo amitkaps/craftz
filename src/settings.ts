@@ -1,9 +1,9 @@
 /** @prose
  * # Settings
  *
- * What the standard sets outside the repositories, where no file in one can hold it: each
+ * What the rules set outside the repositories, where no file in one can hold it: each
  * repository's merge settings, branch rules and labels on GitHub, and each Worker's build settings
- * on Cloudflare. [drift.ts](drift.ts) reads them and [align.ts](https://github.com/amitkaps/ship/blob/main/scripts/align.ts), still in ship, writes them, through the
+ * on Cloudflare. [drift.ts](drift.ts) reads them and `align` will write them, through the
  * logins `gh` and `cf` already have, so there's no token to keep.
  *
  * A login that isn't there isn't drift. Each side says what it couldn't do, once, and the rest
@@ -49,7 +49,7 @@ const labels = json(".github/labels.json") as {
   description: string;
 }[];
 
-/** The merge settings, compared with [.github/settings.json](../standard/.github/settings.json). */
+/** The merge settings, compared with [.github/settings.json](../reference/.github/settings.json). */
 export function mergeDrift(repo: string): string[] {
   const found = JSON.parse(gh("api", `repos/${OWNER}/${repo}`)) as Record<string, unknown>;
   return Object.entries(merging)
@@ -60,7 +60,7 @@ export function mergeDrift(repo: string): string[] {
 /** @prose
  * # Writing GitHub's settings
  *
- * The merge settings come from [.github/settings.json](../standard/.github/settings.json): squash only,
+ * The merge settings come from [.github/settings.json](../reference/.github/settings.json): squash only,
  * branches deleted after merging, and auto-merge on.
  *
  * The branch rules and a package's labels are the fixes of `github-rules` and `releases-labels`,
@@ -81,7 +81,7 @@ export function writeGitHub(repo: string): void {
  * # Writing the labels
  *
  * The labels a package's release notes are grouped by, from
- * [.github/labels.json](../standard/.github/labels.json). Each is created, or updated when it exists, and
+ * [.github/labels.json](../reference/.github/labels.json). Each is created, or updated when it exists, and
  * other labels are left alone.
  */
 export function writeLabels(repo: string): void {
@@ -104,7 +104,7 @@ export function writeLabels(repo: string): void {
 /** @prose
  * # Writing the branch rules
  *
- * A ruleset named `main`, from [.github/ruleset.json](../standard/.github/ruleset.json), created or
+ * A ruleset named `main`, from [.github/ruleset.json](../reference/.github/ruleset.json), created or
  * replaced, so writing twice changes nothing. Classic branch protection is removed, so there's
  * one set of rules to read.
  */
@@ -267,7 +267,7 @@ export function writeWorker(name: string): string[] {
  * # Rebuilding a site
  *
  * Starts a Worker's build from `main` through its trigger, the way a push to `main` does. align
- * uses it for ship's site, whose dashboard reads the other repositories when it's built.
+ * uses it for a site that reads the other repositories when it's built, so it shows what moved.
  */
 export function rebuild(name: string): string {
   const found = tag(name);

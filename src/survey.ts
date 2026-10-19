@@ -1,18 +1,19 @@
 /** @prose
  * # The survey
  *
- * Reads every repository and checks it against the standard, returning what it found as data.
- * `pnpm drift` prints it, and the build turns it into the tables on the dashboard.
+ * Reads every repository and checks it against the rules, returning what it found as data.
+ * `pnpm drift` prints it, and a page can show it as tables.
  *
- * The standard is the files in [standard/](../standard), so there's no second copy of it to keep
- * in step. [standard.md](../standard/docs/standard.md) says what each check means.
+ * Each repository is compared with the files in [reference/](../reference/), so there's no second
+ * copy of them to keep in step. [The rules](../docs/rules.md) say what each check means.
  *
  * Every repository is read from GitHub, from `main`, so a check run on a laptop and one run in CI
  * see the same thing. To check a fix before it's pushed, `pnpm drift` takes the folder instead
  * ([A folder](#a-folder)).
  */
 import { basename, join } from "node:path";
-import { type Rule, RULES, parts, stated } from "./rules.ts";
+import { type Rule, RULES } from "./rules.ts";
+import { parts, stated } from "./stated.ts";
 import { OWNER, type Pkg, read } from "./reference.ts";
 
 export const REPOS = ["base", "markz", "prose", "pagez", "sitez", "ship"];
@@ -129,7 +130,7 @@ async function release(name: string): Promise<Release> {
  * # Branch rules
  *
  * GitHub shows a public repository's branch rules to anyone, so the survey reads them without a
- * login, and `github-rules` compares them with [.github/ruleset.json](../standard/.github/ruleset.json). A
+ * login, and `github-rules` compares them with [.github/ruleset.json](../reference/.github/ruleset.json). A
  * `GITHUB_TOKEN`, when set, only raises the rate limit.
  */
 export type BranchRule = { type: string; parameters?: Record<string, unknown> };
@@ -210,9 +211,9 @@ export type Repo = {
 /** @prose
  * # The checks
  *
- * Each check covers one part of the standard, and says what it expects in a line the page shows
- * beside it. The checks run, and the page lists them, in the order of the standard's parts, so
- * the page reads like the standard.
+ * Each check covers one part of the rules, and says what it expects in a line the page shows
+ * beside it. The checks run, and the page lists them, in the order of the rules' parts, so
+ * the page reads like the rules.
  *
  * A check returns what
  * the repository has, like the version it pins, and what has drifted, which is empty when
@@ -260,20 +261,20 @@ function hold(repo: string, check: Check, finding: Finding | undefined): Finding
 
 export type Check = {
   name: string;
-  // The part of the standard it's in, which the dashboard groups it under.
+  // The part of the rules it's in, which a page groups it under.
   group: string;
   rule: string;
-  // Where the standard states it, for a rule with an id.
-  link?: string;
+  // Where the rules state it, for a rule with an id.
+  see?: string;
   run: (repo: Repo) => Finding | undefined;
 };
 
 /** @prose
  * # Rules with an id
  *
- * A rule with an id is stated in the standard and checked in [rules.ts](rules.ts). Its check here
+ * A rule with an id is stated in the rules and checked in [rules.ts](rules.ts). Its check here
  * is named by its id, and the line the page shows beside it is the rule's first sentence, as the
- * standard has it, so there's no second wording to keep in step.
+ * rules have it, so there's no second wording to keep in step.
  */
 const statements = new Map(stated().map((s) => [s.id, s]));
 
@@ -285,7 +286,7 @@ function fromRule(rule: Rule): Check {
     rule: [rule.wants, /^(.+?\.)(\s|$)/.exec(statement?.text ?? "")?.[1]]
       .filter(Boolean)
       .join(": "),
-    link: statement?.link,
+    see: statement?.see,
     run: (repo) => {
       const finding = rule.check(repo);
       return finding && { ...finding, rule: rule.id };

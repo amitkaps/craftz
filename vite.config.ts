@@ -8,7 +8,7 @@ import { defineConfig } from "vite-plus";
 
 export default defineConfig({
   pack: {
-    entry: ["src/index.ts"],
+    entry: ["src/index.ts", "src/cli.ts"],
     format: ["esm"],
     platform: "node",
     // Oxc writes the types, so there's no typescript dependency, and fails on an export
