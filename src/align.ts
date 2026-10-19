@@ -242,10 +242,12 @@ async function files(repo: string, std: string): Promise<Outcome> {
       .map((name) => `${name} ${after[name]}, from ${before[name] ?? "nothing"}`);
     const other = changed
       .split("\n")
-      .map((line) => line.slice(3))
-      .filter((path) => !["package.json", "pnpm-lock.yaml"].includes(path))
-      .map((path) => `${path} from craftz`);
+      .filter((line) => !["package.json", "pnpm-lock.yaml"].includes(line.slice(3)))
+      .map((line) => `${line.slice(3)} ${line.startsWith(" D") ? "deleted" : "from craftz"}`);
 
+    // Staged first, so verify sees what the commit will hold: a check that lists files with git,
+    // like prose's lexer test, would otherwise still find the ones a fix deleted.
+    await sh(dir, log, "git", "add", "-A");
     await oneAtATime(() => sh(dir, log, "pnpm", "run", "verify"));
     if (local) {
       lines.push(
