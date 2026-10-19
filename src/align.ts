@@ -6,7 +6,7 @@
  * needs `gh` logged in as the owner.
  *
  * Each repository gets two things. Its settings outside the files, on GitHub and on its Worker,
- * are written directly by [settings.ts](settings.ts), since there's no file to review. Its files
+ * are written directly and read back by [apply.ts](apply.ts), since there's no file to review. Its files
  * change in a pull request, from a fresh clone of `main` in a temporary folder, so a checkout on
  * a branch of its own is never touched. The pull request opens only when `verify` passes, with
  * auto-merge on, so CI merges it. One that fails leaves its clone and log for a look.
@@ -23,10 +23,11 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import { fixFiles, fixGitHub } from "./rules.ts";
+import { writeSettings } from "./apply.ts";
+import { fixFiles } from "./rules.ts";
 import { OWNER, TOOLS, catalog, here } from "./reference.ts";
 import { HELD, REPOS, worker } from "./survey.ts";
-import { cloudflareLogin, githubLogin, writeGitHub, writeWorker } from "./settings.ts";
+import { cloudflareLogin, githubLogin } from "./settings.ts";
 
 const SELF = "craftz";
 const run = promisify(execFile);
@@ -304,23 +305,25 @@ async function files(repo: string, std: string): Promise<Outcome> {
  * # Settings
  *
  * GitHub's settings are written for every repository, with each rule's fix on GitHub, like
- * `github-rules`, and a site's Worker settings when `cf` is logged in. Whether a repository is a package, and the name of its Worker, are read from the
- * clone, after its pull request, so they're what `main` is about to hold.
+ * `github-rules`, and a site's Worker settings when `cf` is logged in.
+ *
+ * Whether a repository is a package, and the name of its Worker, are read from the clone, after
+ * its pull request, so they're what `main` is about to hold. Classic branch protection is removed
+ * without asking,
+ * since these repositories are ones the rules already own.
  */
-function settings(repo: string): string[] {
+async function settings(repo: string): Promise<string[]> {
   const dir = join(work, repo);
   const pkg = existsSync(join(dir, "package.json")) ? readJson<Pkg>(join(dir, "package.json")) : {};
-  writeGitHub(repo);
-  fixGitHub(repo, pkg);
   const files = Object.fromEntries(
     ["cloudflare.config.ts", "wrangler.jsonc", "wrangler.toml"].map((f) => [
       f,
       existsSync(join(dir, f)) ? readFileSync(join(dir, f), "utf8") : "",
     ]),
   );
-  const site = worker(files);
-  if (!site || cloudflare) return [];
-  return writeWorker(site.name);
+  // align says once, at the start, why the Workers aren't written.
+  const site = cloudflare ? undefined : worker(files);
+  return writeSettings({ repo, pkg, site }, true);
 }
 
 // craftz goes first when it's named, so the others align with its new reference.
@@ -339,7 +342,10 @@ outcomes.push(
 
 let failed = false;
 for (const outcome of outcomes) {
-  const lines = [...outcome.lines, ...(local || outcome.failed ? [] : settings(outcome.repo))];
+  const lines = [
+    ...outcome.lines,
+    ...(local || outcome.failed ? [] : await settings(outcome.repo)),
+  ];
   failed ||= Boolean(outcome.failed);
   console.log(outcome.failed ? `✗ ${outcome.repo}` : `✓ ${outcome.repo}`);
   for (const line of lines) console.log(`    ${line}`);

@@ -4,6 +4,8 @@
  * Runs `craftz check` and `craftz fix` from source on a package that `pnpm new` writes, after
  * taking its `prepack` script out. check has to name the rule and fail, and fix has to put it
  * back, so the command and `pnpm align` can't disagree on what a fix does.
+ *
+ * fix has to name the one file it changed, and a second run has to change nothing.
  */
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
@@ -30,6 +32,10 @@ test("check finds what fix puts back", { timeout: 60_000 }, async () => {
 
   const fixed = craftz("fix", dir);
   expect([fixed.status, fixed.stdout]).toEqual([0, expect.stringContaining(`✓ ${dir}`)]);
+  expect(fixed.stdout).toMatch(/^Changed:\n {4}package\.json\n/);
+
+  const again = craftz("fix", dir);
+  expect([again.status, again.stdout]).toEqual([0, expect.stringMatching(/^Changed nothing\./)]);
 });
 
 test("a rule prints with its part", () => {

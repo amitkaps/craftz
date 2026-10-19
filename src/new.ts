@@ -30,9 +30,9 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { BROWSERS } from "./browsers.ts";
 import { COMPATIBILITY_DATE } from "./runtime.ts";
-import { type Kind, fixFiles, fixGitHub } from "./rules.ts";
+import { type Kind, fixFiles } from "./rules.ts";
 import { OWNER, VERSIONS, here, root } from "./reference.ts";
-import { writeGitHub } from "./settings.ts";
+import { writeSettings } from "./apply.ts";
 
 export type { Kind };
 
@@ -468,8 +468,11 @@ if (import.meta.main) {
       "--description",
       description,
     );
-    writeGitHub(name);
-    fixGitHub(name, { private: kind !== "package" });
+    const settings = await writeSettings(
+      { repo: name, pkg: { private: kind !== "package" } },
+      true,
+    );
+    for (const line of settings.filter((it) => !it.startsWith("fixed: "))) console.log(line);
   }
 
   const left = [

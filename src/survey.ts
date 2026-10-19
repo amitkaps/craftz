@@ -162,7 +162,7 @@ async function github(path: string): Promise<unknown> {
   }
 }
 
-const branchRules = (repo: string) =>
+export const branchRules = (repo: string) =>
   github(`${repo}/rules/branches/main`) as Promise<BranchRule[] | Error>;
 
 /** @prose
@@ -191,7 +191,7 @@ async function visibility(repo: string): Promise<Visibility> {
  *
  * A package's labels, for `releases-labels`. GitHub shows a public repository's labels to anyone.
  */
-async function repoLabels(repo: string): Promise<string[] | Error> {
+export async function repoLabels(repo: string): Promise<string[] | Error> {
   const found = (await github(`${repo}/labels?per_page=100`)) as { name: string }[] | Error;
   return found instanceof Error ? found : found.map((label) => label.name);
 }

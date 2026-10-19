@@ -17,8 +17,8 @@
  * on every one. A fix in `github` is written directly, since there's no file to review. A rule
  * with no fix is fixed by hand, as the rules say.
  */
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
 import { OWNER, type Pkg, VERSIONS, here, read, standard, versionsIn } from "./reference.ts";
 import { writeLabels, writeRuleset } from "./settings.ts";
 import { BROWSERS, COMPATIBILITY_DATE } from "./pinned.ts";
@@ -91,8 +91,16 @@ export function unread(error: Error): Finding {
 
 const readPkg = (dir: string): Pkg =>
   JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as Pkg;
-const writePkg = (dir: string, pkg: Pkg): void =>
-  writeFileSync(join(dir, "package.json"), JSON.stringify(pkg, null, 2) + "\n");
+// A JSON file is written only when its value changes, so one the formatter laid out stays as it
+// is, and a second fix changes nothing.
+function writeJson(path: string, value: unknown): void {
+  const text = JSON.stringify(value, null, 2);
+  try {
+    if (JSON.stringify(JSON.parse(readFileSync(path, "utf8")), null, 2) === text) return;
+  } catch {}
+  writeFileSync(path, `${text}\n`);
+}
+const writePkg = (dir: string, pkg: Pkg): void => writeJson(join(dir, "package.json"), pkg);
 
 // Sets a dependency to the rules' version, in whichever list the repository has it.
 function pin(dir: string, std: string, name: string): void {
@@ -727,7 +735,7 @@ export const RULES: Rule[] = [
               }
             : { ...theirs, ...ours };
           mkdirSync(dirname(path), { recursive: true });
-          writeFileSync(path, JSON.stringify(merged, null, 2) + "\n");
+          writeJson(path, merged);
         }
       },
     },
@@ -1137,10 +1145,36 @@ export const RULES: Rule[] = [
   },
 ];
 
-/** Applies every fix in the files, but the held ones, for `pnpm align` and `pnpm new`. */
-export function fixFiles(dir: string, std: string, held: Record<string, string> = {}): void {
+// What's built or installed isn't the repository's, so the fixes never write there.
+const SKIP = new Set([".git", "node_modules", "dist"]);
+
+function snapshot(dir: string, top = dir, found = new Map<string, string>()): Map<string, string> {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (!SKIP.has(entry.name)) snapshot(path, top, found);
+    } else if (entry.isFile()) found.set(relative(top, path), readFileSync(path, "utf8"));
+  }
+  return found;
+}
+
+/** @prose
+ * # Fixing the files
+ *
+ * Every fix in the files is applied, but the held ones, for `craftz fix`, `pnpm align` and `pnpm
+ * new`. Each fix writes what the rules want, whatever was there, so a second run changes nothing.
+ *
+ * It answers the files it changed, added or removed, sorted, from the folder as it was before and
+ * after. That's what changed, whichever fix did it, and it's empty when nothing did.
+ */
+export function fixFiles(dir: string, std: string, held: Record<string, string> = {}): string[] {
+  const before = snapshot(dir);
   for (const rule of RULES)
     if (rule.fix?.in === "files" && !held[rule.id]) rule.fix.apply(dir, std);
+  const after = snapshot(dir);
+  return [...new Set([...before.keys(), ...after.keys()])]
+    .filter((file) => before.get(file) !== after.get(file))
+    .toSorted();
 }
 
 /** Applies every fix that's written on GitHub, for `pnpm align` and `pnpm new --push`. */
