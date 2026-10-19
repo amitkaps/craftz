@@ -44,6 +44,10 @@ craftz 0.1.0 is on npm. [`toolchain-craftz`](rules.md#toolchain-craftz) asks eve
 
 `craftz new` started craftz-test, a package with a static site, with `--push`. It installs craftz from npm, uses `craftz()`, passes its full `verify`, opened its first pull request with `pnpm pr`, and deploys through `craftz deploy` from its Worker's build, to craftz-test.amitkaps.com. It turned up two things, now fixed. A site's `ship` wasn't checked, and the settings `new` wrote read back as still off.
 
+### `craftz status`
+
+What's live, read in one command: CI on `main`, the open pull requests, npm's version, and a site's latest build and addresses, with `--log` for the build's log. `AGENTS.md` points agents at it, so a look at a deploy or a release isn't a script written again.
+
 ## Next, in order
 
 Each step works in one repository before the next starts.

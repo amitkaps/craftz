@@ -2,7 +2,7 @@
 
 craftz is used through its commands and its plugin.
 
-Any repository has `craftz rules`, `craftz check`, `craftz fix`, `craftz settings`, `craftz deploy`, `craftz pr`, `craftz gone` and the `craftz()` plugin. This repository adds four scripts: `pnpm drift` checks every repository, `pnpm align` brings them in line, `pnpm new` starts one and `pnpm release` releases a package. The other commands in [the design](design.md#the-commands) come as [the plan](plan.md) builds them, and this page grows with them.
+Any repository has `craftz rules`, `craftz check`, `craftz fix`, `craftz settings`, `craftz status`, `craftz deploy`, `craftz pr`, `craftz gone` and the `craftz()` plugin. This repository adds four scripts: `pnpm drift` checks every repository, `pnpm align` brings them in line, `pnpm new` starts one and `pnpm release` releases a package. The other commands in [the design](design.md#the-commands) come as [the plan](plan.md) builds them, and this page grows with them.
 
 ## Install
 
@@ -87,6 +87,17 @@ pnpm craftz settings          # write what has drifted, then read it back
 `craftz settings` writes what the rules set outside the files, for the repository the folder's `origin` names. That's the merge settings, the `main` ruleset and a package's labels on GitHub, and a site's Worker build settings on Cloudflare. It writes only what has drifted, then reads it back, and lists each setting as `fixed`, `still off`, `failed` or `left`. It exits 1 unless everything is fixed. Running it again finishes what a failed run left.
 
 It needs `gh` logged in as the owner, and `cf` for a site's Worker. Classic branch protection on `main` isn't craftz's, so it asks before removing it. Where there's no one to ask, like in a script, `--yes` removes it.
+
+## What's live
+
+```sh
+pnpm craftz status        # CI, pull requests, npm, and the site's build and addresses
+pnpm craftz status --log  # and the latest build's log
+```
+
+`craftz status` reads what the repository has out in the world, where `check` reads its files and `settings` its setup. It lists the latest run on `main` of each workflow, the open pull requests, and for a package the version npm serves next to the one in `package.json`. For a site, it lists the Worker's latest build, with its outcome, commit and deploy command, and whether the domain answers and `workers.dev` doesn't. Each line is marked `✓` or `✗`, and it exits 1 when any is `✗`. A run or build still going isn't a failure, and neither is a version waiting to be released.
+
+Use it after a merge or a release, to see that CI, the deploy and npm went through. `--log` prints the build's log, which is where a failed deploy says why. It needs `gh` logged in, and `cf` for a site.
 
 ## Checking every repository
 
