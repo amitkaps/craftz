@@ -40,7 +40,10 @@ for (const [what, start] of starts) {
     expect(worker?.deploys).toBe(start.site ? "static" : undefined);
     const settings = join(dir, "pnpm-workspace.yaml");
     const craftz = `  "@amitkaps/craftz": "link:${resolve(import.meta.dirname, "..")}"`;
-    writeFileSync(settings, readFileSync(settings, "utf8").replace(/^overrides:\n/m, `$&${craftz}\n`));
+    writeFileSync(
+      settings,
+      readFileSync(settings, "utf8").replace(/^overrides:\n/m, `$&${craftz}\n`),
+    );
     const run = (...args: string[]) => execFileSync("pnpm", args, { cwd: dir, stdio: "pipe" });
     run("install");
     run("run", "fix");
