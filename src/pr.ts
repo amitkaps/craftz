@@ -1,10 +1,9 @@
 /** @prose
  * # A pull request
  *
- * `pnpm pr "<title>"` takes what's in the working tree to a pull request that merges itself once
- * CI passes, which is how every change reaches `main`. It's the same file in every repository,
- * copied from [craftz](https://craftz.amitkaps.com/docs/rules.md#scripts), so a person and an
- * agent take the same steps everywhere.
+ * `craftz pr "<title>"` takes what's in the working tree to a pull request that merges itself
+ * once CI passes, which is how every change reaches `main`. A repository runs it as `pnpm pr`, so
+ * a person and an agent take the same steps everywhere, from the version the repository installs.
  *
  * On `main`, it starts a branch named after the title. It commits what's changed, with the title
  * as the message, runs `verify`, pushes, opens the pull request and turns on auto-merge. A branch
@@ -17,20 +16,9 @@
  * `--body <text>` is the description. `--wait` waits for the merge, then switches to `main`,
  * pulls, and deletes the branch.
  */
-// Node's types, for a repository whose tsconfig.json doesn't include scripts/.
-/// <reference types="node" />
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
-
-const { values, positionals } = parseArgs({
-  allowPositionals: true,
-  options: {
-    label: { type: "string" },
-    body: { type: "string", default: "" },
-    wait: { type: "boolean", default: false },
-  },
-});
 
 function fail(message: string): never {
   console.error(message);
@@ -43,70 +31,88 @@ const run = (command: string, ...args: string[]): void => {
 const output = (command: string, ...args: string[]): string =>
   execFileSync(command, args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
 
-const title = positionals[0];
-if (!title) fail('Give a title: pnpm pr "<title>" [--label <label>] [--body <text>] [--wait]');
+/** The labels CI accepts, read from the notes config the way its Label step reads them. */
+export const labelsIn = (notes: string): string[] =>
+  [...notes.matchAll(/labels: \[(\w+)\]|^ +- (\w+)$/gm)].map((m) => m[1] ?? m[2] ?? "");
 
-// The labels CI accepts, read from the notes config the way its Label step reads them.
-const NOTES = ".github/release.yml";
-const known = existsSync(NOTES)
-  ? [...readFileSync(NOTES, "utf8").matchAll(/labels: \[(\w+)\]|^ +- (\w+)$/gm)].map(
-      (m) => m[1] ?? m[2] ?? "",
-    )
-  : [];
-const label = values.label;
-if (known.length && !label) fail(`Label this pull request with one of ${known.join(", ")}.`);
-if (label && !known.includes(label)) {
-  fail(
-    known.length ? `${label} isn't one of ${known.join(", ")}.` : "Only a package takes a label.",
-  );
-}
-
-let branch = output("git", "branch", "--show-current");
-if (branch === "main") {
-  branch = title
+/** The branch a title starts on `main`. */
+export const branchOf = (title: string): string =>
+  title
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 48)
     .replace(/-$/, "");
-  run("git", "switch", "--create", branch);
-}
 
-if (output("git", "status", "--porcelain")) {
-  run("git", "add", "--all");
-  run("git", "commit", "--quiet", "--message", title);
-}
-run("git", "fetch", "--quiet", "origin", "main");
-if (output("git", "rev-list", "--count", "origin/main..HEAD") === "0") {
-  fail(`${branch} has nothing that isn't on main.`);
-}
-
-run("pnpm", "run", "verify");
-run("git", "push", "--quiet", "--set-upstream", "origin", branch);
-
-const open = (): string => {
-  try {
-    return output(
-      "gh",
-      "pr",
-      "view",
-      branch,
-      "--json",
-      "state,url",
-      "--jq",
-      'select(.state == "OPEN") | .url',
-    );
-  } catch {
-    return "";
+/** Opens the pull request for what's in the working tree, and waits for it with `--wait`. */
+export async function pr(args: string[]): Promise<void> {
+  const { values, positionals } = parseArgs({
+    args,
+    allowPositionals: true,
+    options: {
+      label: { type: "string" },
+      body: { type: "string", default: "" },
+      wait: { type: "boolean", default: false },
+    },
+  });
+  const title = positionals[0];
+  if (!title || positionals.length > 1) {
+    fail('Give a title: craftz pr "<title>" [--label <label>] [--body <text>] [--wait]');
   }
-};
-let url = open();
-if (!url) {
-  const labels = label ? ["--label", label] : [];
-  url = output("gh", "pr", "create", "--title", title, "--body", values.body, ...labels);
+
+  const NOTES = ".github/release.yml";
+  const known = existsSync(NOTES) ? labelsIn(readFileSync(NOTES, "utf8")) : [];
+  const label = values.label;
+  if (known.length && !label) fail(`Label this pull request with one of ${known.join(", ")}.`);
+  if (label && !known.includes(label)) {
+    fail(
+      known.length ? `${label} isn't one of ${known.join(", ")}.` : "Only a package takes a label.",
+    );
+  }
+
+  let branch = output("git", "branch", "--show-current");
+  if (branch === "main") {
+    branch = branchOf(title);
+    run("git", "switch", "--create", branch);
+  }
+
+  if (output("git", "status", "--porcelain")) {
+    run("git", "add", "--all");
+    run("git", "commit", "--quiet", "--message", title);
+  }
+  run("git", "fetch", "--quiet", "origin", "main");
+  if (output("git", "rev-list", "--count", "origin/main..HEAD") === "0") {
+    fail(`${branch} has nothing that isn't on main.`);
+  }
+
+  run("pnpm", "run", "verify");
+  run("git", "push", "--quiet", "--set-upstream", "origin", branch);
+
+  const open = (): string => {
+    try {
+      return output(
+        "gh",
+        "pr",
+        "view",
+        branch,
+        "--json",
+        "state,url",
+        "--jq",
+        'select(.state == "OPEN") | .url',
+      );
+    } catch {
+      return "";
+    }
+  };
+  let url = open();
+  if (!url) {
+    const labels = label ? ["--label", label] : [];
+    url = output("gh", "pr", "create", "--title", title, "--body", values.body, ...labels);
+  }
+  run("gh", "pr", "merge", branch, "--auto", "--squash");
+  console.log(url);
+  if (values.wait) await merged(branch, url);
 }
-run("gh", "pr", "merge", branch, "--auto", "--squash");
-console.log(url);
 
 /** @prose
  * # Waiting for the merge
@@ -123,7 +129,7 @@ type Check = { name?: string; conclusion?: string; startedAt?: string };
 type State = { state: string; mergeStateStatus: string; statusCheckRollup: Check[] };
 const FAILED = ["FAILURE", "CANCELLED", "TIMED_OUT", "ACTION_REQUIRED"];
 
-if (values.wait) {
+async function merged(branch: string, url: string): Promise<void> {
   for (;;) {
     await new Promise((resolve) => setTimeout(resolve, 10_000));
     const pr = JSON.parse(

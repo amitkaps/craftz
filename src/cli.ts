@@ -27,12 +27,18 @@
  * static site uploads the Build Output with `cf deploy --prebuilt`, and an app runs
  * `wrangler deploy`, which is held until cf can deploy one. Each tool is the repository's own
  * dependency, so the version the rules check is the one that deploys.
+ *
+ * `craftz pr` opens a pull request that merges itself, as [pr.ts](pr.ts) says, and `craftz gone`
+ * deletes the branches that merged, as [gone.ts](gone.ts) says. A repository runs them as
+ * `pnpm pr` and `pnpm gone`.
  */
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { type Target, checkSettings, writeSettings } from "./apply.ts";
+import { gone } from "./gone.ts";
+import { pr } from "./pr.ts";
 import { OWNER, type Pkg, here } from "./reference.ts";
 import { fixFiles } from "./rules.ts";
 import { cloudflareLogin, githubLogin, hasClassic } from "./settings.ts";
@@ -47,7 +53,10 @@ const HELP = `Usage: craftz <command>
   fix [dir]    writes every fix, then checks what's left
   settings [dir] [--check] [--yes]
                writes the settings on GitHub and Cloudflare, then reads them back
-  deploy       deploys the site the current folder built, as its ship script`;
+  deploy       deploys the site the current folder built, as its ship script
+  pr "<title>" [--label <label>] [--body <text>] [--wait]
+               opens a pull request that merges itself once CI passes
+  gone         deletes the local branches that merged`;
 
 const [command, arg, ...rest] = process.argv.slice(2);
 
@@ -181,6 +190,10 @@ if (command === "rules" && !rest.length) {
   process.exitCode = off ? 1 : 0;
 } else if (command === "deploy" && !arg) {
   process.exitCode = deploy(process.cwd());
+} else if (command === "pr") {
+  await pr([arg, ...rest].filter((it) => it !== undefined));
+} else if (command === "gone" && !arg) {
+  gone();
 } else if (command === "-h" || command === "--help") {
   console.log(HELP);
 } else {

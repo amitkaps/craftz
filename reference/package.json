@@ -11,8 +11,8 @@
     "test": "vp test --run",
     "ship": "cf deploy --prebuilt",
     "prose": "prose",
-    "pr": "node scripts/pr.ts",
-    "gone": "node scripts/gone.ts"
+    "pr": "craftz pr",
+    "gone": "craftz gone"
   },
   "devDependencies": {
     "@amitkaps/markz": "^0.6.0",

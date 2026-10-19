@@ -12,6 +12,7 @@ Every repository makes the same choices, like its toolchain, versions, workflows
 | `craftz fix` | writes every fix that can be automated |
 | `craftz settings` | checks and writes what lives outside the files, on GitHub and Cloudflare |
 | `craftz deploy` | deploys a site the way its Worker config says |
+| `craftz pr`, `craftz gone` | open a pull request that merges itself once CI passes, and delete the branches that merged |
 | `craftz rules [id]` | prints the rules, or one rule, from the installed version |
 | `craftz()` | a Vite plugin that sets `fmt`, `lint` and a site's config, and never overrides the repository's |
 
