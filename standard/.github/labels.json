@@ -1,0 +1,20 @@
+[
+  {
+    "name": "breaking",
+    "color": "B60205",
+    "description": "A change that needs users to update their code or documents"
+  },
+  { "name": "added", "color": "0E8A16", "description": "A new feature or warning" },
+  { "name": "fixed", "color": "1D76DB", "description": "A bug fix users would notice" },
+  {
+    "name": "improved",
+    "color": "5319E7",
+    "description": "Faster or smaller, with the same behaviour"
+  },
+  { "name": "docs", "color": "0075CA", "description": "Documentation readers use" },
+  {
+    "name": "internal",
+    "color": "CCCCCC",
+    "description": "Tests, tooling, site or lessons; left out of release notes"
+  }
+]
