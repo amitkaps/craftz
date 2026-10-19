@@ -83,6 +83,9 @@ function rulesDrift(found: BranchRule[]): string[] {
 
 const drifted = (drift: string[]): Finding => ({ drift });
 
+// A config with `craftz()` in its plugins has what the plugin sets, or fails when it conflicts.
+const PLUGIN = /\bplugins:\s*\[[^\]]*\bcraftz\(\)/;
+
 // What GitHub couldn't answer. Its rate limit isn't drift: the check says it wasn't made.
 export function unread(error: Error): Finding {
   if (error.name === "RateLimit") return { drift: [], unchecked: error.message };
@@ -642,6 +645,7 @@ export const RULES: Rule[] = [
       // Without Vite+ there's no lint block to read, and versions-vite-plus already says so.
       if (!own) return undefined;
       const vite = files["vite.config.ts"] ?? "";
+      if (PLUGIN.test(vite)) return drifted([]);
       const drift: string[] = [];
       if (!/typeAware:\s*true/.test(vite)) drift.push("lint isn't type-aware");
       if (!/typeCheck:\s*true/.test(vite)) drift.push("lint doesn't type-check");
@@ -653,6 +657,7 @@ export const RULES: Rule[] = [
     check: ({ files, vitePlus: own }) => {
       if (!own) return undefined;
       const vite = files["vite.config.ts"] ?? "";
+      if (PLUGIN.test(vite)) return drifted([]);
       if (!/\bfmt:\s*\{/.test(vite)) return drifted(["no fmt block"]);
       return drifted(
         /proseWrap:\s*"never"/.test(vite) ? [] : ['fmt doesn\'t set proseWrap: "never"'],
@@ -665,7 +670,8 @@ export const RULES: Rule[] = [
         if (!existsSync(file)) return;
         const text = read(file);
         // A config with no fmt block is left alone, and its check still drifts.
-        if (/proseWrap:\s*"never"/.test(text) || !/\bfmt:\s*\{/.test(text)) return;
+        if (PLUGIN.test(text) || /proseWrap:\s*"never"/.test(text) || !/\bfmt:\s*\{/.test(text))
+          return;
         const wrapped = text
           // The comment above the block says oxfmt's defaults, which it no longer is.
           .replace(

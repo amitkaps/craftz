@@ -39,6 +39,8 @@ lint: {
 },
 ```
 
+`craftz()` in the config's `plugins` sets the `fmt` and `lint` blocks, so a config with it holds neither. It fills in only what the config leaves unset, and fails a config that sets one of them differently, naming the key.
+
 ### The editor
 
 - [`toolchain-editor`]{#toolchain-editor}: every repository has the reference's [.vscode/settings.json](../reference/.vscode/settings.json), the one Vite+ writes, and recommends the extensions its `.vscode/extensions.json` does. A repository can add settings of its own, like base's for Svelte, and `align` keeps them when it writes the reference's.

@@ -46,12 +46,13 @@ type Pkg = {
 };
 const reference = JSON.parse(read("package.json")) as Pkg;
 
-// A block of craftz's `vite.config.ts`.
-function block(text: string, pattern: RegExp): string {
-  const found = pattern.exec(text)?.[0];
-  if (!found) throw new Error(`craftz's config has no ${pattern}`);
-  return found;
-}
+// The lint block `toolchain-lint` asks for. craftz's own config gets it from `craftz()`, which a
+// new repository can use once craftz is released, and then this block goes.
+const lint = `  lint: {
+    plugins: ["typescript", "unicorn", "import"],
+    categories: { correctness: "error" },
+    options: { typeAware: true, typeCheck: true },
+  },`;
 
 async function packageJson(name: string, kind: Kind, description: string): Promise<string> {
   const npm = (tool: string): string => {
@@ -165,7 +166,6 @@ function tsconfig(kind: Kind): string {
 }
 
 function viteConfig(kind: Kind): string {
-  const lint = block(own("vite.config.ts"), /^ {2}lint: \{[\s\S]*?^ {2}\},$/m);
   if (kind === "site") {
     const browsers = `  build: { target: ${JSON.stringify(BROWSERS).replaceAll(",", ", ")} },`;
     return `/** @prose

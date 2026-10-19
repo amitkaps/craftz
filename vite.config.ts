@@ -6,12 +6,18 @@
  *
  * The browsers and the Workers' date are worked out here and written in, as
  * [pinned.ts](src/pinned.ts) says. The packages they come from stay out of the bundle.
+ *
+ * `craftz()` sets the format and lint the rules ask for, from source, as a repository sets them
+ * from the package.
  */
 import { defineConfig } from "vite-plus";
 import { BROWSERS } from "./src/browsers.ts";
 import { COMPATIBILITY_DATE } from "./src/runtime.ts";
+import { craftz } from "./src/index.ts";
 
 export default defineConfig({
+  plugins: [craftz()],
+
   pack: {
     entry: ["src/index.ts", "src/cli.ts"],
     format: ["esm"],
@@ -24,16 +30,6 @@ export default defineConfig({
     publint: { strict: true },
     define: { __PINNED__: JSON.stringify({ browsers: BROWSERS, date: COMPATIBILITY_DATE }) },
     deps: { neverBundle: ["@mdn/browser-compat-data", "cf"] },
-  },
-
-  // oxfmt's defaults, with each Markdown paragraph on one line.
-  fmt: { proseWrap: "never" },
-
-  // Type-aware lint that also type-checks, so `pnpm check` needs no separate `tsc`.
-  lint: {
-    plugins: ["typescript", "unicorn", "import"],
-    categories: { correctness: "error" },
-    options: { typeAware: true, typeCheck: true },
   },
 
   test: {

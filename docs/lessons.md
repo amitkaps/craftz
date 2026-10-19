@@ -122,4 +122,6 @@ Most were learned before craftz, when one repository kept the rules and copied t
 
 **A fix that rewrites a file undoes the formatter.** The first `craftz fix` on a repository in line changed `.vscode/extensions.json`. The fix wrote the JSON it parsed with `JSON.stringify`, which puts the formatter's one-line array on four lines. Now a JSON file is written only when its value changes. To prove a fix is idempotent, run `craftz fix` twice on each repository's `main` from `git archive`, since a local checkout can be behind and look like drift.
 
+**A claim about a tool is tested twice, with and without.** `craftz()` rests on `vp fmt` and `vp lint` reading a plugin's `config` hook. A scratch project showed a hand-wrapped paragraph failing `vp fmt --check` and a type error failing `vp lint` with the plugin, and both passing without it. Only the run without the plugin shows that the plugin did it.
+
 **A file kept twice stays, while it's checked.** `scripts/pr.ts` and `scripts/gone.ts` are in `reference/` and in craftz's root, since craftz runs them like any repository. Having the rules read craftz's own copy would have saved one, but `reference/` would then hold every file a repository matches but two. So both stay, and `craftz check` keeps them the same, until `craftz pr` and `craftz gone` make the files unneeded.

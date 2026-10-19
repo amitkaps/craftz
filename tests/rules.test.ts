@@ -84,6 +84,19 @@ test("a build for browsers targets this repository's browsers", () => {
   ]);
 });
 
+test("a config with craftz() has the format and lint the rules set", () => {
+  const drift = (id: string, vite: string) =>
+    RULES.find((r) => r.id === id)?.check({
+      files: { "vite.config.ts": vite },
+      vitePlus: "1",
+    } as unknown as Repo)?.drift;
+  for (const id of ["toolchain-wrap", "toolchain-lint"]) {
+    expect(drift(id, "plugins: [craftz()],")).toEqual([]);
+    expect(drift(id, "plugins: [sveltekit(), craftz()],")).toEqual([]);
+    expect(drift(id, "// craftz() isn't used yet")).not.toEqual([]);
+  }
+});
+
 test("a Worker answers on its domain only, at the runtime's date, and the fixes write both", () => {
   const config = `export default defineConfig({
   worker: {
