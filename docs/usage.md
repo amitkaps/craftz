@@ -1,6 +1,6 @@
 # Usage
 
-craftz is used through its commands. Today that's `craftz rules`, to read the rules, and four scripts in this repository: `pnpm drift` checks every repository, `pnpm align` brings them in line, `pnpm new` starts one and `pnpm release` releases a package. The other commands in [the design](design.md#the-commands) come as [the plan](plan.md) builds them, and this page grows with them.
+craftz is used through its commands. Today that's `craftz rules`, `craftz check` and `craftz fix` in any repository, and four scripts in this repository: `pnpm drift` checks every repository, `pnpm align` brings them in line, `pnpm new` starts one and `pnpm release` releases a package. The other commands in [the design](design.md#the-commands) come as [the plan](plan.md) builds them, and this page grows with them.
 
 ## Install
 
@@ -18,6 +18,18 @@ pnpm exec craftz rules scripts-verify  # one rule, with the part it's under
 ```
 
 `craftz rules` prints [the rules](rules.md) from the installed version, so a repository reads the rules it's checked against, and nothing is fetched. A finding names its rule as `see: craftz rules <id>`, so the line to run is the one printed.
+
+## Checking one repository
+
+```sh
+pnpm exec craftz check          # this folder
+pnpm exec craftz check ../markz # another one
+pnpm exec craftz fix            # write every fix, then check again
+```
+
+`craftz check` runs every rule on the folder's files, with the installed version's rules, and prints what has drifted, each with its `see:` line. It exits 1 when anything has. It reads no settings, so it needs no login. It only asks GitHub whether the repository is private, under the folder's name.
+
+`craftz fix` writes every fix that can be automated, the same ones `pnpm align` runs, then checks again and prints what's left to do by hand. A fix can move versions, so run `pnpm install` next, then `pnpm run fix` for the format.
 
 ## Checking every repository
 

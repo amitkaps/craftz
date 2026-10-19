@@ -12,7 +12,8 @@
   },
   "files": [
     "dist",
-    "docs/rules.md"
+    "docs/rules.md",
+    "reference"
   ],
   "type": "module",
   "exports": {
