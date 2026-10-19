@@ -64,7 +64,7 @@ A repository isn't one type. It's four independent axes, as [the rules](rules.md
 
 A static site's files can come from anywhere, like `.prose` as `publicDir` or Vite's own pages, and nothing about the deploy changes. The axes don't overlap, so there's nothing to choose between. The deploy axis is the one that could, and the Worker config settles it, since code to run makes it an app. So no repository ever writes its type down.
 
-Some pairs meet badly, and they're allowed, with what's lost said where it applies, rather than a rule forbidding them. A package in a private repository can't have npm's provenance, and `new` says so. A private repository's rulesets may need a paid GitHub plan.
+Some pairs meet badly, and they're allowed, with what's lost said where it applies, rather than a rule forbidding them. A package in a private repository can't have npm's provenance, and `new` says so. A private repository's rulesets need a paid GitHub plan, which this account has.
 
 When cf can deploy SvelteKit, only `craftz deploy` changes, and the app needs no change of its own.
 

@@ -24,26 +24,29 @@ function part(name: string, drift: string[], after: string[], write?: () => stri
 
 test("each write is read back and reported as it ended", async () => {
   const writes: string[] = [];
-  const lines = await settle([
-    part("in line", [], [], () => {
-      writes.push("in line");
-      return [];
-    }),
-    part("merge", ["a is off", "b is off"], ["b is off"]),
-    part("ruleset", ["no ruleset"], ["no ruleset"], () => {
-      throw new Error("HTTP 403\nmore");
-    }),
-    part("worker", ["no trigger"], [], () => ["left: not connected yet"]),
-    {
-      name: "labels",
-      read: async () => {
-        throw new Error("HTTP 500");
+  const lines = await settle(
+    [
+      part("in line", [], [], () => {
+        writes.push("in line");
+        return [];
+      }),
+      part("merge", ["a is off", "b is off"], ["b is off"]),
+      part("ruleset", ["no ruleset"], ["no ruleset"], () => {
+        throw new Error("HTTP 403\nmore");
+      }),
+      part("worker", ["no trigger"], [], () => ["left: not connected yet"]),
+      {
+        name: "labels",
+        read: async () => {
+          throw new Error("HTTP 500");
+        },
+        write: () => {
+          writes.push("labels");
+        },
       },
-      write: () => {
-        writes.push("labels");
-      },
-    },
-  ]);
+    ],
+    0,
+  );
   expect(writes).toEqual([]);
   expect(lines).toEqual([
     "fixed: a is off",

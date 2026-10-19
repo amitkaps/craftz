@@ -6,7 +6,9 @@
  * same way. The pieces that read and write each setting are in [settings.ts](settings.ts).
  *
  * A write is done when the setting reads back as the rules want it, not when the API took it.
- * So each part is read, written only when it has drifted, then read again. Each line in the
+ * So each part is read, written only when it has drifted, then read again. GitHub can answer
+ * with what it held before a write for a few seconds, so a read that still drifts is tried again,
+ * a few times, before it's reported. Each line in the
  * report says what happened: `fixed`, `still off`, `failed` or `left`. Each write is
  * idempotent, so a run that stops partway, like GitHub's landing and Cloudflare's not, is
  * finished by running it again.
@@ -93,8 +95,11 @@ export async function checkSettings(target: Target): Promise<string[]> {
   return lines;
 }
 
+// How many more times a write is read back, `wait` apart, before it's still off.
+const RETRIES = 5;
+
 /** Each part read, written when it has drifted, and read back, in turn. */
-export async function settle(all: Part[]): Promise<string[]> {
+export async function settle(all: Part[], wait = 2_000): Promise<string[]> {
   const lines: string[] = [];
   for (const part of all) {
     const before = await read(part);
@@ -112,7 +117,11 @@ export async function settle(all: Part[]): Promise<string[]> {
     } catch (error) {
       lines.push(`failed: ${part.name}: ${reason(error)}`);
     }
-    const after = await read(part);
+    let after = await read(part);
+    for (let tries = 0; tries < RETRIES && Array.isArray(after) && after.length; tries++) {
+      await new Promise((resolve) => setTimeout(resolve, wait));
+      after = await read(part);
+    }
     if (after instanceof Error) {
       lines.push(`failed: ${after.message}`);
       continue;
