@@ -1,10 +1,18 @@
 # Design
 
-craftz is one way every repository builds, checks, deploys and releases, and the repository that shows it working. This page is the design as a whole. [The plan](plan.md) says which parts are built so far, and in what order the rest comes.
+craftz is one way to build, check, deploy and release a repository, as a package each one depends on. It's also the repository that shows it working. This page is the design as a whole. [The plan](plan.md) says which parts are built so far, and in what order the rest comes.
 
 ## What it is
 
-A package, `@amitkaps/craftz` on npm, that each repository depends on, the way a project depends on Vite+. It holds [the rules](rules.md), the check and the fix for each, the files a repository is compared with, and the commands that act on them. A repository holds its own code and a few short files that point to craftz.
+A package, `@amitkaps/craftz` on npm, that each repository depends on, the way a project depends on Vite+. A repository holds its own code and a few short files that point to craftz. The package holds the rest.
+
+- **The rules.** [The rules](rules.md) say what every repository does the same way and why, each under an id. `craftz rules` prints them from the installed version.
+- **The checks and fixes.** Each rule has a check, and a fix where one can be automated. `craftz check` runs them in a repository's `verify`, and `craftz fix` writes the fixes.
+- **The reference.** [reference/](../reference/README.md) holds the files a repository is compared with, like the workflows, the editor settings and the pinned versions. A fix copies from there.
+- **The settings.** `craftz settings` checks and writes what lives outside the files, like the `main` ruleset, the labels and each Worker's build settings.
+- **The plugin and the deploy.** `craftz()` sets the Vite+ config the rules ask for, and `craftz deploy` deploys a site the way its Worker config says.
+
+It's opinionated, and built for one setup: Vite+, pnpm, Node 26, GitHub and Cloudflare Workers. It doesn't try to fit another, since every choice it makes rests on that setup.
 
 It's built with `vp pack` and released like markz and prose. It follows its own rules, so it's also the first repository they're tried on.
 
@@ -14,7 +22,7 @@ Each repository used to make the same choices on its own, and they drifted. Ther
 
 Then the choices were kept in one repository and copied into the rest. Every repository held copies, like `pr.ts`, `gone.ts`, the release workflow, CI's Label step, the `fmt` and `lint` config and the editor settings, and that one repository checked and moved them. Each new repository added more copies to keep in line. An agent read the rules by fetching a page, which hands it a summary, not the text.
 
-A package removes both. A repository checks itself against the version it installs, and `craftz rules` prints the rules from that version, with no fetch.
+A package removes both. A repository checks itself against the version it installs, and `craftz rules` prints the rules from that version, with no fetch. A new choice reaches every repository as a version bump, which `craftz align` opens as a pull request in each. A repository that's behind still checks clean against its own version, so nothing breaks before it moves.
 
 ## One rule, one check, one fix
 

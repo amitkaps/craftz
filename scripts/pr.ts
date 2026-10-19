@@ -3,7 +3,7 @@
  *
  * `pnpm pr "<title>"` takes what's in the working tree to a pull request that merges itself once
  * CI passes, which is how every change reaches `main`. It's the same file in every repository,
- * copied from [ship](https://ship.amitkaps.com/docs/standard.md#scripts), so a person and an
+ * copied from [craftz](https://craftz.amitkaps.com/docs/rules.md#scripts), so a person and an
  * agent take the same steps everywhere.
  *
  * On `main`, it starts a branch named after the title. It commits what's changed, with the title

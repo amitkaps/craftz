@@ -2,15 +2,15 @@
 
 The sections every repository's `AGENTS.md` has, word for word. The rest of the file is the repository's own.
 
-## Standard
+## craftz
 
-This repository follows the standard at [ship](https://ship.amitkaps.com), which sets how every repository builds, checks and deploys. Read [the standard](https://ship.amitkaps.com/docs/standard.md) before changing any of that.
+This repository follows [craftz's rules](https://craftz.amitkaps.com/docs/rules.md), which set how every repository builds, checks, deploys and releases. Run `pnpm exec craftz rules` before changing any of that. It prints the rules for the version this repository installs, and `pnpm exec craftz rules <id>` prints one.
 
-- Change the toolchain, scripts, versions or deploys in ship first, then bring each repository in line. Don't change them in one repository alone.
+- Change the toolchain, scripts, versions or deploys in craftz first, then bring each repository in line. Don't change them in one repository alone.
 - Open a pull request with `pnpm pr "<title>"`. It branches from `main`, commits, runs `pnpm run verify`, pushes and turns on auto-merge, and the pull request is squash-merged once CI passes. Nobody pushes to `main`. After a merge, `pnpm gone` deletes the merged branches.
 - In a package, give it one label for the release notes, `pnpm pr "<title>" --label <label>`: `breaking`, `added`, `fixed`, `improved`, `docs`, or `internal` for tests, tooling, site and lessons. CI fails without one.
 - Run tools through `pnpm run …` and `pnpm exec`, not global installs.
-- A held check on ship's page is a tool's limit, not a choice. Leave it until its reason goes away.
+- A held check is a tool's limit, not a choice. The rules give its reason, so leave it until the reason goes away.
 
 ## Prose
 

@@ -270,8 +270,11 @@ const ACTIONS = Object.fromEntries(
  * A section runs from its `## ` heading to the next. The fix writes this repository's two
  * sections over a repository's own, or puts them before its first section when they're
  * missing, and leaves the rest of the file alone.
+ *
+ * The craftz section was called Standard before craftz. The fix renames a repository's Standard
+ * section to craftz, so the old section doesn't stay beside the new one.
  */
-const SECTIONS = ["Standard", "Prose"];
+const SECTIONS = ["craftz", "Prose"];
 const sectionOf = (heading: string): RegExp =>
   new RegExp(`^## ${heading}\\n([\\s\\S]*?)(?=^## |(?![\\s\\S]))`, "m");
 const section = (text: string, heading: string): string | undefined =>
@@ -309,7 +312,7 @@ export const shipping = (shape: Shape, release: string, deploy: string): string[
 
 function firstDocs(name: string, shape: Shape, description: string): Record<string, string> {
   const built = shape.package || shape.site;
-  const standard = "https://ship.amitkaps.com/docs/standard.md";
+  const rules = "https://craftz.amitkaps.com/docs/rules.md";
   type Page = [file: string, title: string, what: string];
   const usage: Page = ["usage.md", "Usage", "install it, use it, and the snippet for agents."];
   const pages: Page[] = [
@@ -354,7 +357,7 @@ What it leaves out on purpose, so nobody adds it back.
 
 ### Started
 
-It follows [ship's standard](${standard}).
+It follows [craftz's rules](${rules}).
 
 ## Next, in order
 
@@ -374,7 +377,7 @@ How ${name} is built and changed. What every repository shares, like ${listed([
       "the scripts",
       "CI",
       ...shipping(shape, "releases", "deploys"),
-    ])}, is in [ship's standard](${standard}), and isn't repeated here.
+    ])}, is in [craftz's rules](${rules}), and isn't repeated here.
 
 ## Build and test
 
@@ -475,7 +478,7 @@ const SCRIPTS_README = `# Scripts
 
 Scripts this repository runs with Node, which reads TypeScript as it is. [pr.ts](pr.ts) and
 [gone.ts](gone.ts) are the same file in every repository, copied from
-[ship](https://ship.amitkaps.com/docs/standard.md#scripts), so change them there.
+[craftz](https://craftz.amitkaps.com/docs/rules.md#scripts), so change them there.
 `;
 
 const sharedScript = (id: string, name: string): Rule => ({
@@ -1017,6 +1020,7 @@ export const RULES: Rule[] = [
         const ours = read(join(std, "AGENTS.md"));
         const path = join(dir, "AGENTS.md");
         let text = read(path) || "# AGENTS.md\n";
+        if (!sectionOf("craftz").test(text)) text = text.replace(/^## Standard$/m, "## craftz");
         let after = -1;
         for (const heading of SECTIONS) {
           const want = sectionOf(heading).exec(ours)?.[0];

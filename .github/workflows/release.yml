@@ -3,8 +3,8 @@
 #
 # Merging a new `version` in `package.json` releases it. The workflow checks the package, stages
 # it on npm, then tags the merged commit `vX.Y.Z` and publishes a GitHub Release with the tarball.
-# Nobody pushes a tag by hand. This file is the same in every package, copied from ship's
-# `package/` folder, so it names no package and reads everything from `package.json`.
+# Nobody pushes a tag by hand. This file is the same in every package, copied from craftz's
+# `reference/package/` folder, so it names no package and reads everything from `package.json`.
 #
 # npm uses trusted publishing, with OIDC and provenance, so there's no token to store. The
 # publisher may only stage. The new version waits on npmjs.com until a maintainer approves it

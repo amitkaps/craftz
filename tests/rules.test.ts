@@ -13,7 +13,7 @@ import { BROWSERS } from "../src/browsers.ts";
 import { COMPATIBILITY_DATE } from "../src/runtime.ts";
 import { BETA, RULES } from "../src/rules.ts";
 import { parts, stated } from "../src/stated.ts";
-import { standard } from "../src/reference.ts";
+import { here, standard } from "../src/reference.ts";
 import { CHECKS, type Repo, worker } from "../src/survey.ts";
 
 const checked = RULES.map((rule) => rule.id);
@@ -131,6 +131,22 @@ test("a Worker answers on its domain only, at the runtime's date, and the fixes 
   expect(
     drift(config.replace("previewUrls: true,", 'compatibilityFlags: ["nodejs_als"],')),
   ).toContain("sets a Node.js compatibility flag");
+});
+
+test("the agents' fix writes craftz over the Standard section it replaces", () => {
+  const dir = mkdtempSync(join(tmpdir(), "craftz-agents-"));
+  const old =
+    "# AGENTS.md\n\nx\n\n## Standard\n\nOld.\n\n## Prose\n\nOld.\n\n## This repository\n\nOurs.\n";
+  writeFileSync(join(dir, "AGENTS.md"), old);
+  const rule = RULES.find((r) => r.id === "agents-sections");
+  if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
+  const text = readFileSync(join(dir, "AGENTS.md"), "utf8");
+  const files = { "AGENTS.md": text, "CLAUDE.md": "@AGENTS.md\n" };
+  expect(rule?.check({ files } as unknown as Repo)?.drift ?? []).toEqual([]);
+  expect(text).not.toContain("## Standard");
+  expect(text).toMatch(
+    /^# AGENTS\.md\n\nx\n\n## craftz\n[\s\S]*## Prose\n[\s\S]*## This repository\n\nOurs\.\n$/,
+  );
 });
 
 test("the betas this repository is on are the ones the rules name", () => {
