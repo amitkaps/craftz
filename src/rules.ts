@@ -276,32 +276,39 @@ const agents = read(join(here, "AGENTS.md"));
  * alone, since it's written, not copied. `pnpm new` starts every doc this way. A README that
  * doesn't link to `docs/` is fixed by hand.
  */
-export type Kind = "package" | "site" | "tool";
+export type Shape = { package: boolean; site: boolean };
 
-// What a folder is: a package unless it's private, then a site if it has a Worker's config.
-function kindOf(dir: string, pkg: Pkg): Kind {
-  if (!pkg.private) return "package";
+// What a folder publishes and deploys: a package unless it's private, a site if it has a
+// Worker's config, either, both or neither.
+function shapeOf(dir: string, pkg: Pkg): Shape {
   const site = ["cloudflare.config.ts", "wrangler.jsonc", "wrangler.toml"];
-  return site.some((file) => existsSync(join(dir, file))) ? "site" : "tool";
+  return { package: !pkg.private, site: site.some((file) => existsSync(join(dir, file))) };
 }
 
-function firstDocs(name: string, kind: Kind, description: string): Record<string, string> {
+// Words as a list in a sentence, like "build, test, release and deploy".
+export const listed = (words: string[]): string =>
+  words.length > 1 ? `${words.slice(0, -1).join(", ")} and ${words.at(-1)}` : (words[0] ?? "");
+
+// What a shape adds to a list, like "release" and "deploy".
+export const shipping = (shape: Shape, release: string, deploy: string): string[] => [
+  ...(shape.package ? [release] : []),
+  ...(shape.site ? [deploy] : []),
+];
+
+function firstDocs(name: string, shape: Shape, description: string): Record<string, string> {
+  const built = shape.package || shape.site;
   const standard = "https://ship.amitkaps.com/docs/standard.md";
   type Page = [file: string, title: string, what: string];
   const usage: Page = ["usage.md", "Usage", "install it, use it, and the snippet for agents."];
   const pages: Page[] = [
     ["design.md", "Design", "what it is, why it's built this way, and what it isn't."],
-    ...(kind === "package" ? [usage] : []),
+    ...(shape.package ? [usage] : []),
     ["plan.md", "Plan", "what's done and what's next, in order."],
     ["lessons.md", "Lessons", "what building it taught, for the next change."],
     [
       "development.md",
       "Development",
-      {
-        site: "build, test and deploy it.",
-        package: "build, test and release it.",
-        tool: "check and test it.",
-      }[kind],
+      `${listed([...(built ? ["build"] : ["check"]), "test", ...shipping(shape, "release", "deploy")])} it.`,
     ],
   ];
   const files: Record<string, string> = {
@@ -351,19 +358,21 @@ What building ${name} taught, for whoever changes it next. Each lesson says what
 `,
     "docs/development.md": `# Development
 
-How ${name} is built and changed. What every repository shares, like the scripts${
-      { site: ", CI and deploys", package: ", CI and releases", tool: " and CI" }[kind]
-    }, is in [ship's standard](${standard}), and isn't repeated here.
+How ${name} is built and changed. What every repository shares, like ${listed([
+      "the scripts",
+      "CI",
+      ...shipping(shape, "releases", "deploys"),
+    ])}, is in [ship's standard](${standard}), and isn't repeated here.
 
 ## Build and test
 
 \`\`\`sh
-pnpm install${kind === "tool" ? "" : "\npnpm dev"}
+pnpm install${built ? "\npnpm dev" : ""}
 pnpm verify    # what CI runs
 \`\`\`
 `,
   };
-  if (kind === "package") {
+  if (shape.package) {
     files["docs/usage.md"] = `# Usage
 
 ## Install
@@ -694,8 +703,9 @@ export const RULES: Rule[] = [
     check: ({ files, worker: site }) => {
       const vite = files["vite.config.ts"] ?? "";
       const pack = /\bpack:\s*\{/.test(vite) && !/platform:\s*"node"/.test(vite);
-      const app = Boolean(site) && !/publicDir:\s*"\.prose"/.test(vite);
-      if (!pack && !app) return undefined;
+      // A site Vite bundles from source, unlike one that serves a folder `prose build` wrote.
+      const bundled = Boolean(site) && !/publicDir:\s*"\.prose"/.test(vite);
+      if (!pack && !bundled) return undefined;
       const have = targetsIn(vite);
       const where = pack ? "pack.target" : "build.target";
       if (!have.length) return drifted([`${where} isn't set`]);
@@ -1031,7 +1041,7 @@ export const RULES: Rule[] = [
       apply: (dir) => {
         const pkg = readPkg(dir);
         const name = (pkg.name ?? "").replace(/^@[^/]+\//, "");
-        const first = firstDocs(name, kindOf(dir, pkg), pkg.description ?? "");
+        const first = firstDocs(name, shapeOf(dir, pkg), pkg.description ?? "");
         const index = join(dir, "docs", "README.md");
         const had = read(index);
         mkdirSync(join(dir, "docs"), { recursive: true });

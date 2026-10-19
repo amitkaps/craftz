@@ -308,11 +308,13 @@ export function rebuild(name: string): string {
 /** @prose
  * # Access
  *
- * A private repository's site is internal when an Access application covers its domain, and
- * Access lets in only who its policies name. One with no policy lets nobody in, so it's drift.
+ * A site is internal when an Access application covers its domain, and Access lets in only who
+ * its policies name. One with no policy lets nobody in, so it's drift. Any site can be internal,
+ * in a public repository or a private one, since the code's visibility and the site's are
+ * separate axes.
  *
- * With no application, the site is public, which a private repository may choose. That's said
- * once, not counted as drift, so a site meant to be internal doesn't go public unseen.
+ * With no application, the site is public. That's said once, not counted as drift, so a site
+ * meant to be internal doesn't go public unseen.
  *
  * Access is turned on once per account, in the Zero Trust dashboard, and until it is, the
  * lookup fails and says so. Access isn't written, since who it lets in is a choice for each site.

@@ -6,15 +6,23 @@ The repositories are the ones in `REPOS`, in [src/survey.ts](../src/survey.ts). 
 
 A rule `drift` checks is a list item that opens with its id as a span, like ``[`scripts-verify`]{#scripts-verify}``. An id is lowercase kebab case, its part and then its name, since an id can't hold a dot. Its first sentence is the rule, and the rest says why. `drift` prints the id on each line a repository drifted on, and `craftz rules <id>` prints the rule. The check, and the fix where one can be automated, are in [src/rules.ts](../src/rules.ts), under the same id. Some checks don't have an id yet, and they move over part by part.
 
-## Kinds
+## Axes
 
-What a repository must have follows from three facts, each read from where it already lives, so none is declared twice.
+What a repository must have follows from four axes. Each is read from where it already lives, so none is declared twice, and each varies on its own.
 
-- **A package** is published to npm, and its `package.json` isn't `private`.
-- **A site** deploys to a Cloudflare Worker, and has a Worker config.
-- **A tool** is neither, just scripts run on a laptop.
+| Axis       | Values               | Read from                                             |
+| ---------- | -------------------- | ----------------------------------------------------- |
+| publish    | package, or none     | `package.json` isn't `private`                        |
+| deploy     | static, app, or none | the Worker config, and whether it has code of its own |
+| audience   | public or internal   | Cloudflare Access, for each site                      |
+| repository | public or private    | GitHub                                                |
 
-A site is **internal** when Cloudflare Access covers its domain, and only a private repository's site can be. An internal site is still a site, deployed the same way, as [Internal sites](#internal-sites) says. A package can't be internal, since npm is public.
+- **Publish.** A package is published to npm, so its audience there is public. A private npm package would be a fifth value, and none is needed yet.
+- **Deploy.** A site deploys to a Cloudflare Worker. One whose config names code to run, cf's `entrypoint` or wrangler's `main`, is an [app](#an-app). One without is static, whatever builds its files, like [a prose site](#a-prose-site) or a Vite page.
+- **Audience.** A site is internal when Cloudflare Access covers its domain, as [Internal sites](#internal-sites) says. Audience applies only to a site.
+- **Repository.** Whether the code is public is separate from whether the site is. A private repository can have a public site, and a public repository an internal one.
+
+A package can have a site, like markz and its docs. A repository with neither is scripts run on a laptop. Where two axes meet badly, the pair is allowed, and what's lost is said where it applies. npm takes provenance only from a public repository, so a package in a private one publishes without it.
 
 ## Toolchain: Vite+
 
@@ -57,7 +65,7 @@ Code shipped to browsers works in the browsers people use, with a floor for each
 - **Gecko**, which is Firefox: the oldest ESR Mozilla supports. It's the oldest Firefox that still gets fixes.
 - **WebKit**, which is Safari and every browser on iOS, in-app browsers too: the newest release of the major two before the current one. An iPhone that a new iOS drops stays on its last major and keeps getting point releases, so that's the oldest Safari in use. Chrome on iOS and an app's WebView run this engine too, so it covers more people than Safari's own share.
 
-- [`toolchain-browsers`]{#toolchain-browsers}: a build that bundles code for browsers targets these browsers, in `build.target` for an app and in `pack.target` for a package that isn't `platform: "node"`. A package that runs in Node too adds its Node to the list.
+- [`toolchain-browsers`]{#toolchain-browsers}: a build that bundles code for browsers targets these browsers, in `build.target` for a site Vite bundles from source and in `pack.target` for a package that isn't `platform: "node"`. A package that runs in Node too adds its Node to the list.
 
 The list is worked out from MDN's browser-compat-data, by [src/browsers.ts](../src/browsers.ts), as of the date of the data. The package is one of craftz's own dependencies, so a craftz release moves it, and the floors move with it, with `drift` listing what then needs the new list.
 
@@ -188,12 +196,12 @@ A site that needs code on the server starts from base: SvelteKit with `adapter-c
 
 ### Internal sites
 
-A private repository's site can be public or internal. Its code is private either way, and an internal site is one that Cloudflare Access covers.
+Any site can be public or internal, in a public repository or a private one. An internal site is one that Cloudflare Access covers, and it's deployed like any other.
 
 - **Access covers its domain.** A Cloudflare Access application on the site's domain, with a policy that lets in only who it's for. Access is turned on once per account, in the Zero Trust dashboard.
 - **Its other addresses are off,** as on every site, by `cloudflare-addresses`. Access covers the domain, not the Worker, so `workers.dev` or a preview URL would serve the site without a login.
 
-The config says so in its `@prose` comment. `drift <folder>` reads whether the repository is private from GitHub, and with `cf` logged in, looks up Access for its domain. An application with no policy has drifted. With no application, the site is public, and drift says so on its own line, without counting it, so a site meant to be internal doesn't go public unseen.
+The config says so in its `@prose` comment. With `cf` logged in, `drift` looks up Access for every site's domain. An application with no policy has drifted. With no application, the site is public, and drift says so on its own line, without counting it, so a site meant to be internal doesn't go public unseen.
 
 ## GitHub
 
@@ -313,7 +321,7 @@ A change to the rules, like a new check, is a pull request to craftz, and the ne
 
 ### Following it unlisted
 
-A private repository can follow these rules without joining `REPOS`, since craftz is public and would name it. `drift <folder>` checks it from disk, everything but its branch rules and labels, which `align <repo>` still writes, and reads from GitHub whether it's private. Where it can't follow a rule, its own docs say which and why.
+A private repository can follow these rules without joining `REPOS`, since craftz is public and would name it. `drift <folder>` checks it from disk, everything but its branch rules and labels, which `align <repo>` still writes. Where it can't follow a rule, its own docs say which and why.
 
 ### Starting one
 
@@ -321,12 +329,13 @@ A private repository can follow these rules without joining `REPOS`, since craft
 
 ```sh
 new <name> --package --description "What it is, in a sentence." --push
-new <name> --site --description "What it is, in a sentence." --push
-new <name> --tool --internal --description "What it is, in a sentence." --push
+new <name> --package --site static --description "What it is, in a sentence." --push
+new <name> --site static --internal --description "What it is, in a sentence." --push
+new <name> --private --description "What it is, in a sentence." --push
 ```
 
-`--internal` makes a site or a tool private on GitHub and leaves it out of `REPOS`, and an internal site's config says it's behind Access. The Access application is the step left to do by hand.
+The flags are [the axes](#axes). `--package` publishes it and `--site static` deploys a static site, and with neither, it's scripts run on a laptop. `--private` makes the repository private on GitHub and leaves it out of `REPOS`. `--internal` says in a site's config that it's behind Access, and the Access application is the step left to do by hand.
 
-It writes only what's the repository's own: its name and description, its source, the Vite config and strict types for its kind, and CI, each built from the reference's files rather than a template. Then it runs every rule's fix, the ones `align` runs. They write the rest: the versions and engines, the shared scripts, the editor settings, the cooldown, the shared `AGENTS.md` sections, a package's release files and packing, and a first version of each doc. So a new repository can't follow the rules any less than `align` makes an old one. Then it installs, formats with `fix`, runs `verify` and makes the first commit. `--push` creates the repository on GitHub, pushes that commit and writes its GitHub settings, as `align` does. That first push is the only one to `main` the rules allow, since the rules aren't on yet. It prints what's left: adding the repository to `REPOS`, and the Worker or npm's setup. A SvelteKit app starts from base instead, and is brought in like any other.
+It writes only what's the repository's own: its name and description, its source, its Vite config and strict types, and CI. Each is built from the reference's files rather than a template. Then it runs every rule's fix, the ones `align` runs. They write the rest: the versions and engines, the shared scripts, the editor settings, the cooldown, the shared `AGENTS.md` sections, a package's release files and packing, and a first version of each doc. So a new repository can't follow the rules any less than `align` makes an old one. Then it installs, formats with `fix`, runs `verify` and makes the first commit. `--push` creates the repository on GitHub, pushes that commit and writes its GitHub settings, as `align` does. That first push is the only one to `main` the rules allow, since the rules aren't on yet. It prints what's left: adding the repository to `REPOS`, and the Worker or npm's setup. A SvelteKit app starts from base instead, and is brought in like any other.
 
-`new`'s test generates a package, a site, a tool and an internal site, checks each against the survey and runs its `verify`, so the generator can't fall behind the rules.
+`new`'s test generates a package, a static site, a package with a site, scripts in a private repository and an internal site. It checks each against the survey and runs its `verify`, so the generator can't fall behind the rules.

@@ -38,20 +38,25 @@ craftz owns a repository's conventions and its lifecycle commands. Vite+ and eac
 | `craftz new` | starts a repository that already follows the rules |
 | `craftz drift` | reports every repository's craftz version, checks and settings |
 | `craftz align` | moves each repository that's behind to the latest craftz, in a pull request |
-| `craftz()` | a Vite plugin that sets `fmt`, `lint` and a site's config for its type |
+| `craftz()` | a Vite plugin that sets `fmt`, `lint` and a site's config for what it deploys |
 
 `ship` stays the deploy verb, as the `ship` script, so the command and the script don't share a name. pnpm runs a script before a command of the same name, so a command called `ship` would run the deploy.
 
-## Types
+## Axes
 
-Each type is read from the project, never declared, and `craftz()` and `craftz deploy` act on it. A project that matches two types fails `craftz check` until it names one, and that's the only time a type is written down. A failure lists the evidence that matched each type, like a dependency or a folder, so it's clear what to change.
+A repository isn't one type. It's four independent axes, as [the rules](rules.md#axes) define them: what it publishes, what it deploys, who the site is for, and who can see the code. Each is read from where it already lives, never declared, and `craftz()` and `craftz deploy` act on them.
 
-| Type | Read from | Gets |
+| Axis | Read from | Gets |
 | --- | --- | --- |
-| prose site | `@amitkaps/prose`, and no server code | `.prose` as `publicDir`, Cloudflare's plugin with `assetsOnly`, `cf deploy --prebuilt` |
-| app | `@sveltejs/kit` | the adapter, `wrangler types`, and wrangler's deploy while it's held |
-| package | not `private` | `vp pack`, the release workflow, a release-notes label |
-| tool | none of these | the checks |
+| publish: package | not `private` | `vp pack`, the release workflow, a release-notes label |
+| deploy: static | a Worker config with no code of its own | Cloudflare's plugin with `assetsOnly`, `cf deploy --prebuilt` |
+| deploy: app | a Worker config with an `entrypoint` or `main` | the adapter, `wrangler types`, and wrangler's deploy while it's held |
+| audience: internal | an Access application on the site's domain | its other addresses off, and Access's policy checked |
+| repository: private | GitHub | no `LICENSE`, and no place in `REPOS` |
+
+A static site's files can come from anywhere, like `.prose` as `publicDir` or Vite's own pages, and nothing about the deploy changes. The axes don't overlap, so there's nothing to choose between. The deploy axis is the one that could, and the Worker config settles it, since code to run makes it an app. So no repository ever writes its type down.
+
+Some pairs meet badly, and they're allowed, with what's lost said where it applies, rather than a rule forbidding them. A package in a private repository can't have npm's provenance, and `new` says so. A private repository's rulesets may need a paid GitHub plan.
 
 When cf can deploy SvelteKit, only `craftz deploy` changes, and the app needs no change of its own.
 
