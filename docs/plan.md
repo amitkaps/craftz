@@ -26,13 +26,17 @@ The command runs every rule on a folder and writes every fix, from the installed
 
 ### `craftz()`
 
-The plugin sets `fmt` and `lint`, and fails a config that sets either differently, with a test that it never overrides one. craftz's own config uses it, and the checks accept it. A site's config for its type comes with `craftz deploy`, which reads the same type.
+The plugin sets `fmt` and `lint`, and fails a config that sets either differently, with a test that it never overrides one. craftz's own config uses it, and the checks accept it.
+
+### A site's config and `craftz deploy`
+
+Both read the deploy axis from the Worker config. `craftz()` sets a static site's `publicDir` or `build.target`, and `craftz deploy` runs cf or wrangler. craftz's own docs are its site, built by `verify` and deployed by `craftz deploy` from source. A dry run reads every file, and the Worker for craftz.amitkaps.com is still to be created and connected by hand.
 
 ## Next, in order
 
 Each step works in one repository before the next starts.
 
-1. **The release cycle.** A hard gate before any real repository moves. First `craftz deploy` and a site's config in `craftz()`, both from the type read from the project. From a clean checkout, release craftz's first version. Then `craftz new`, writing `craftz()` in place of the `fmt` and `lint` blocks, makes a test repository, which passes its full `verify` and deploys through `craftz deploy`.
+1. **The release cycle.** A hard gate before any real repository moves. First, craftz's site goes live at craftz.amitkaps.com through `craftz deploy`. From a clean checkout, release craftz's first version. Then `craftz new`, writing `craftz()` in place of the `fmt` and `lint` blocks, makes a test repository, which passes its full `verify` and deploys through `craftz deploy`.
 2. **The repositories.** Move one real repository, then the rest, with `craftz align`. The files every repository shares word for word, like the `AGENTS.md` sections and the workflows, change here, and their "Standard" section becomes "Rules", pointing at `craftz rules`. `pr` and `gone` become `craftz pr` and `craftz gone`, so no repository copies `scripts/pr.ts` or `scripts/gone.ts`, and both `scripts/` folders here go.
 3. **The old repository retires.** The one that kept the rules before craftz is archived with its history, and its site redirects to craftz's, since every `AGENTS.md` links to it until step 2 has moved them.
 

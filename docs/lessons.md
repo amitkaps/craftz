@@ -127,3 +127,5 @@ Most were learned before craftz, when one repository kept the rules and copied t
 **A file kept twice stays, while it's checked.** `scripts/pr.ts` and `scripts/gone.ts` are in `reference/` and in craftz's root, since craftz runs them like any repository. Having the rules read craftz's own copy would have saved one, but `reference/` would then hold every file a repository matches but two. So both stay, and `craftz check` keeps them the same, until `craftz pr` and `craftz gone` make the files unneeded.
 
 **A type that's a combination of axes breaks on the next combination.** "Package, site or tool" couldn't say what markz is, a package with a site, or what an internal site in a public repository is. Four axes, each read from its own place, describe every repository, and a new one needs no new type. When two kinds overlap, look for the separate questions they answer.
+
+**A deploy can be tested before there's anywhere to deploy to.** `cf deploy --prebuilt --dry-run` reads the Build Output and stops before the upload, so craftz's site was checked before its Worker existed. Run it after `vp build` on any site whose deploy changes, before the first real one.

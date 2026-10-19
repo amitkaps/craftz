@@ -1,6 +1,8 @@
 # Usage
 
-craftz is used through its commands and its plugin. Any repository has `craftz rules`, `craftz check`, `craftz fix`, `craftz settings` and the `craftz()` plugin. This repository adds four scripts: `pnpm drift` checks every repository, `pnpm align` brings them in line, `pnpm new` starts one and `pnpm release` releases a package. The other commands in [the design](design.md#the-commands) come as [the plan](plan.md) builds them, and this page grows with them.
+craftz is used through its commands and its plugin.
+
+Any repository has `craftz rules`, `craftz check`, `craftz fix`, `craftz settings`, `craftz deploy` and the `craftz()` plugin. This repository adds four scripts: `pnpm drift` checks every repository, `pnpm align` brings them in line, `pnpm new` starts one and `pnpm release` releases a package. The other commands in [the design](design.md#the-commands) come as [the plan](plan.md) builds them, and this page grows with them.
 
 ## Install
 
@@ -43,6 +45,26 @@ export default defineConfig({
 ```
 
 `craftz()` sets the `fmt` and `lint` blocks the rules ask for, so `vite.config.ts` holds only what's the repository's own. It never overrides the config. A key the config leaves unset is filled in, and one it sets differently fails `vp` with the key named, so take that key out.
+
+A static site gets its config too, read from its Worker config. With an `index.html`, `build.target` is the rules' browsers. Without one, the site is the folder `prose build` writes, and `publicDir` is `.prose`. The Cloudflare plugin stays in the config, since it's the repository's own dependency.
+
+```ts
+import { cloudflare } from "@cloudflare/vite-plugin";
+import { craftz } from "@amitkaps/craftz";
+import { defineConfig } from "vite-plus";
+
+export default defineConfig({
+  plugins: [craftz(), cloudflare({ assetsOnly: true })],
+});
+```
+
+## Deploying a site
+
+```sh
+pnpm exec craftz deploy
+```
+
+`craftz deploy` deploys the site the folder has built, and a site's `ship` script runs it, which is the Worker's deploy command. A static site uploads its Build Output with `cf deploy --prebuilt`. An app runs `wrangler deploy`, until cf can deploy one. To see what would go up without uploading it, run `pnpm exec cf deploy --prebuilt --dry-run` after the build.
 
 ## Writing the settings
 

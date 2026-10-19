@@ -5,14 +5,47 @@
  * into a config, the way Vite does. Unset keys are filled in and the repository's own stay.
  *
  * A value set the same passes, and a value set differently fails, naming each key.
+ *
+ * Each config has its own folder as its root, since a site's config follows from the files
+ * there: a Worker config, and an `index.html` or none.
  */
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { mergeConfig } from "vite-plus";
 import { expect, test } from "vite-plus/test";
 import { craftz } from "../src/index.ts";
+import { BROWSERS } from "../src/pinned.ts";
 
 type Config = Record<string, unknown>;
 
-const resolved = (config: Config): Config => mergeConfig(config, craftz().config(config)) as Config;
+// A folder holding these files, as a config's root.
+function folder(files: Record<string, string> = {}): string {
+  const dir = mkdtempSync(join(tmpdir(), "craftz-plugin-"));
+  for (const [file, text] of Object.entries(files)) writeFileSync(join(dir, file), text);
+  return dir;
+}
+
+// The config Vite ends with, without its root.
+function resolved(config: Config, root = folder()): Config {
+  const at = { ...config, root };
+  const { root: _, ...rest } = mergeConfig(at, craftz().config(at)) as Config;
+  return rest;
+}
+
+const STATIC = `export default defineConfig({
+  worker: {
+    name: "example",
+  },
+});
+`;
+const APP = `export default defineConfig({
+  worker: {
+    name: "example",
+    entrypoint: "src/worker.ts",
+  },
+});
+`;
 
 test("an empty config gets what the rules set", () => {
   expect(resolved({})).toEqual({
@@ -44,12 +77,38 @@ test("a value set differently fails, naming each key", () => {
     fmt: { proseWrap: "preserve" },
     lint: { plugins: ["typescript"], options: { typeCheck: false } },
   };
-  expect(() => craftz().config(config)).toThrow(
+  expect(() => craftz().config({ ...config, root: folder() })).toThrow(
     [
       "craftz() won't override vite.config.ts. Take these out of it:",
       '  fmt.proseWrap is "preserve", and the rules set "never"',
       '  lint.plugins is ["typescript"], and the rules set ["typescript","unicorn","import"]',
       "  lint.options.typeCheck is false, and the rules set true",
     ].join("\n"),
+  );
+});
+
+test("a static site with an index.html gets the browsers as its build target", () => {
+  const root = folder({ "cloudflare.config.ts": STATIC, "index.html": "<!doctype html>" });
+  expect(resolved({}, root)["build"]).toEqual({ target: BROWSERS });
+  expect(resolved({}, root)["publicDir"]).toBeUndefined();
+});
+
+test("a static site without one serves the folder prose writes", () => {
+  const root = folder({ "cloudflare.config.ts": STATIC });
+  expect(resolved({}, root)["publicDir"]).toBe(".prose");
+  expect(resolved({}, root)["build"]).toBeUndefined();
+});
+
+test("an app and a folder with no Worker get no site config", () => {
+  for (const root of [folder({ "cloudflare.config.ts": APP, "index.html": "" }), folder()]) {
+    const out = resolved({}, root);
+    expect([out["build"], out["publicDir"]]).toEqual([undefined, undefined]);
+  }
+});
+
+test("a site's config set differently fails too", () => {
+  const root = folder({ "cloudflare.config.ts": STATIC });
+  expect(() => craftz().config({ publicDir: "public", root })).toThrow(
+    '  publicDir is "public", and the rules set ".prose"',
   );
 });

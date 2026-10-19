@@ -24,6 +24,7 @@ import { writeLabels, writeRuleset } from "./settings.ts";
 import { BROWSERS, COMPATIBILITY_DATE } from "./pinned.ts";
 import { stated } from "./stated.ts";
 import type { BranchRule, Finding, Repo } from "./survey.ts";
+import type { Worker } from "./worker.ts";
 
 export type Fix =
   | { in: "files"; apply: (dir: string, std: string) => void }
@@ -85,6 +86,17 @@ const drifted = (drift: string[]): Finding => ({ drift });
 
 // A config with `craftz()` in its plugins has what the plugin sets, or fails when it conflicts.
 const PLUGIN = /\bplugins:\s*\[[^\]]*\bcraftz\(\)/;
+
+// What `craftz()` fills in for a static site: `build.target` with its own page, and `publicDir`
+// as `.prose` without one. Its src/index.ts says why.
+function filled(
+  vite: string,
+  files: Record<string, string>,
+  site?: Worker,
+): "target" | "prose" | undefined {
+  if (!PLUGIN.test(vite) || site?.deploys !== "static") return undefined;
+  return files["index.html"] ? "target" : "prose";
+}
 
 // What GitHub couldn't answer. Its rate limit isn't drift: the check says it wasn't made.
 export function unread(error: Error): Finding {
@@ -704,8 +716,11 @@ export const RULES: Rule[] = [
       const vite = files["vite.config.ts"] ?? "";
       const pack = /\bpack:\s*\{/.test(vite) && !/platform:\s*"node"/.test(vite);
       // A site Vite bundles from source, unlike one that serves a folder `prose build` wrote.
-      const bundled = Boolean(site) && !/publicDir:\s*"\.prose"/.test(vite);
+      const fills = filled(vite, files, site);
+      const served = /publicDir:\s*"\.prose"/.test(vite) || fills === "prose";
+      const bundled = Boolean(site) && !served;
       if (!pack && !bundled) return undefined;
+      if (!pack && fills === "target") return { value: BROWSERS.join(" "), drift: [] };
       const have = targetsIn(vite);
       const where = pack ? "pack.target" : "build.target";
       if (!have.length) return drifted([`${where} isn't set`]);
@@ -884,7 +899,9 @@ export const RULES: Rule[] = [
       }
       const vite = files["vite.config.ts"] ?? "";
       const drift: string[] = [];
-      if (!/publicDir:\s*"\.prose"/.test(vite)) drift.push("vite.config.ts doesn't serve .prose");
+      if (!/publicDir:\s*"\.prose"/.test(vite) && filled(vite, files, site) !== "prose") {
+        drift.push("vite.config.ts doesn't serve .prose");
+      }
       if (!/cloudflare\(\{\s*assetsOnly:\s*true\s*\}\)/.test(vite)) {
         drift.push("vite.config.ts doesn't use the Cloudflare plugin with assetsOnly");
       }

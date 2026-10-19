@@ -65,7 +65,7 @@ Code shipped to browsers works in the browsers people use, with a floor for each
 - **Gecko**, which is Firefox: the oldest ESR Mozilla supports. It's the oldest Firefox that still gets fixes.
 - **WebKit**, which is Safari and every browser on iOS, in-app browsers too: the newest release of the major two before the current one. An iPhone that a new iOS drops stays on its last major and keeps getting point releases, so that's the oldest Safari in use. Chrome on iOS and an app's WebView run this engine too, so it covers more people than Safari's own share.
 
-- [`toolchain-browsers`]{#toolchain-browsers}: a build that bundles code for browsers targets these browsers, in `build.target` for a site Vite bundles from source and in `pack.target` for a package that isn't `platform: "node"`. A package that runs in Node too adds its Node to the list.
+- [`toolchain-browsers`]{#toolchain-browsers}: a build that bundles code for browsers targets these browsers, in `build.target` for a site Vite bundles from source and in `pack.target` for a package that isn't `platform: "node"`. `craftz()` sets `build.target` for a static site with an `index.html`. A package that runs in Node too adds its Node to the list.
 
 The list is worked out from MDN's browser-compat-data, by [src/browsers.ts](../src/browsers.ts), as of the date of the data. The package is one of craftz's own dependencies, so a craftz release moves it, and the floors move with it, with `drift` listing what then needs the new list.
 
@@ -186,9 +186,11 @@ export default defineConfig({
 });
 ```
 
+With `craftz()` in the plugins, the `publicDir` line goes, since the plugin sets it for a static site with no `index.html`.
+
 - [`cloudflare-prose-site`]{#cloudflare-prose-site}: a prose site serves `.prose` as Vite's `publicDir` through the Cloudflare plugin with `assetsOnly`, `verify` builds it after `prose build`, and `.gitignore` leaves out `.cloudflare`. With no `index.html` at the root, the plugin builds an empty entry and deletes it, so only the folder's files are deployed.
 
-In a site, the build after `prose build` is `pnpm build`, which is `vp build`. In a package, `build` is `vp pack`, so `verify` ends with `vp build` itself. Anything that adds to the site, like markz's Quality page, runs before it. `ship` is `cf deploy --prebuilt`, which uploads `.cloudflare/output/`.
+In a site, the build after `prose build` is `pnpm build`, which is `vp build`. In a package, `build` is `vp pack`, so `verify` ends with `vp build` itself. Anything that adds to the site, like markz's Quality page, runs before it. `ship` is `cf deploy --prebuilt`, which uploads `.cloudflare/output/`. craftz's own `ship` runs `craftz deploy`, which runs the same command, and every site's will once the repositories move to craftz.
 
 ### An app
 

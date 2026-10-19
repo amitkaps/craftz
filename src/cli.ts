@@ -21,8 +21,14 @@
  * reads. Classic branch protection on `main` isn't craftz's, so removing it asks first, or takes
  * `--yes` where there's no one to ask. It needs `gh` logged in as the owner, and `cf` for a
  * Worker.
+ *
+ * `craftz deploy` deploys a site that's already built, as its `ship` script, which the Worker's
+ * deploy command runs. What it runs follows from [the deploy axis](../docs/rules.md#axes). A
+ * static site uploads the Build Output with `cf deploy --prebuilt`, and an app runs
+ * `wrangler deploy`, which is held until cf can deploy one. Each tool is the repository's own
+ * dependency, so the version the rules check is the one that deploys.
  */
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
@@ -31,7 +37,8 @@ import { OWNER, type Pkg, here } from "./reference.ts";
 import { fixFiles } from "./rules.ts";
 import { cloudflareLogin, githubLogin, hasClassic } from "./settings.ts";
 import { RULES_DOC, stated } from "./stated.ts";
-import { type Finding, HELD, checkFolder, worker } from "./survey.ts";
+import { type Finding, HELD, checkFolder } from "./survey.ts";
+import { workerIn } from "./worker.ts";
 
 const HELP = `Usage: craftz <command>
 
@@ -39,7 +46,8 @@ const HELP = `Usage: craftz <command>
   check [dir]  runs every rule on a folder, the current one by default
   fix [dir]    writes every fix, then checks what's left
   settings [dir] [--check] [--yes]
-               writes the settings on GitHub and Cloudflare, then reads them back`;
+               writes the settings on GitHub and Cloudflare, then reads them back
+  deploy       deploys the site the current folder built, as its ship script`;
 
 const [command, arg, ...rest] = process.argv.slice(2);
 
@@ -80,12 +88,26 @@ function target(dir: string): Target {
   const file = (name: string): string =>
     existsSync(join(dir, name)) ? readFileSync(join(dir, name), "utf8") : "";
   const pkg = JSON.parse(file("package.json") || "{}") as Pkg;
-  const site = worker(
-    Object.fromEntries(
-      ["cloudflare.config.ts", "wrangler.jsonc", "wrangler.toml"].map((f) => [f, file(f)]),
-    ),
-  );
+  const site = workerIn(dir);
   return { repo, pkg, site, cloudflare: site && cloudflareLogin() };
+}
+
+// Deploys the folder's site with the tool its deploy axis names, and returns the exit code.
+function deploy(dir: string): number {
+  const site = workerIn(dir);
+  if (!site) {
+    console.error(`craftz deploy: ${dir} has no Worker config, so there's nothing to deploy.`);
+    return 1;
+  }
+  const [tool, ...args] =
+    site.deploys === "static" ? ["cf", "deploy", "--prebuilt"] : ["wrangler", "deploy"];
+  const bin = join(dir, "node_modules", ".bin", tool ?? "");
+  if (!existsSync(bin)) {
+    console.error(`craftz deploy: ${site.name} is ${site.deploys}, so it needs ${tool} installed.`);
+    return 1;
+  }
+  console.log(`craftz deploy: ${site.name}, ${site.deploys}, with ${tool} ${args.join(" ")}`);
+  return spawnSync(bin, args, { cwd: dir, stdio: "inherit" }).status ?? 1;
 }
 
 async function ask(question: string): Promise<boolean> {
@@ -157,6 +179,8 @@ if (command === "rules" && !rest.length) {
     flags.includes("--yes"),
   );
   process.exitCode = off ? 1 : 0;
+} else if (command === "deploy" && !arg) {
+  process.exitCode = deploy(process.cwd());
 } else if (command === "-h" || command === "--help") {
   console.log(HELP);
 } else {
