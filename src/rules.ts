@@ -642,6 +642,40 @@ export const RULES: Rule[] = [
     },
   },
   {
+    id: "toolchain-wrap",
+    check: ({ files, vitePlus: own }) => {
+      if (!own) return undefined;
+      const vite = files["vite.config.ts"] ?? "";
+      if (!/\bfmt:\s*\{/.test(vite)) return drifted(["no fmt block"]);
+      return drifted(
+        /proseWrap:\s*"never"/.test(vite) ? [] : ['fmt doesn\'t set proseWrap: "never"'],
+      );
+    },
+    fix: {
+      in: "files",
+      apply: (dir) => {
+        const file = join(dir, "vite.config.ts");
+        if (!existsSync(file)) return;
+        const text = read(file);
+        // A config with no fmt block is left alone, and its check still drifts.
+        if (/proseWrap:\s*"never"/.test(text) || !/\bfmt:\s*\{/.test(text)) return;
+        const wrapped = text
+          // The comment above the block says oxfmt's defaults, which it no longer is.
+          .replace(
+            /((?:^[ \t]*\/\/.*\n)*)(^[ \t]*fmt:)/m,
+            (_, comment: string, fmt: string) =>
+              comment.replace(
+                /(o)xfmt's defaults/i,
+                "$1xfmt's defaults, with each paragraph on one line",
+              ) + fmt,
+          )
+          .replace(/\bfmt:\s*\{\s*\}/, 'fmt: { proseWrap: "never" }')
+          .replace(/\bfmt:\s*\{(?!\s*proseWrap)/, 'fmt: { proseWrap: "never",');
+        writeFileSync(file, wrapped);
+      },
+    },
+  },
+  {
     id: "toolchain-browsers",
     wants: BROWSERS.join(" "),
     check: ({ files, worker: site }) => {

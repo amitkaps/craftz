@@ -22,7 +22,9 @@ One `vite.config.ts`, run through `vp`, covers dev, build, format, lint and test
 
 Vite+ ships its own build of Vite. Each repository points every `vite` at it with an override in `pnpm-workspace.yaml`, and turns off pnpm's peer checks for `vite`, since that build is an npm alias. Bump `vite-plus` and the override together, in every repository at once. A version that differs between repositories is the drift that makes Vite+ painful.
 
-Formatting runs at oxfmt's defaults, written as an empty `fmt: {}` so the config says so.
+Formatting runs at oxfmt's defaults, but for one setting.
+
+- [`toolchain-wrap`]{#toolchain-wrap}: `fmt` sets `proseWrap: "never"`, so each Markdown paragraph is one line that the editor soft-wraps. Nobody hand-wraps, and a changed paragraph shows in a diff as one line with its changed words highlighted. `"always"` would reflow the rest of a paragraph when one word is added. `@prose` comments stay hand-wrapped at 100 characters, since no oxfmt setting wraps comment text.
 
 - [`toolchain-lint`]{#toolchain-lint}: lint is type-aware and type-checks too, so `check` covers types without a separate `tsc`.
 - [`toolchain-types`]{#toolchain-types}: every `tsconfig.json` turns on the same strict options: `strict`, `noUncheckedIndexedAccess`, `noImplicitOverride`, `noImplicitReturns`, `noFallthroughCasesInSwitch`, `verbatimModuleSyntax`, `isolatedModules` and `forceConsistentCasingInFileNames`. [The reference's tsconfig.json](../reference/tsconfig.json) is the example. The rest of a tsconfig, like `include` and `types`, is the repository's own.
@@ -215,15 +217,15 @@ Every repository has the same docs, so anyone, or any agent, finds the same thin
 
 - [`docs-files`]{#docs-files}: `docs/` has `design.md`, `plan.md`, `development.md` and `lessons.md`, and a package's has `usage.md`. Each is in the `nav` of `docs/README.md`, and `README.md` links to `docs/`.
 
-| File                  | Holds                                                                        |
-| --------------------- | ---------------------------------------------------------------------------- |
-| `README.md`           | what it is, how it's used, and a link to `docs/`                             |
-| `docs/README.md`      | the docs in reading order: `nav` in its metadata, and a line for each        |
-| `docs/design.md`      | what it is, why it's built this way, and what it isn't                       |
-| `docs/plan.md`        | where it is, and its own next steps, later and open, not other repositories' |
-| `docs/development.md` | only what's its own: its extra scripts, its site, beyond these rules         |
-| `docs/lessons.md`     | what building it taught, each lesson what happened and what to do about it   |
-| `docs/usage.md`       | a package's install and use, and a section for agents                        |
+| File | Holds |
+| --- | --- |
+| `README.md` | what it is, how it's used, and a link to `docs/` |
+| `docs/README.md` | the docs in reading order: `nav` in its metadata, and a line for each |
+| `docs/design.md` | what it is, why it's built this way, and what it isn't |
+| `docs/plan.md` | where it is, and its own next steps, later and open, not other repositories' |
+| `docs/development.md` | only what's its own: its extra scripts, its site, beyond these rules |
+| `docs/lessons.md` | what building it taught, each lesson what happened and what to do about it |
+| `docs/usage.md` | a package's install and use, and a section for agents |
 
 The README is the site's home page when prose builds it, so it reads as one. It says what it is, gives a short example, and lists the commands a user runs, like a package's command. The repository's own scripts, like `dev` and `verify`, are the shared ones, and are left to `development.md`, which links these rules for the shared toolchain, scripts and workflows rather than describing them.
 
