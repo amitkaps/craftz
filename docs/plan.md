@@ -38,7 +38,7 @@ The scripts every repository copied are craftz's commands now, and `pnpm pr` and
 
 ### 0.1.0, and repositories that depend on craftz
 
-craftz 0.1.0 is on npm. [`toolchain-craftz`](rules.md#toolchain-craftz) asks every other repository to depend on it and use `craftz()`, and its fix writes both. [`versions-craftz`](rules.md#versions-craftz) asks for craftz's own version, so a release moves every repository. `new` writes both too, and its test installs craftz from npm.
+craftz 0.1.0 is on npm. [`toolchain-craftz`](rules.md#toolchain-craftz) asks every other repository to depend on it and use `craftz()`, and its fix writes both. [`versions-craftz`](rules.md#versions-craftz) asks for craftz's own version, so a release moves every repository. `new` writes both too, and its test installs this checkout in place of the version it writes.
 
 ### craftz-test
 
@@ -48,13 +48,16 @@ craftz 0.1.0 is on npm. [`toolchain-craftz`](rules.md#toolchain-craftz) asks eve
 
 What's live, read in one command: CI on `main`, the open pull requests, npm's version, and a site's latest build and addresses, with `--log` for the build's log. `AGENTS.md` points agents at it, so a look at a deploy or a release isn't a script written again.
 
+### 0.1.1, through the release workflow
+
+0.1.1 is the first release that wasn't published by hand. The release pull request merged, the workflow staged it on npm and tagged it, and it was approved. Its CI failed twice first, since `new`'s test installed a version npm didn't have yet, so the test now builds and installs this checkout. craftz-test moved to it with `craftz fix`, and its check, `verify`, deploy and `craftz status` pass on the published package.
+
 ## Next, in order
 
 Each step works in one repository before the next starts.
 
-1. **The release cycle.** A hard gate before any real repository moves. 0.1.1 goes out through the release workflow, staged and approved, the first release that isn't published by hand.
-2. **The repositories.** Move one real repository, then the rest, with `craftz align`. Each one's shared files, like the `AGENTS.md` sections and the workflows, come from craftz's reference and point at craftz, and `craftz fix` writes "craftz" over the old "Standard" section. `craftz fix` points `pr` and `gone` at `craftz pr` and `craftz gone`, and deletes the copied `scripts/pr.ts` and `scripts/gone.ts`.
-3. **The old repository retires.** The one that kept the rules before craftz is archived with its history, and its site redirects to craftz's, since every `AGENTS.md` links to it until step 2 has moved them.
+1. **The repositories.** Move one real repository, then the rest, with `craftz align`. Each one's shared files, like the `AGENTS.md` sections and the workflows, come from craftz's reference and point at craftz, and `craftz fix` writes "craftz" over the old "Standard" section. `craftz fix` points `pr` and `gone` at `craftz pr` and `craftz gone`, and deletes the copied `scripts/pr.ts` and `scripts/gone.ts`.
+2. **The old repository retires.** The one that kept the rules before craftz is archived with its history, and its site redirects to craftz's, since every `AGENTS.md` links to it until step 1 has moved them.
 
 If craftz doesn't work out, this repository is deleted, and the repositories carry on as they are.
 
