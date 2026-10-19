@@ -16,7 +16,22 @@
  * an array the repository sets is compared whole, and one it leaves unset is filled in whole.
  *
  * It needs nothing from Vite at run time, so the package keeps no dependencies.
+ *
+ * ## A site's config
+ *
+ * A static site's config follows from [the deploy axis](../docs/rules.md#axes), read from the
+ * Worker config beside `vite.config.ts`. With an `index.html`, Vite bundles the site's own code,
+ * so `build.target` is the rules' [browsers](../docs/rules.md#toolchain-browsers). Without one,
+ * the site is the folder `prose build` writes, so `publicDir` is `.prose`. An app's config is its
+ * framework's, so it gets neither.
+ *
+ * The Cloudflare plugin stays in the repository's config. It's the repository's dependency, at
+ * the version the rules check, and craftz would otherwise need it as a peer.
  */
+import { existsSync } from "node:fs";
+import { join, resolve } from "node:path";
+import { BROWSERS } from "./pinned.ts";
+import { workerIn } from "./worker.ts";
 
 type Config = { [key: string]: unknown };
 
@@ -29,6 +44,13 @@ const RULED: Config = {
     options: { typeAware: true, typeCheck: true },
   },
 };
+
+// What a static site adds to the rules, from the files at its root.
+function site(root: string): Config {
+  if (workerIn(root)?.deploys !== "static") return {};
+  if (existsSync(join(root, "index.html"))) return { build: { target: BROWSERS } };
+  return { publicDir: ".prose" };
+}
 
 const isObject = (value: unknown): value is Config =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -52,13 +74,14 @@ function fill(want: Config, have: Config, path: string, conflicts: string[]): Co
   return added;
 }
 
-/** The Vite plugin that sets what the rules ask of every config, and never overrides one. */
+/** The Vite plugin that sets what the rules ask of a config, and never overrides one. */
 export function craftz(): { name: string; config(config: Config): Config } {
   return {
     name: "craftz",
     config(config) {
       const conflicts: string[] = [];
-      const added = fill(RULED, config, "", conflicts);
+      const root = resolve(typeof config["root"] === "string" ? config["root"] : ".");
+      const added = fill({ ...RULED, ...site(root) }, config, "", conflicts);
       if (conflicts.length) {
         const list = conflicts.map((c) => `  ${c}`).join("\n");
         throw new Error(`craftz() won't override vite.config.ts. Take these out of it:\n${list}`);

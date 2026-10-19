@@ -2,6 +2,7 @@
   "name": "@amitkaps/craftz",
   "version": "0.0.0",
   "description": "One way every repository builds, checks, deploys and releases, and the repository that shows it working.",
+  "homepage": "https://craftz.amitkaps.com",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -31,7 +32,8 @@
     "build": "vp pack",
     "check": "vp check",
     "test": "vp test --run",
-    "verify": "pnpm check && pnpm prose check && pnpm test && pnpm build",
+    "verify": "pnpm check && pnpm prose check && pnpm test && pnpm build && pnpm prose build && vp build",
+    "ship": "node src/cli.ts deploy",
     "fix": "vp check --fix",
     "prose": "prose",
     "pr": "node scripts/pr.ts",
@@ -45,6 +47,7 @@
   },
   "devDependencies": {
     "@amitkaps/prose": "^0.8.0",
+    "@cloudflare/vite-plugin": "2.0.0-beta.v.1",
     "@mdn/browser-compat-data": "^8.1.6",
     "@types/node": "^26.6.5",
     "cf": "1.0.0-beta.18",

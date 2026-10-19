@@ -33,7 +33,7 @@ craftz owns a repository's conventions and its lifecycle commands. Vite+ and eac
 | `craftz fix` | writes every fix that can be automated |
 | `craftz settings` | writes the GitHub and Cloudflare settings, with your login |
 | `craftz pr`, `craftz gone` | open a pull request that merges itself, and delete merged branches |
-| `craftz deploy` | deploys the way the repository's type does, run by the `ship` script |
+| `craftz deploy` | deploys the way the repository's deploy axis says, run by the `ship` script |
 | `craftz release` | opens the pull request that releases a package |
 | `craftz new` | starts a repository that already follows the rules |
 | `craftz drift` | reports every repository's craftz version, checks and settings |

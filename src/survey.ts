@@ -15,6 +15,9 @@ import { basename, join } from "node:path";
 import { type Rule, RULES } from "./rules.ts";
 import { parts, stated } from "./stated.ts";
 import { OWNER, type Pkg, read } from "./reference.ts";
+import { type Worker, worker } from "./worker.ts";
+
+export { type Worker, worker };
 
 export const REPOS = ["base", "markz", "prose", "pagez", "sitez", "ship"];
 
@@ -29,6 +32,8 @@ const FILES = [
   "cloudflare.config.ts",
   "wrangler.jsonc",
   "wrangler.toml",
+  // Whether a static site has its own page, which says what `craftz()` fills in for it.
+  "index.html",
   "AGENTS.md",
   "CLAUDE.md",
   ".github/workflows/ci.yml",
@@ -65,49 +70,6 @@ async function fromGitHub(repo: string): Promise<Files> {
     }),
   );
   return Object.fromEntries(entries);
-}
-
-/** @prose
- * # A repository's Worker
- *
- * A repository deploys if it has a Cloudflare config, and the Worker's name is read from it.
- * `cloudflare.config.ts` is the one to use, and `wrangler.jsonc` and `wrangler.toml` are the ones
- * still on wrangler. A regular expression is enough, since each file states `name` once.
- *
- * Its domain is read the same way, the first in `domains` or the first route's `pattern`, and
- * the page links to it under the repository's name.
- *
- * So is whether it turns off `workers.dev` and preview URLs, each on unless the config says
- * otherwise. cf's config names them `workersDev` and `previewUrls`, and wrangler's `workers_dev`
- * and `preview_urls`.
- *
- * And what it deploys, the deploy axis in [the rules](../docs/rules.md#axes). A Worker with code
- * of its own, cf's `entrypoint` or wrangler's `main`, is an app, and one without is a static
- * site, whatever builds its files.
- */
-export type Worker = {
-  file: string;
-  name: string;
-  domain?: string;
-  workersDev: boolean;
-  previewUrls: boolean;
-  deploys: "static" | "app";
-};
-
-const off = (text: string, key: string): boolean =>
-  new RegExp(`"?${key}"?\\s*[:=]\\s*false`).test(text);
-
-export function worker(files: Files): Worker | undefined {
-  for (const file of ["cloudflare.config.ts", "wrangler.jsonc", "wrangler.toml"]) {
-    const text = files[file] ?? "";
-    const name = /^\s*"?name"?\s*[:=]\s*"([^"]+)"/m.exec(text)?.[1];
-    const domain = /(?:domains"?\s*:\s*\[\s*|"?pattern"?\s*[:=]\s*)"([^"]+)"/.exec(text)?.[1];
-    const workersDev = !off(text, "workersDev") && !off(text, "workers_dev");
-    const previewUrls = !off(text, "previewUrls") && !off(text, "preview_urls");
-    const deploys = /^\s*"?(?:entrypoint|main)"?\s*[:=]/m.test(text) ? "app" : "static";
-    if (name) return { file, name, domain, workersDev, previewUrls, deploys };
-  }
-  return undefined;
 }
 
 /** @prose
