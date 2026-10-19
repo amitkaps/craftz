@@ -1,0 +1,25 @@
+# @prose
+# # pnpm's settings
+#
+# pnpm 12 reads project settings from here. It's a settings file, not a workspace, and its
+# settings are the standard's, from ship.
+
+# @prose
+# Vite+ ships its own build of Vite, and every `vite` in the tree is pointed at it. Bump this
+# alongside the `vite-plus` devDependency, in every repository at once. Since that build is
+# an npm alias, pnpm can't check it against the usual `vite` peer ranges, so those checks
+# are off for `vite`.
+overrides:
+  "vite@*": "npm:@voidzero-dev/vite-plus-core@1.3.0"
+
+peerDependencyRules:
+  allowAny:
+    - vite
+
+# @prose
+# pnpm holds back a version for a day after it's published, so a bad release can be caught
+# before it's installed. That default is kept, and our own packages skip the wait, since each
+# reaches npm only after the owner approves it with 2FA. The scope, not a version, is named, so
+# a release needs no change here.
+minimumReleaseAgeExclude:
+  - "@amitkaps/*"

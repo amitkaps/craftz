@@ -1,0 +1,23 @@
+# @prose
+# # Ignored
+#
+# What git leaves out. That is installed packages, what a build writes, the OS's own files and
+# secrets, which never belong in the repository.
+
+node_modules
+
+# Output
+dist
+.cloudflare
+.prose
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.*
+
+# Cloudflare Vite plugin
+.dev.vars*
