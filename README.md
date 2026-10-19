@@ -24,16 +24,19 @@ It's opinionated, and built for one setup: Vite+, pnpm, Node 26, GitHub and Clou
 
 ```sh
 pnpm add -D @amitkaps/craftz
+pnpm exec craftz fix
 ```
+
+The first fix writes the `craftz`, `pr` and `gone` scripts, and the rest of what can be fixed. From then on, `pnpm craftz` runs it.
 
 It needs Node 26 or newer, the Node it's built and tested on.
 
 ## Use
 
 ```sh
-pnpm exec craftz check                 # what's out of line
-pnpm exec craftz fix                   # fix what can be fixed
-pnpm exec craftz rules scripts-verify  # what one rule asks, and why
+pnpm craftz check                 # what's out of line
+pnpm craftz fix                   # fix what can be fixed
+pnpm craftz rules scripts-verify  # what one rule asks, and why
 ```
 
 Read [the docs](docs/README.md) for its design, [the rules](docs/rules.md), [its usage](docs/usage.md), the plan and the lessons.
