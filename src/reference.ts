@@ -1,9 +1,9 @@
 /** @prose
  * # The reference
  *
- * What the other modules read as the standard: the files in [standard/](../standard), laid out
- * as ship's own, its owner on GitHub, and its `package.json`, whose versions, engines and scripts
- * are the standard's. `root` is craftz itself, for the tools it runs. It imports nothing of
+ * What the other modules read as the rules: the files in [reference/](../reference/), laid out
+ * as a repository has them, their owner on GitHub, and its `package.json`, whose versions, engines and scripts
+ * are the rules'. `root` is craftz itself, for the tools it runs. It imports nothing of
  * theirs, so any of them can import it.
  */
 import { existsSync, readFileSync } from "node:fs";
@@ -14,7 +14,7 @@ export const OWNER = "amitkaps";
 
 export const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
-export const here = join(root, "standard");
+export const here = join(root, "reference");
 
 export const read = (file: string): string => (existsSync(file) ? readFileSync(file, "utf8") : "");
 
@@ -69,7 +69,7 @@ export function catalog(workspace: string): Record<string, string> {
   );
 }
 
-/** The versions a folder names, as this one names the standard's: `pnpm align` reads its clone. */
+/** The versions a folder names, as this one names the rules': `pnpm align` reads its clone. */
 export function versionsIn(dir: string): Record<string, string | undefined> {
   const pkg = JSON.parse(read(join(dir, "package.json")) || "{}") as Pkg;
   return {

@@ -1,21 +1,21 @@
 /** @prose
  * # The rules
  *
- * Each rule of [the standard](../standard/docs/standard.md) that has an id, like `scripts-verify`. The
- * standard states it, as a list item that opens with its id, and says why. Here is only what the
- * words can't do: the check that finds where a repository has drifted from it, and the fix, where
- * one can be automated.
+ * Each rule in [the rules](../docs/rules.md) that has an id, like `scripts-verify`. The doc
+ * states it, as a list item that opens with its id, and says why. Here is only what the words
+ * can't do: the check that finds where a repository has drifted from it, and the fix, where one
+ * can be automated.
  *
- * It's how markz's grammar names its side rules, and
- * [rules.test.ts](../tests/rules.test.ts) holds the two to the same ids, so a rule can't be stated without
- * a check, or checked without being stated.
+ * It's how markz's grammar names its side rules, and [rules.test.ts](../tests/rules.test.ts)
+ * holds the two to the same ids, so a rule can't be stated without a check, or checked without
+ * being stated.
  *
  * A check returns `undefined` when its rule doesn't apply, like `scripts-preview` for a package.
  * What it `wants`, like a version, goes before the rule on the dashboard. A fix in `files` edits
- * a clone to match the folder that holds the standard, and `pnpm align` puts it in the
+ * a clone to match [the reference](../reference/), and `pnpm align` puts it in the
  * repository's pull request. It changes nothing in a clone already in line, so it's safe to run
  * on every one. A fix in `github` is written directly, since there's no file to review. A rule
- * with no fix is fixed by hand, as the standard says.
+ * with no fix is fixed by hand, as the rules say.
  */
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -23,6 +23,7 @@ import { OWNER, type Pkg, VERSIONS, here, read, standard, versionsIn } from "./r
 import { writeLabels, writeRuleset } from "./settings.ts";
 import { BROWSERS } from "./browsers.ts";
 import { COMPATIBILITY_DATE } from "./runtime.ts";
+import { stated } from "./stated.ts";
 import type { BranchRule, Finding, Repo } from "./survey.ts";
 
 export type Fix =
@@ -35,50 +36,6 @@ export type Rule = {
   check: (repo: Repo) => Finding | undefined;
   fix?: Fix;
 };
-
-/** @prose
- * # Where each rule is stated
- *
- * A rule in the standard is a list item on one line that opens with its id as a span, like
- * ``- [`scripts-verify`]{#scripts-verify}: text``. Its part is the second-level heading it's
- * under, like Scripts, which the dashboard groups it by.
- *
- * The link `pnpm drift` prints goes to the rule itself, by its id, which markz keeps as written.
- * Code blocks are skipped, so an example can't state a rule.
- */
-export type Stated = { id: string; text: string; part: string; link: string };
-
-const STANDARD = join(here, "docs", "standard.md");
-
-// Each line outside a code block, with the part it's under.
-function* lines(markdown: string): Generator<{ line: string; part: string }> {
-  let part = "";
-  let fenced = false;
-  for (const line of markdown.split("\n")) {
-    if (/^(```|~~~)/.test(line)) fenced = !fenced;
-    if (fenced) continue;
-    part = /^## (.+)$/.exec(line)?.[1] ?? part;
-    yield { line, part };
-  }
-}
-
-export function stated(markdown = read(STANDARD)): Stated[] {
-  const found: Stated[] = [];
-  for (const { line, part } of lines(markdown)) {
-    const rule = /^- \[`([a-z]+-[a-z-]+)`\]\{#\1\}: (.+)$/.exec(line);
-    if (rule?.[1] && rule[2]) {
-      found.push({ id: rule[1], text: rule[2], part, link: `${STANDARD_URL}#${rule[1]}` });
-    }
-  }
-  return found;
-}
-
-/** The standard's parts, its second-level headings, in order. */
-export function parts(markdown = read(STANDARD)): string[] {
-  return [...lines(markdown)].flatMap(({ line }) => /^## (.+)$/.exec(line)?.[1] ?? []);
-}
-
-const STANDARD_URL = "https://ship.amitkaps.com/docs/standard.md";
 
 const pnpm = standard.packageManager?.replace(/^pnpm@/, "");
 const standardScripts = standard.scripts ?? {};
@@ -138,7 +95,7 @@ const readPkg = (dir: string): Pkg =>
 const writePkg = (dir: string, pkg: Pkg): void =>
   writeFileSync(join(dir, "package.json"), JSON.stringify(pkg, null, 2) + "\n");
 
-// Sets a dependency to the standard's version, in whichever list the repository has it.
+// Sets a dependency to the rules' version, in whichever list the repository has it.
 function pin(dir: string, std: string, name: string): void {
   const want = versionsIn(std)[name];
   const pkg = readPkg(dir);
@@ -170,7 +127,7 @@ const version = (id: string, name: string): Rule => ({
 /** @prose
  * # The betas
  *
- * The packages `versions-beta` names, as code in its line of the standard, so the list is kept
+ * The packages `versions-beta` names, as code in its line of the rules, so the list is kept
  * in one place. A version is a pre-release when its numbers are followed by a tag, as in
  * `1.0.0-beta.17`, behind a range or not.
  */
@@ -433,7 +390,7 @@ const nav = (text: string): string[] =>
 /** @prose
  * # Releases
  *
- * A package releases the way every package does, with the files in [package/](../standard/package/README.md)
+ * A package releases the way every package does, with the files in [package/](../reference/package/README.md)
  * copied in unchanged, and CI's `Label` step from this repository's, word for word.
  *
  * The fix copies
@@ -446,9 +403,9 @@ const LABEL_STEP = /^ {6}- name: Label\n[\s\S]*?\n {10}'\n/m;
 const LABEL_TRIGGER = /^ {4}types: \[.*labeled.*\]$/m;
 const INSTALL = /^ {6}- run: pnpm install/m;
 const TYPES = /^( {2}pull_request:\n(?: {4}branches: .*\n)?)(?: {4}types: .*\n)?/m;
-const shipCi = read(join(here, CI));
-const labelStep = LABEL_STEP.exec(shipCi)?.[0] ?? "";
-const labelTrigger = LABEL_TRIGGER.exec(shipCi)?.[0] ?? "";
+const referenceCi = read(join(here, CI));
+const labelStep = LABEL_STEP.exec(referenceCi)?.[0] ?? "";
+const labelTrigger = LABEL_TRIGGER.exec(referenceCi)?.[0] ?? "";
 const labelNames = (
   JSON.parse(read(join(here, ".github", "labels.json"))) as { name: string }[]
 ).map((label) => label.name);
@@ -462,7 +419,7 @@ function addLabel(ci: string): string {
   return text;
 }
 
-// Sets a script to the standard's, in a repository the rule applies to.
+// Sets a script to the rules', in a repository the rule applies to.
 function setScript(dir: string, std: string, name: string, applies: (pkg: Pkg) => boolean): void {
   const pkg = readPkg(dir);
   const want = readPkg(std).scripts?.[name];
@@ -502,7 +459,7 @@ const sharedScript = (id: string, name: string): Rule => ({
       );
     }
     if (!files[file]) drift.push(`no ${file}`);
-    else if (files[file] !== read(join(here, file))) drift.push(`${file} differs from ship's`);
+    else if (files[file] !== read(join(here, file))) drift.push(`${file} differs from craftz's`);
     return drifted(drift);
   },
   fix: {
@@ -720,7 +677,7 @@ export const RULES: Rule[] = [
             : Object.keys(want).every(
                 (key) => JSON.stringify(have[key]) === JSON.stringify(want[key]),
               );
-          return same ? [] : [`${file} differs from ship's`];
+          return same ? [] : [`${file} differs from craftz's`];
         }),
       ),
     fix: {
@@ -887,7 +844,7 @@ export const RULES: Rule[] = [
    * # A Worker's config
    *
    * `cloudflare.config.ts` is code, so it's read and fixed by its lines. The fixes anchor on the
-   * lines the standard asks for: the date's own line, and the two addresses go after `domains`.
+   * lines the rules ask for: the date's own line, and the two addresses go after `domains`.
    * A config laid out otherwise is left alone, and its check still drifts.
    *
    * A site on wrangler, like base, is left out of both. It's held on wrangler, so it moves when
@@ -973,7 +930,9 @@ export const RULES: Rule[] = [
       const drift = SECTIONS.flatMap((heading) => {
         const have = section(text, heading);
         if (!have) return [`no ${heading} section`];
-        return have === section(agents, heading) ? [] : [`${heading} section differs from ship's`];
+        return have === section(agents, heading)
+          ? []
+          : [`${heading} section differs from craftz's`];
       });
       if (files["CLAUDE.md"]?.trim() !== "@AGENTS.md") drift.push("CLAUDE.md isn't @AGENTS.md");
       return drifted(drift);
@@ -1050,10 +1009,10 @@ export const RULES: Rule[] = [
         if (!files[file]) return [`no ${file}`];
         return files[file] === read(join(here, "package", file))
           ? []
-          : [`${file} differs from ship's`];
+          : [`${file} differs from craftz's`];
       });
       const ci = files[CI] ?? "";
-      if (!ci.includes(labelStep)) drift.push("ci.yml doesn't have ship's Label step");
+      if (!ci.includes(labelStep)) drift.push("ci.yml doesn't have craftz's Label step");
       if (!ci.includes(labelTrigger)) drift.push("ci.yml doesn't run again when a label changes");
       return drifted(drift);
     },

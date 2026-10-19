@@ -1,7 +1,7 @@
 /** @prose
  * # The browsers
  *
- * The browsers the standard's [floors](../standard/docs/standard.md#browsers) name, worked out from MDN's
+ * The browsers the rules' [floors](../docs/rules.md#browsers) name, worked out from MDN's
  * browser-compat-data. The date is the data's own, not today's, so the list moves only when
  * `pnpm align` moves the package, and two runs on one version agree.
  *

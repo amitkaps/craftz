@@ -5,9 +5,16 @@ One way every repository builds, checks, deploys and releases, and the repositor
 ## Install
 
 ```sh
-pnpm add @amitkaps/craftz
+pnpm add -D @amitkaps/craftz
 ```
 
 It needs Node 26 or newer, the Node it's built and tested on.
 
-Read [the docs](docs/README.md) for its design, plan and lessons. It follows [ship's standard](https://ship.amitkaps.com/docs/standard.md) for how it builds, checks and releases.
+## Use
+
+```sh
+pnpm exec craftz rules                 # every rule
+pnpm exec craftz rules scripts-verify  # one rule
+```
+
+Read [the docs](docs/README.md) for its design, [the rules](docs/rules.md), the plan and the lessons.

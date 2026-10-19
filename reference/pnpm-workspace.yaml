@@ -3,7 +3,7 @@
 #
 # pnpm 12 reads project settings from here, not from `.npmrc` or `package.json`. It's a
 # settings file, not a workspace. The same settings belong in every repository, so a change
-# here is a change to [the standard](docs/standard.md).
+# here is a change to [the rules](../docs/rules.md).
 
 # @prose
 # pnpm holds back a version for a day after it's published, so a bad release can be caught
