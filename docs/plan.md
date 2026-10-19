@@ -40,11 +40,15 @@ The scripts every repository copied are craftz's commands now, and `pnpm pr` and
 
 craftz 0.1.0 is on npm. [`toolchain-craftz`](rules.md#toolchain-craftz) asks every other repository to depend on it and use `craftz()`, and its fix writes both. [`versions-craftz`](rules.md#versions-craftz) asks for craftz's own version, so a release moves every repository. `new` writes both too, and its test installs craftz from npm.
 
+### craftz-test
+
+`craftz new` started craftz-test, a package with a static site, with `--push`. It installs craftz from npm, uses `craftz()`, passes its full `verify`, opened its first pull request with `pnpm pr`, and deploys through `craftz deploy` from its Worker's build, to craftz-test.amitkaps.com. It turned up two things, now fixed. A site's `ship` wasn't checked, and the settings `new` wrote read back as still off.
+
 ## Next, in order
 
 Each step works in one repository before the next starts.
 
-1. **The release cycle.** A hard gate before any real repository moves. `craftz new` makes a test repository, a package with a static site, which passes its full `verify` and deploys through `craftz deploy`. Then 0.1.1 goes out through the release workflow, staged and approved, the first release that isn't published by hand.
+1. **The release cycle.** A hard gate before any real repository moves. 0.1.1 goes out through the release workflow, staged and approved, the first release that isn't published by hand.
 2. **The repositories.** Move one real repository, then the rest, with `craftz align`. Each one's shared files, like the `AGENTS.md` sections and the workflows, come from craftz's reference and point at craftz, and `craftz fix` writes "craftz" over the old "Standard" section. `craftz fix` points `pr` and `gone` at `craftz pr` and `craftz gone`, and deletes the copied `scripts/pr.ts` and `scripts/gone.ts`.
 3. **The old repository retires.** The one that kept the rules before craftz is archived with its history, and its site redirects to craftz's, since every `AGENTS.md` links to it until step 2 has moved them.
 
@@ -58,7 +62,7 @@ If craftz doesn't work out, this repository is deleted, and the repositories car
 
 ## Open questions
 
-- **Where axes meet badly.** A package in a private repository can't publish with provenance, and only `new` says so. A private repository's rulesets may need a paid GitHub plan. Each could be a check that shows a hold, once a repository is in that position. A private npm package would add a value to the publish axis, and none is needed yet.
+- **Where axes meet badly.** A package in a private repository can't publish with provenance, and only `new` says so. A private repository's rulesets need a paid GitHub plan, which this account has. Each could be a check that shows a hold, once a repository is in that position. A private npm package would add a value to the publish axis, and none is needed yet.
 
 - **Browser code Vite doesn't build.** prose's and pagez's page scripts and styles are copied as they're written, so [`toolchain-browsers`](rules.md#toolchain-browsers) doesn't reach them, and nothing stops them using a feature past a floor. A Baseline lint that reads the same list would, once oxlint has one. Until then, check a new feature's support by hand.
 
