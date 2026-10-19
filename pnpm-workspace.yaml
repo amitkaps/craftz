@@ -2,7 +2,7 @@
 # # pnpm's settings
 #
 # pnpm 12 reads project settings from here. It's a settings file, not a workspace, and its
-# settings are the standard's, from ship.
+# settings are the rules', from craftz.
 
 # @prose
 # Vite+ ships its own build of Vite, and every `vite` in the tree is pointed at it. Bump this

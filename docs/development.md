@@ -24,8 +24,6 @@ A change to how things are done starts here, in [the rules](rules.md) and in [th
 
 `pnpm align` moves the reference's versions, not craftz's own. It installs the reference in a clone as a project of its own, updates it, and then aligns craftz with it like any other repository. `pnpm new` builds a repository from the reference, and from craftz's own `vite.config.ts`, `.gitignore` and `LICENSE`, which every repository has the same.
 
-Some of them still name ship, since every repository has them word for word and ship's copies are what they're checked against. They change when the repositories move to craftz.
-
 ## The command
 
 [src/cli.ts](../src/cli.ts) is the `craftz` command, built by `vp pack` into `dist/cli.js`, with the rules' checks and fixes bundled in. The package publishes `dist/`, `docs/rules.md`, which `craftz rules` prints, and `reference/`, which the checks compare with. It has no dependencies.

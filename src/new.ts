@@ -130,7 +130,7 @@ function workspace(shape: Shape): string {
     "# # pnpm's settings",
     "#",
     "# pnpm 12 reads project settings from here. It's a settings file, not a workspace, and its",
-    "# settings are the standard's, from ship.",
+    "# settings are the rules', from craftz.",
   ].join("\n");
   const parts = [header, ...(shape.site ? [pick("allowBuilds")] : []), pick("overrides")];
   return parts.join("\n\n");
@@ -254,7 +254,7 @@ ${intro}
 
 ## This repository
 
-- Nothing yet beyond the standard. What's particular to ${name} goes here.
+- Nothing yet beyond the rules. What's particular to ${name} goes here.
 `;
 }
 
@@ -266,7 +266,7 @@ function readme(name: string, shape: Shape, description: string): string {
 
 ${description}
 ${install}
-Read [the docs](docs/README.md) for its design, plan and lessons. It follows [ship's standard](https://ship.amitkaps.com/docs/standard.md) for how it ${listed(
+Read [the docs](docs/README.md) for its design, plan and lessons. It follows [craftz's rules](https://craftz.amitkaps.com/docs/rules.md) for how it ${listed(
     [
       ...(shape.package || shape.site ? ["builds", "checks"] : ["checks"]),
       ...shipping(shape, "releases", "deploys"),
@@ -287,7 +287,7 @@ function cloudflareConfig(name: string, internal: boolean): string {
  *
  * What Cloudflare runs: its name, compatibility date, domain and how it serves the files. Keep
  * the name equal to the Worker connected to this repository in the dashboard. The build and
- * deploy commands are set on the Worker, as ship's standard lists. The site answers only on its
+ * deploy commands are set on the Worker, as craftz's rules list. The site answers only on its
  * domain, so \`workers.dev\` and preview URLs are off.${why}
  */
 import { defineConfig } from "cf/config";

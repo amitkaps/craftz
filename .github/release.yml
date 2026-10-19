@@ -4,7 +4,7 @@
 # The headings of a release's generated notes, by the one label each pull request carries. Tests,
 # tooling, site and lessons are `internal`, and left out. CI won't merge a pull request without
 # one of these labels, so Other only catches a label changed after the merge. This file is the same in
-# every package, copied from ship's `package/` folder.
+# every package, copied from craftz's `reference/package/` folder.
 changelog:
   exclude:
     labels:

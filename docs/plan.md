@@ -37,7 +37,7 @@ Both read the deploy axis from the Worker config. `craftz()` sets a static site'
 Each step works in one repository before the next starts.
 
 1. **The release cycle.** A hard gate before any real repository moves. First, craftz's site goes live at craftz.amitkaps.com through `craftz deploy`. From a clean checkout, release craftz's first version. Then `craftz new`, writing `craftz()` in place of the `fmt` and `lint` blocks, makes a test repository, which passes its full `verify` and deploys through `craftz deploy`.
-2. **The repositories.** Move one real repository, then the rest, with `craftz align`. The files every repository shares word for word, like the `AGENTS.md` sections and the workflows, change here, and their "Standard" section becomes "Rules", pointing at `craftz rules`. `pr` and `gone` become `craftz pr` and `craftz gone`, so no repository copies `scripts/pr.ts` or `scripts/gone.ts`, and both `scripts/` folders here go.
+2. **The repositories.** Move one real repository, then the rest, with `craftz align`. Each one's shared files, like the `AGENTS.md` sections and the workflows, come from craftz's reference and point at craftz, and `craftz fix` writes "craftz" over the old "Standard" section. `pr` and `gone` become `craftz pr` and `craftz gone`, so no repository copies `scripts/pr.ts` or `scripts/gone.ts`, and both `scripts/` folders here go.
 3. **The old repository retires.** The one that kept the rules before craftz is archived with its history, and its site redirects to craftz's, since every `AGENTS.md` links to it until step 2 has moved them.
 
 If craftz doesn't work out, this repository is deleted, and the repositories carry on as they are.

@@ -219,7 +219,7 @@ Every `main` takes changes the same way. Work happens on a branch, in a pull req
 
 - [`agents-sections`]{#agents-sections}: every `AGENTS.md` opens with the same two sections as [the reference's](../reference/AGENTS.md), word for word, and `CLAUDE.md` holds only `@AGENTS.md`, so Claude Code reads the same file.
 
-"Standard" points at these rules, and says how changes reach `main`. "Prose" says to run `prose rules`, which prints the rules in [prose's usage](https://prose.amitkaps.com/docs/usage.md#for-agents) as the installed version has them, so an agent reads them without a fetch. The rules live there, once, and aren't copied into each repository, since the copies had already started to differ. It also says to run `prose style` on the files a change touched. That's advice, so it isn't a script or a check. The rest of an `AGENTS.md` is the repository's own.
+"craftz" points at these rules, says to read them with `craftz rules`, and says how changes reach `main`. "Prose" says to run `prose rules`, which prints the rules in [prose's usage](https://prose.amitkaps.com/docs/usage.md#for-agents) as the installed version has them, so an agent reads them without a fetch. The rules live there, once, and aren't copied into each repository, since the copies had already started to differ. It also says to run `prose style` on the files a change touched. That's advice, so it isn't a script or a check. The rest of an `AGENTS.md` is the repository's own.
 
 ## Docs
 

@@ -3,7 +3,7 @@
  *
  * `pnpm gone` deletes each local branch whose branch on GitHub is gone. GitHub deletes a branch
  * once its pull request merges, so that's each one that merged. It's the same file in every
- * repository, copied from [ship](https://ship.amitkaps.com/docs/standard.md#scripts), and works
+ * repository, copied from [craftz](https://craftz.amitkaps.com/docs/rules.md#scripts), and works
  * where no git alias is set, like an agent's machine.
  *
  * A squash merge puts a new commit on `main`, so git can't tell the branch merged, and it's

@@ -1,7 +1,7 @@
 {
   "name": "@amitkaps/craftz",
   "version": "0.0.0",
-  "description": "One way every repository builds, checks, deploys and releases, and the repository that shows it working.",
+  "description": "craftz — one way to build, check, deploy and release.",
   "homepage": "https://craftz.amitkaps.com",
   "license": "MIT",
   "repository": {
