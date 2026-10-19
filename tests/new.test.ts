@@ -5,11 +5,15 @@
  * internal site in a public one, the way `pnpm new` does. Each is checked against the survey and
  * runs its `verify`. If the rules change and the generator doesn't follow, this fails here,
  * before a new repository starts out of line.
+ *
+ * Each one depends on craftz at this checkout's version, which npm doesn't have while it's being
+ * released. An override in its pnpm settings installs this checkout instead, so the test runs
+ * the craftz it's testing, and `package.json` stays as `new` wrote it.
  */
 import { execFileSync } from "node:child_process";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { expect, test } from "vite-plus/test";
 import { type Start, write } from "../src/new.ts";
 import { checkFolder } from "../src/survey.ts";
@@ -34,6 +38,9 @@ for (const [what, start] of starts) {
     // Every site answers only on its domain, internal or not.
     if (worker) expect([worker.workersDev, worker.previewUrls]).toEqual([false, false]);
     expect(worker?.deploys).toBe(start.site ? "static" : undefined);
+    const settings = join(dir, "pnpm-workspace.yaml");
+    const craftz = `  "@amitkaps/craftz": "link:${resolve(import.meta.dirname, "..")}"`;
+    writeFileSync(settings, readFileSync(settings, "utf8").replace(/^overrides:\n/m, `$&${craftz}\n`));
     const run = (...args: string[]) => execFileSync("pnpm", args, { cwd: dir, stdio: "pipe" });
     run("install");
     run("run", "fix");
