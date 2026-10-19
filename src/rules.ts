@@ -21,8 +21,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node
 import { dirname, join } from "node:path";
 import { OWNER, type Pkg, VERSIONS, here, read, standard, versionsIn } from "./reference.ts";
 import { writeLabels, writeRuleset } from "./settings.ts";
-import { BROWSERS } from "./browsers.ts";
-import { COMPATIBILITY_DATE } from "./runtime.ts";
+import { BROWSERS, COMPATIBILITY_DATE } from "./pinned.ts";
 import { stated } from "./stated.ts";
 import type { BranchRule, Finding, Repo } from "./survey.ts";
 

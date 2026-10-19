@@ -16,16 +16,19 @@ The rules, the survey and the settings checks are in [src/](../src/), and the fi
 
 `pnpm align`, `pnpm new` and `pnpm release` moved here, calling the same rules as drift. align moves the reference first, then craftz and the others with it, and `--local` keeps a run on the laptop. new builds from the reference, and its test checks four new repositories against the survey.
 
+### `craftz check` and `craftz fix`
+
+The command runs every rule on a folder and writes every fix, from the installed version. The package carries the reference, and the browsers and the Workers' date are written in when it's packed, so it has no dependencies.
+
 ## Next, in order
 
 Each step works in one repository before the next starts.
 
-1. **One rule, one check, one fix.** The `craftz` command runs `check` and `fix` in a repository.
-2. **`fix` and `settings`.** Make them predictable, as [the design](design.md#settings-never-secrets) says, with a check that only reads and a report of what changed.
-3. **`craftz()`.** Keep it thin, with the test that it never overrides the repository.
-4. **The release cycle.** A hard gate before any real repository moves. From a clean checkout, release craftz's first version. Then `craftz new` makes a test repository, which passes its full `verify` and deploys through `craftz deploy`.
-5. **The repositories.** Move one real repository, then the rest, with `craftz align`. The files every repository shares word for word, like the `AGENTS.md` sections and the workflows, change here, and their "Standard" section becomes "Rules", pointing at `craftz rules`.
-6. **The old repository retires.** The one that kept the rules before craftz is archived with its history, and its site redirects to craftz's, since every `AGENTS.md` links to it until step 5 has moved them.
+1. **`fix` and `settings`.** Make them predictable, as [the design](design.md#settings-never-secrets) says, with a check that only reads and a report of what changed.
+2. **`craftz()`.** Keep it thin, with the test that it never overrides the repository.
+3. **The release cycle.** A hard gate before any real repository moves. From a clean checkout, release craftz's first version. Then `craftz new` makes a test repository, which passes its full `verify` and deploys through `craftz deploy`.
+4. **The repositories.** Move one real repository, then the rest, with `craftz align`. The files every repository shares word for word, like the `AGENTS.md` sections and the workflows, change here, and their "Standard" section becomes "Rules", pointing at `craftz rules`.
+5. **The old repository retires.** The one that kept the rules before craftz is archived with its history, and its site redirects to craftz's, since every `AGENTS.md` links to it until step 4 has moved them.
 
 If craftz doesn't work out, this repository is deleted, and the repositories carry on as they are.
 

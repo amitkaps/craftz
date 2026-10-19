@@ -28,7 +28,9 @@ Some of them still name ship, since every repository has them word for word and 
 
 ## The command
 
-[src/cli.ts](../src/cli.ts) is the `craftz` command, built by `vp pack` into `dist/cli.js`. It reads the rules with [src/stated.ts](../src/stated.ts), which stays apart from the checks so the command doesn't bundle them. The package publishes `dist/` and `docs/rules.md`, since `craftz rules` prints that file.
+[src/cli.ts](../src/cli.ts) is the `craftz` command, built by `vp pack` into `dist/cli.js`, with the rules' checks and fixes bundled in. The package publishes `dist/`, `docs/rules.md`, which `craftz rules` prints, and `reference/`, which the checks compare with. It has no dependencies.
+
+Two values come from dev dependencies, the browsers from browser-compat-data and the Workers' date from cf. `vp pack` works them out and writes them in, as [src/pinned.ts](../src/pinned.ts) says, and leaves both packages out of the bundle. `pnpm pack` and running `dist/cli.js` from the unpacked tarball shows what a user gets.
 
 ## Beta packages
 
