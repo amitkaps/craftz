@@ -49,6 +49,8 @@ lint: {
 
 `craftz()` in the config's `plugins` sets the `fmt` and `lint` blocks, so a config with it holds neither. It fills in only what the config leaves unset, and fails a config that sets one of them differently, naming the key.
 
+- [`toolchain-craftz`]{#toolchain-craftz}: every repository on Vite+ depends on `@amitkaps/craftz` and puts `craftz()` first in its config's `plugins`, so its format, lint and site build come from the version it installs. craftz's own config imports the plugin from source. The fix adds both, and takes out the `fmt` and `lint` blocks where they're the ones the plugin sets.
+
 ### The editor
 
 - [`toolchain-editor`]{#toolchain-editor}: every repository has the reference's [.vscode/settings.json](../reference/.vscode/settings.json), the one Vite+ writes, and recommends the extensions its `.vscode/extensions.json` does. A repository can add settings of its own, like base's for Svelte, and `align` keeps them when it writes the reference's.
@@ -98,6 +100,7 @@ The tools every repository shares are on one version, written the same way, so m
 - [`versions-typescript`]{#versions-typescript}: `typescript` is the catalog's, where a repository has it.
 - [`versions-prose`]{#versions-prose}: `@amitkaps/prose` is the reference's, where a repository has it.
 - [`versions-markz`]{#versions-markz}: `@amitkaps/markz` is the reference's, where a repository has it.
+- [`versions-craftz`]{#versions-craftz}: `@amitkaps/craftz` is at craftz's own version, as a caret range, so a release of craftz is what moves every repository to its rules.
 - [`versions-cf`]{#versions-cf}: `cf` is the reference's, where a repository deploys with it.
 - [`versions-cf-vite-plugin`]{#versions-cf-vite-plugin}: `@cloudflare/vite-plugin` is the reference's, where a repository deploys with cf, at the build that goes with `cf`.
 - [`versions-beta`]{#versions-beta}: only `cf` and `@cloudflare/vite-plugin` are on a pre-release, each pinned to an exact build.
