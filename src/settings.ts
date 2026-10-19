@@ -3,14 +3,15 @@
  *
  * What the rules set outside the repositories, where no file in one can hold it: each
  * repository's merge settings, branch rules and labels on GitHub, and each Worker's build settings
- * on Cloudflare. [drift.ts](drift.ts) reads them and `align` will write them, through the
- * logins `gh` and `cf` already have, so there's no token to keep.
+ * on Cloudflare. [drift.ts](drift.ts) reads them, and [apply.ts](apply.ts) writes them for
+ * `craftz settings`, `align` and `new --push`. Both go through the logins `gh` and `cf` already
+ * have, so there's no token to keep.
  *
  * A login that isn't there isn't drift. Each side says what it couldn't do, once, and the rest
  * goes on.
  */
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { OWNER, here, nodeMajor, root } from "./reference.ts";
 import type { Worker } from "./survey.ts";
@@ -105,8 +106,7 @@ export function writeLabels(repo: string): void {
  * # Writing the branch rules
  *
  * A ruleset named `main`, from [.github/ruleset.json](../reference/.github/ruleset.json), created or
- * replaced, so writing twice changes nothing. Classic branch protection is removed, so there's
- * one set of rules to read.
+ * replaced, so writing twice changes nothing. Other rulesets are left alone.
  */
 export function writeRuleset(repo: string): void {
   const api = `repos/${OWNER}/${repo}`;
@@ -115,12 +115,33 @@ export function writeRuleset(repo: string): void {
   const main = sets.find((set) => set.name === "main");
   if (main) gh("api", "--method", "PUT", `${api}/rulesets/${main.id}`, "--input", ruleset);
   else gh("api", "--method", "POST", `${api}/rulesets`, "--input", ruleset);
+}
 
-  // Without classic protection, GitHub answers 404, which is the state we want.
+/** @prose
+ * # Classic branch protection
+ *
+ * The rules are the ruleset, so classic protection on `main` is one set of rules too many. But
+ * craftz didn't create it, so `craftz settings` asks before removing it. `align` and `new --push`
+ * remove it without asking, since the owner runs them on repositories the rules already own.
+ * Without classic protection, GitHub answers 404.
+ */
+export function hasClassic(repo: string): boolean {
   try {
-    execFileSync("gh", ["api", "--method", "DELETE", `${api}/branches/main/protection`], {
-      stdio: "ignore",
-    });
+    gh("api", `repos/${OWNER}/${repo}/branches/main/protection`);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Removes classic branch protection from `main`, which does nothing where there's none. */
+export function removeClassic(repo: string): void {
+  try {
+    execFileSync(
+      "gh",
+      ["api", "--method", "DELETE", `repos/${OWNER}/${repo}/branches/main/protection`],
+      { stdio: "ignore" },
+    );
   } catch {}
 }
 
@@ -148,8 +169,10 @@ export function cloudflareLogin(): string | undefined {
   return undefined;
 }
 
+// craftz's own cf, or, where craftz is installed without it, the repository's, which a site has.
 function cf(...args: string[]): unknown {
-  const bin = join(root, "node_modules", ".bin", "cf");
+  const own = join(root, "node_modules", ".bin", "cf");
+  const bin = existsSync(own) ? own : join(process.cwd(), "node_modules", ".bin", "cf");
   const out = execFileSync(bin, args, {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
@@ -223,7 +246,8 @@ export function workerDrift(name: string): string[] {
  * on the Worker's build trigger, and its variables beside them. A Worker that isn't connected to
  * its repository yet has no trigger, and connecting it is the one step left to the dashboard.
  *
- * Each line says whether it was fixed or left, so `align` prints them as they are.
+ * It answers what it left, and nothing when it wrote. Whether the write landed is for reading
+ * back, which [apply.ts](apply.ts) does.
  */
 export function writeWorker(name: string): string[] {
   const found = tag(name);
@@ -260,7 +284,7 @@ export function writeWorker(name: string): string[] {
     JSON.stringify(node),
   );
   cf("builds", "workers", "update", found, "--previews-enabled", "false");
-  return drift.map((line) => `fixed: ${line}`);
+  return [];
 }
 
 /** @prose

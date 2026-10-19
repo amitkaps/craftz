@@ -201,7 +201,7 @@ Every `main` takes changes the same way. Work happens on a branch, in a pull req
 - [`github-actions`]{#github-actions}: every workflow uses the actions at the versions the reference's do, and there's no Dependabot. A repository can add steps of its own, but the versions move in the reference first, like every other version.
 - **Merge settings:** from [.github/settings.json](../reference/.github/settings.json). Squash is the only merge, a branch is deleted once it's merged, and auto-merge is on.
 
-`align` writes both, to every repository or to the ones named, and removes any classic branch protection. `drift` checks the rules, which GitHub shows to anyone. Without a login, GitHub answers 60 requests an hour, so `drift` uses `gh`'s login when there is one, and a check the limit stopped shows as not checked, not as drift. With that login, it checks the merge settings too, which only the owner can read.
+`craftz settings` writes both for one repository, and asks before removing classic branch protection. `align` writes both to every repository or to the ones named, and removes classic protection without asking. `drift` checks the rules, which GitHub shows to anyone. Without a login, GitHub answers 60 requests an hour, so `drift` uses `gh`'s login when there is one, and a check the limit stopped shows as not checked, not as drift. With that login, it checks the merge settings too, which only the owner can read.
 
 ## Agents
 

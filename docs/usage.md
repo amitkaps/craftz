@@ -1,6 +1,6 @@
 # Usage
 
-craftz is used through its commands. Today that's `craftz rules`, `craftz check` and `craftz fix` in any repository, and four scripts in this repository: `pnpm drift` checks every repository, `pnpm align` brings them in line, `pnpm new` starts one and `pnpm release` releases a package. The other commands in [the design](design.md#the-commands) come as [the plan](plan.md) builds them, and this page grows with them.
+craftz is used through its commands. Today that's `craftz rules`, `craftz check`, `craftz fix` and `craftz settings` in any repository, and four scripts in this repository: `pnpm drift` checks every repository, `pnpm align` brings them in line, `pnpm new` starts one and `pnpm release` releases a package. The other commands in [the design](design.md#the-commands) come as [the plan](plan.md) builds them, and this page grows with them.
 
 ## Install
 
@@ -29,7 +29,18 @@ pnpm exec craftz fix            # write every fix, then check again
 
 `craftz check` runs every rule on the folder's files, with the installed version's rules, and prints what has drifted, each with its `see:` line. It exits 1 when anything has. It reads no settings, so it needs no login. It only asks GitHub whether the repository is private, under the folder's name.
 
-`craftz fix` writes every fix that can be automated, the same ones `pnpm align` runs, then checks again and prints what's left to do by hand. A fix can move versions, so run `pnpm install` next, then `pnpm run fix` for the format.
+`craftz fix` writes every fix that can be automated, the same ones `pnpm align` runs. It lists each file it changed, then checks again and prints what's left to do by hand. A second run changes nothing. A fix can move versions, so run `pnpm install` next, then `pnpm run fix` for the format.
+
+## Writing the settings
+
+```sh
+pnpm exec craftz settings --check  # read them, and write nothing
+pnpm exec craftz settings          # write what has drifted, then read it back
+```
+
+`craftz settings` writes what the rules set outside the files, for the repository the folder's `origin` names. That's the merge settings, the `main` ruleset and a package's labels on GitHub, and a site's Worker build settings on Cloudflare. It writes only what has drifted, then reads it back, and lists each setting as `fixed`, `still off`, `failed` or `left`. It exits 1 unless everything is fixed. Running it again finishes what a failed run left.
+
+It needs `gh` logged in as the owner, and `cf` for a site's Worker. Classic branch protection on `main` isn't craftz's, so it asks before removing it. Where there's no one to ask, like in a script, `--yes` removes it.
 
 ## Checking every repository
 
