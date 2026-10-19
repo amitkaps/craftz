@@ -33,18 +33,6 @@ If craftz doesn't work out, this repository is deleted, and the repositories car
 
 ## Open questions
 
-- **How Markdown wraps.** Formatting runs at oxfmt's default `proseWrap: "preserve"`, so each writer's line breaks stay as they are. Most repositories put a paragraph on one line, markz hand-wraps at about 100 characters, and nothing flags the mix. The decision is `"never"`, so each paragraph is one line that the editor soft-wraps. Nobody hand-wraps, and a changed paragraph shows in a diff as one line with its changed words highlighted. `"always"` is ruled out, since one added word reflows the rest of the paragraph.
-
-  The blocker was markz's element lines. To plain Markdown, a `{@section}` line with text beneath it is part of the paragraph, so `"never"` joined it in and markz rendered it as text. Blank lines around it keep it apart. markz 0.5.0 warns about a line without them, `prose check` fails on that warning in every `verify`, and every repository has fixed its lines.
-
-  What's left, in order:
-
-  1. **Here:** set `fmt: { proseWrap: "never" }` in the reference. Rewrite [the formatting rule](rules.md#toolchain-vite), which says oxfmt's defaults with an empty `fmt: {}`, and add a lesson.
-  2. **markz:** ignore `test/documents/` in `fmt`, so the reformat leaves its fixtures alone.
-  3. **`align`:** each repository gets one reformat pull request. `proseWrap` reaches YAML too, so check each repository's YAML in its pull request.
-
-  The cost is a one-time reformat, mainly in markz, and a review comment on a doc that covers a whole paragraph. `@prose` comments stay hand-wrapped at 100, since no oxfmt setting wraps comment text.
-
 - **Browser code Vite doesn't build.** prose's and pagez's page scripts and styles are copied as they're written, so [`toolchain-browsers`](rules.md#toolchain-browsers) doesn't reach them, and nothing stops them using a feature past a floor. A Baseline lint that reads the same list would, once oxlint has one. Until then, check a new feature's support by hand.
 
   prose's `built` plugin runs oxfmt, which only formats. Lowering syntax is in reach: `vite-plus` exports `transformWithOxc` for JS, and Lightning CSS's `transform({ targets })` does CSS, as a devDependency. But at today's floors there's little to lower, and Oxc's lowering can add `require` of its runtime helpers, which a page script can't load. An API past a floor, like `::highlight()`, can't be lowered at all, so the lint is the part that matters.

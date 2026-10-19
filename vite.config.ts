@@ -19,8 +19,8 @@ export default defineConfig({
     publint: { strict: true },
   },
 
-  // oxfmt's defaults.
-  fmt: {},
+  // oxfmt's defaults, with each Markdown paragraph on one line.
+  fmt: { proseWrap: "never" },
 
   // Type-aware lint that also type-checks, so `pnpm check` needs no separate `tsc`.
   lint: {

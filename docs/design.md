@@ -26,19 +26,19 @@ craftz owns a repository's conventions and its lifecycle commands. Vite+ and eac
 
 ## The commands
 
-| Command                    | Does                                                                        |
-| -------------------------- | --------------------------------------------------------------------------- |
-| `craftz rules [id]`        | prints the rules, or one rule, from the installed version                   |
-| `craftz check`             | runs every rule in the repository, in its own `verify`                      |
-| `craftz fix`               | writes every fix that can be automated                                      |
-| `craftz settings`          | writes the GitHub and Cloudflare settings, with your login                  |
-| `craftz pr`, `craftz gone` | open a pull request that merges itself, and delete merged branches          |
-| `craftz deploy`            | deploys the way the repository's type does, run by the `ship` script        |
-| `craftz release`           | opens the pull request that releases a package                              |
-| `craftz new`               | starts a repository that already follows the rules                          |
-| `craftz drift`             | reports every repository's craftz version, checks and settings              |
-| `craftz align`             | moves each repository that's behind to the latest craftz, in a pull request |
-| `craftz()`                 | a Vite plugin that sets `fmt`, `lint` and a site's config for its type      |
+| Command | Does |
+| --- | --- |
+| `craftz rules [id]` | prints the rules, or one rule, from the installed version |
+| `craftz check` | runs every rule in the repository, in its own `verify` |
+| `craftz fix` | writes every fix that can be automated |
+| `craftz settings` | writes the GitHub and Cloudflare settings, with your login |
+| `craftz pr`, `craftz gone` | open a pull request that merges itself, and delete merged branches |
+| `craftz deploy` | deploys the way the repository's type does, run by the `ship` script |
+| `craftz release` | opens the pull request that releases a package |
+| `craftz new` | starts a repository that already follows the rules |
+| `craftz drift` | reports every repository's craftz version, checks and settings |
+| `craftz align` | moves each repository that's behind to the latest craftz, in a pull request |
+| `craftz()` | a Vite plugin that sets `fmt`, `lint` and a site's config for its type |
 
 `ship` stays the deploy verb, as the `ship` script, so the command and the script don't share a name. pnpm runs a script before a command of the same name, so a command called `ship` would run the deploy.
 
@@ -46,12 +46,12 @@ craftz owns a repository's conventions and its lifecycle commands. Vite+ and eac
 
 Each type is read from the project, never declared, and `craftz()` and `craftz deploy` act on it. A project that matches two types fails `craftz check` until it names one, and that's the only time a type is written down. A failure lists the evidence that matched each type, like a dependency or a folder, so it's clear what to change.
 
-| Type       | Read from                             | Gets                                                                                   |
-| ---------- | ------------------------------------- | -------------------------------------------------------------------------------------- |
+| Type | Read from | Gets |
+| --- | --- | --- |
 | prose site | `@amitkaps/prose`, and no server code | `.prose` as `publicDir`, Cloudflare's plugin with `assetsOnly`, `cf deploy --prebuilt` |
-| app        | `@sveltejs/kit`                       | the adapter, `wrangler types`, and wrangler's deploy while it's held                   |
-| package    | not `private`                         | `vp pack`, the release workflow, a release-notes label                                 |
-| tool       | none of these                         | the checks                                                                             |
+| app | `@sveltejs/kit` | the adapter, `wrangler types`, and wrangler's deploy while it's held |
+| package | not `private` | `vp pack`, the release workflow, a release-notes label |
+| tool | none of these | the checks |
 
 When cf can deploy SvelteKit, only `craftz deploy` changes, and the app needs no change of its own.
 
