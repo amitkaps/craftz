@@ -22,8 +22,9 @@
  * `--log` prints the latest build's log after, which is where a failed deploy says why, and
  * `--notes` prints the latest release's notes in full.
  *
- * It needs `gh` logged in, and `cf` for a site. An app on wrangler has no cf, which is said. What can't be read is said, and marked `✗`,
- * rather than taken as fine.
+ * It needs `gh` logged in, and cf logged in for a site. A site with no cf of its own, like an app
+ * on wrangler, has its builds read by the reference's cf, which pnpm fetches. What can't be read
+ * is said, and marked `✗`, rather than taken as fine.
  */
 import { execFileSync } from "node:child_process";
 import { cf, cloudflareLogin, workerTag } from "./settings.ts";

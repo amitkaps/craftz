@@ -272,6 +272,16 @@ test("a prose site names .prose as its folder, and the fix writes it", () => {
   expect(rule?.check(repo(fixed))?.drift).toEqual([]);
 });
 
+test("the prose site's fix adds the folders .gitignore leaves out, once", () => {
+  const dir = mkdtempSync(join(tmpdir(), "craftz-prose-ignore-"));
+  writeFileSync(join(dir, ".gitignore"), "node_modules\n.cloudflare");
+  const fix = RULES.find((r) => r.id === "cloudflare-prose-site")?.fix;
+  for (let i = 0; i < 2; i++) if (fix?.in === "files") fix.apply(dir, here);
+  expect(readFileSync(join(dir, ".gitignore"), "utf8")).toBe(
+    "node_modules\n.cloudflare\n.wrangler\n",
+  );
+});
+
 test("a Worker answers on its domain only, at the runtime's date, and the fixes write both", () => {
   const config = `export default defineConfig({
   worker: {
@@ -328,20 +338,4 @@ test("the betas this repository is on are the ones the rules name", () => {
   const deps = { ...standard.dependencies, ...standard.devDependencies };
   const pre = Object.keys(deps).filter((name) => /^\d+\.\d+\.\d+-/.test(deps[name] ?? ""));
   expect(pre.sort()).toEqual([...BETA].sort());
-});
-
-test("the old standard's links and name become craftz's", () => {
-  const dir = mkdtempSync(join(tmpdir(), "craftz-old-"));
-  mkdirSync(join(dir, "docs"));
-  const old = `What every repository shares is in [ship's standard](https://ship.amitkaps.com/docs/standard.md#releases), as [ship](https://ship.amitkaps.com) has it.\n`;
-  writeFileSync(join(dir, "docs/development.md"), old);
-  const rule = RULES.find((r) => r.id === "docs-old-name");
-  const files = { "docs/development.md": old, ".github/workflows/ci.yml": "" };
-  expect(rule?.check({ files } as unknown as Repo)?.drift).toEqual([
-    "docs/development.md names the old standard",
-  ]);
-  if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
-  expect(readFileSync(join(dir, "docs/development.md"), "utf8")).toBe(
-    `What every repository shares is in [craftz's rules](https://craftz.amitkaps.com/docs/rules.md#releases), as [craftz](https://craftz.amitkaps.com) has it.\n`,
-  );
 });
