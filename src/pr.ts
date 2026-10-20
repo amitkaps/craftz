@@ -14,7 +14,8 @@
  * as CI would stop after. A site or a tool has no release notes, so it takes none.
  *
  * `--body <text>` is the description. `--wait` waits for the merge, then switches to `main`,
- * pulls, and deletes the branch.
+ * pulls, and deletes the branch. It stops before pushing a branch that has nothing new for
+ * `main`, as [Nothing new](#nothing-new) says.
  */
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
@@ -127,9 +128,7 @@ export async function pr(args: string[]): Promise<void> {
     run("git", "commit", "--quiet", "--message", title);
   }
   run("git", "fetch", "--quiet", "origin", "main");
-  if (output("git", "rev-list", "--count", "origin/main..HEAD") === "0") {
-    fail(`${branch} has nothing that isn't on main.`);
-  }
+  if (!newOnMain()) fail(`${branch} has nothing that isn't on main.`);
 
   run("pnpm", "run", "verify");
   run("git", "push", "--quiet", "--set-upstream", "origin", branch);
@@ -161,6 +160,34 @@ export async function pr(args: string[]): Promise<void> {
 }
 
 /** @prose
+ * # Nothing new
+ *
+ * A branch has something new when merging it onto `main` changes `main`. Counting its commits
+ * ahead of `main` isn't enough, since a squash merge leaves them looking unmerged, and a second
+ * run would push them again, into a pull request with nothing to merge. A merge that conflicts
+ * has something new.
+ */
+function newOnMain(): boolean {
+  let merged: string;
+  try {
+    merged =
+      output("git", "merge-tree", "--write-tree", "origin/main", "HEAD").split("\n")[0] ?? "";
+  } catch {
+    return true;
+  }
+  return merged !== output("git", "rev-parse", "origin/main^{tree}");
+}
+
+// The worktree other than this one that has `main` checked out, if there is one.
+function mainElsewhere(): string | undefined {
+  const here = output("git", "rev-parse", "--show-toplevel");
+  const trees = output("git", "worktree", "list", "--porcelain").split("\n\n");
+  const main = trees.find((tree) => tree.split("\n").includes("branch refs/heads/main"));
+  const path = main?.match(/^worktree (.*)$/m)?.[1];
+  return path && path !== here ? path : undefined;
+}
+
+/** @prose
  * # Waiting for the merge
  *
  * Asks GitHub every ten seconds, and stops at the first check that fails, with the pull request
@@ -170,6 +197,9 @@ export async function pr(args: string[]): Promise<void> {
  * A pull request that falls behind `main`, because another merged first, has its branch updated,
  * so CI runs again on what it would merge. `main` requires a branch that's up to date, and
  * auto-merge doesn't update one.
+ *
+ * Once it merges, it switches to `main` and pulls. In a worktree, `main` is checked out in
+ * another, so it switches to `origin/main` instead, detached, and the branch goes either way.
  */
 type Check = { name?: string; conclusion?: string; startedAt?: string };
 type State = { state: string; mergeStateStatus: string; statusCheckRollup: Check[] };
@@ -199,8 +229,18 @@ async function merged(branch: string, url: string): Promise<void> {
     const failed = [...latest.values()].find((check) => FAILED.includes(check.conclusion ?? ""));
     if (failed) fail(`${failed.name ?? "A check"} failed on ${url}.`);
   }
-  run("git", "switch", "--quiet", "main");
-  run("git", "pull", "--quiet", "--prune");
+  const elsewhere = mainElsewhere();
+  if (elsewhere) {
+    run("git", "fetch", "--quiet", "--prune", "origin", "main");
+    run("git", "switch", "--quiet", "--detach", "origin/main");
+  } else {
+    run("git", "switch", "--quiet", "main");
+    run("git", "pull", "--quiet", "--prune");
+  }
   run("git", "branch", "--quiet", "--delete", "--force", branch);
-  console.log("Merged, and on main.");
+  console.log(
+    elsewhere
+      ? `Merged, and on origin/main, since main is in ${elsewhere}.`
+      : "Merged, and on main.",
+  );
 }
