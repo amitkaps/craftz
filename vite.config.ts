@@ -21,6 +21,9 @@ import { craftz } from "./src/index.ts";
 export default defineConfig({
   plugins: [craftz(), cloudflare({ assetsOnly: true })],
 
+  // The site is the folder `prose build` writes.
+  publicDir: ".prose",
+
   pack: {
     entry: ["src/index.ts", "src/cli.ts"],
     format: ["esm"],

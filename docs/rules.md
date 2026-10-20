@@ -18,7 +18,7 @@ What a repository must have follows from four axes. Each is read from where it a
 | repository | public or private    | GitHub                                                |
 
 - **Publish.** A package is published to npm, so its audience there is public. A private npm package would be a fifth value, and none is needed yet.
-- **Deploy.** A site deploys to a Cloudflare Worker. One whose config names code to run, cf's `entrypoint` or wrangler's `main`, is an [app](#an-app). One without is static, whatever builds its files, like [a prose site](#a-prose-site) or a Vite page.
+- **Deploy.** A site deploys to a Cloudflare Worker. One whose config names code to run, cf's `entrypoint` or wrangler's `main`, is an [app](#an-app). One without is static, whatever builds its files, like [a prose site](#a-static-site) or a Vite page.
 - **Audience.** A site is internal when Cloudflare Access covers its domain, as [Internal sites](#internal-sites) says. Audience applies only to a site.
 - **Repository.** Whether the code is public is separate from whether the site is. A private repository can have a public site, and a public repository an internal one.
 
@@ -67,7 +67,7 @@ Code shipped to browsers works in the browsers people use, with a floor for each
 - **Gecko**, which is Firefox: the oldest ESR Mozilla supports. It's the oldest Firefox that still gets fixes.
 - **WebKit**, which is Safari and every browser on iOS, in-app browsers too: the newest release of the major two before the current one. An iPhone that a new iOS drops stays on its last major and keeps getting point releases, so that's the oldest Safari in use. Chrome on iOS and an app's WebView run this engine too, so it covers more people than Safari's own share.
 
-- [`toolchain-browsers`]{#toolchain-browsers}: a build that bundles code for browsers targets these browsers, in `build.target` for a site Vite bundles from source and in `pack.target` for a package that isn't `platform: "node"`. `craftz()` sets `build.target` for a static site with an `index.html`. A package that runs in Node too adds its Node to the list.
+- [`toolchain-browsers`]{#toolchain-browsers}: a build that bundles code for browsers targets these browsers, in `build.target` for a site Vite bundles from source and in `pack.target` for a package that isn't `platform: "node"`. `craftz()` sets `build.target` for every static site. A package that runs in Node too adds its Node to the list.
 
 The list is worked out from MDN's browser-compat-data, by [src/browsers.ts](../src/browsers.ts), as of the date of the data. The package is one of craftz's own dependencies, so a craftz release moves it, and the floors move with it, with `drift` listing what then needs the new list.
 
@@ -166,7 +166,7 @@ A repository with a site deploys it to a Cloudflare Worker with static assets.
 - [`cloudflare-config`]{#cloudflare-config}: a site deploys with `cloudflare.config.ts`, cf's typed config. It holds the Worker's name, compatibility date, domain, addresses and asset handling.
 - [`cloudflare-addresses`]{#cloudflare-addresses}: a site's config turns off `workers.dev` and preview URLs, so it answers only on its domain. Nothing uses the other addresses, and each would serve the site outside anything that covers the domain, like Access.
 - [`cloudflare-date`]{#cloudflare-date}: a site's `compatibilityDate` is the build date of the workerd that the reference's cf installs, and it sets no Node.js compatibility flag. That's the newest date the local runtime knows, so dev and tests run what production does, and from 2026-08-04 the date turns on Node.js compatibility itself.
-- [`cloudflare-wrangler`]{#cloudflare-wrangler}: a site cf can't deploy yet keeps `wrangler.toml`, never `wrangler.jsonc`. prose reads comments in TOML but not in JSONC. `cloudflare-addresses` and `cloudflare-date` read `cloudflare.config.ts`, so they apply once a site moves to it.
+- [`cloudflare-wrangler`]{#cloudflare-wrangler}: an app cf can't build yet, like SvelteKit's, keeps `wrangler.toml`, never `wrangler.jsonc`. prose reads comments in TOML but not in JSONC. `cloudflare-addresses` and `cloudflare-date` read `cloudflare.config.ts`, so they apply once a site moves to it.
 - **Deploys:** the Worker's Git integration (Workers Builds) builds and deploys `main`. There's no deploy step in GitHub Actions, and no API token or secret.
 - **The Worker's settings** are the same on every Worker. Cloudflare's config has no field for them, so `align` writes them with `cf`, and `drift` checks them when `cf` is logged in. Only connecting the Worker to its repository is left to Cloudflare's dashboard.
 
@@ -181,20 +181,20 @@ Previews           off
 
 `verify` fails on a failing check, so a merge that breaks one doesn't deploy. Previews stay off because CI already checks every pull request. If a public repository turns them on, it sets the preview deploy command too: `pnpm exec wrangler versions upload`, or `pnpm exec cf workers versions create --prebuilt`.
 
-### A prose site
+### A static site
 
-A site that's the folder `prose build` writes, like a package's, deploys with cf through Vite. cf's config has no field for an assets folder, so Vite hands the folder on.
+A static site is one folder, however it's built: by Vite from an `index.html`, by a plugin like Sitez or Pagez, or by `prose build`. cf deploys it through Vite, since cf's config has no field for an assets folder. A site that serves a folder names it as Vite's `publicDir`, and the Cloudflare plugin with `assetsOnly` hands it on. A site with an `index.html` is Vite's own build, so it names no folder. `craftz()` never guesses the folder. A prose site's is `.prose`:
 
 ```ts
 export default defineConfig({
   publicDir: ".prose",
-  plugins: [cloudflare({ assetsOnly: true })],
+  plugins: [craftz(), cloudflare({ assetsOnly: true })],
 });
 ```
 
-With `craftz()` in the plugins, the `publicDir` line goes, since the plugin sets it for a static site with no `index.html` and no `publicDir` of its own.
+A site built in several steps, each writing into the same folder, ends with a build of its own that only deploys: the plugin, and the folder as its `publicDir`. With no `index.html`, the plugin builds an empty entry and deletes it, so only the folder's files are deployed.
 
-- [`cloudflare-prose-site`]{#cloudflare-prose-site}: a prose site serves `.prose` as Vite's `publicDir` through the Cloudflare plugin with `assetsOnly`, `verify` builds it after `prose build`, and `.gitignore` leaves out `.cloudflare` and `.wrangler`. The Cloudflare plugin leaves its temporary files in `.wrangler`. With no `index.html` at the root, the plugin builds an empty entry and deletes it, so only the folder's files are deployed.
+- [`cloudflare-prose-site`]{#cloudflare-prose-site}: a prose site names `.prose` as Vite's `publicDir` and serves it through the Cloudflare plugin with `assetsOnly`, `verify` builds it after `prose build`, and `.gitignore` leaves out `.cloudflare` and `.wrangler`. The Cloudflare plugin leaves its temporary files in `.wrangler`.
 
 In a site, the build after `prose build` is `pnpm build`, which is `vp build`. In a package, `build` is `vp pack`, so `verify` ends with `vp build` itself. Anything that adds to the site, like markz's Quality page, runs before it. `ship` is `craftz deploy`, which runs `cf deploy --prebuilt` to upload `.cloudflare/output/`.
 
