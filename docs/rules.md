@@ -215,7 +215,7 @@ The config says so in its `@prose` comment. With `cf` logged in, `drift` looks u
 
 Every `main` takes changes the same way. Work happens on a branch, in a pull request, and `ci` has to pass on a branch that's up to date with `main`. The pull request is squash-merged, so `main` reads as one commit per change, and nobody pushes to it, admins included.
 
-- [`github-rules`]{#github-rules}: `main` has one ruleset, named `main`, from [.github/ruleset.json](../reference/.github/ruleset.json). It requires a pull request with no approvals, since there's one maintainer, and the `ci` check. It keeps history linear, and blocks force pushes and deleting the branch. Nobody bypasses it.
+- [`github-rules`]{#github-rules}: `main` has one ruleset, named `main`, from [.github/ruleset.json](../reference/.github/ruleset.json). It requires a pull request with no approvals, since there's one maintainer, and the `ci` check, and a package's the `label` check too. It keeps history linear, and blocks force pushes and deleting the branch. Nobody bypasses it.
 - [`github-actions`]{#github-actions}: every workflow uses the actions at the versions the reference's do, and there's no Dependabot. A repository can add steps of its own, but the versions move in the reference first, like every other version.
 - **Merge settings:** from [.github/settings.json](../reference/.github/settings.json). Squash is the only merge, a branch is deleted once it's merged, and auto-merge is on. The topic `craftz` goes with them, so the sweeps find the repository.
 
@@ -261,7 +261,7 @@ The docs are published at `/docs/<file>.md`, so a link to one works on GitHub an
 
 markz, prose, pagez and sitez are packages, published to npm. A package is any repository whose `package.json` isn't private, and every one releases the same way.
 
-- [`releases-files`]{#releases-files}: The release files are [the reference's package/](../reference/package/README.md), copied into the package unchanged: the release workflow and `.github/release.yml`, which groups the notes. They name no package, so the copies stay identical and the survey checks them word for word. CI has the reference's `Label` step, word for word, and runs again when a label is added or taken off. Its `concurrency` is the reference's too, which groups a label's run apart from a push's, so a pull request opened with its label runs both and neither is cancelled.
+- [`releases-files`]{#releases-files}: The release files are [the reference's package/](../reference/package/README.md), copied into the package unchanged: the release workflow, `.github/release.yml`, which groups the notes, and the `label` workflow, which checks a pull request has one. They name no package, so the copies stay identical and the survey checks them word for word. CI doesn't check the label, or run again when one changes, so a pull request opened with its label runs `verify` once. Its `concurrency` is the reference's.
 - [`releases-packing`]{#releases-packing}: A package packs `dist` with publint. `files` is `["dist"]`, followed only by what the package reads as it runs, like craftz's `docs/rules.md`. `prepack` is `pnpm run build`, and `publishConfig.access` is `public`. publint runs inside `vp pack`, with `pack: { publint: { strict: true } }` and `publint` as a dev dependency, so `build` fails on a package npm would serve badly, and there's no separate publint step.
 - [`releases-types`]{#releases-types}: Types come from Oxc. The pack block sets `dts: { generator: "oxc" }`, so `vp pack` writes the `.d.ts` files without the TypeScript compiler, and fails on an export whose type isn't written out. It's set there, not as `isolatedDeclarations` in `tsconfig.json`, which the editor would apply to tests and config too. A package has no `typescript` dependency, like a site: `vp check` type-checks with tsgolint, which Vite+ installs.
 - [`releases-bundled`]{#releases-bundled}: Our own packages are bundled, not depended on. prose and sitez have markz as a dev dependency, and `vp pack` puts it inside `dist/`. So a package's users never install a second markz, and each package releases on its own, in any order. Picking up a new markz takes a release of the package that bundles it.
@@ -293,7 +293,7 @@ There's no changelog file. Each pull request carries one label, which files it u
 | `docs`     | Documentation      | documentation readers use                      |
 | `internal` | left out           | tests, tooling, site and lessons               |
 
-A pull request's title is its line in the notes, so a user-facing one is written for the package's users. `ci` fails until a package's pull request has exactly one of these labels, and adding one runs it again, so a release's notes are right when it's tagged, not fixed after. A site or a tool has no release notes, so its pull requests need no label.
+A pull request's title is its line in the notes, so a user-facing one is written for the package's users. `label` fails until a package's pull request has exactly one of these labels, and adding one runs it again, so a release's notes are right when it's tagged, not fixed after. A site or a tool has no release notes, so its pull requests need no label.
 
 ### Setting up a new package
 
@@ -307,7 +307,7 @@ The next merge that changes `package.json` finds that version on npm with no tag
 
 ## CI
 
-GitHub Actions runs one job, named `ci`, on pull requests and on `main`. It installs with `pnpm install --frozen-lockfile` and runs `pnpm run verify`, plus whatever a package adds, like publint or a size budget. In a package, it first checks the pull request has one [release-notes label](#release-notes), and it runs again when a label changes. The `main` ruleset requires `ci`. Cloudflare's own check on each commit isn't required, since it runs after the merge.
+GitHub Actions runs one job, named `ci`, on pull requests and on `main`. It installs with `pnpm install --frozen-lockfile` and runs `pnpm run verify`, plus whatever a package adds, like publint or a size budget. In a package, a second workflow, `label`, checks the pull request has one [release-notes label](#release-notes), and runs again when a label changes, without installing anything. The `main` ruleset requires `ci`, and a package's `label` too. Cloudflare's own check on each commit isn't required, since it runs after the merge.
 
 ## Repositories
 

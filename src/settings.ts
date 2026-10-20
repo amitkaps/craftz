@@ -13,8 +13,8 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { OWNER, TOPIC, VERSIONS, here, nodeMajor, root } from "./reference.ts";
-import type { Worker } from "./survey.ts";
+import { OWNER, type Pkg, TOPIC, VERSIONS, here, nodeMajor, root } from "./reference.ts";
+import type { BranchRule, Worker } from "./survey.ts";
 
 const json = (file: string): unknown => JSON.parse(readFileSync(join(here, file), "utf8"));
 
@@ -112,15 +112,28 @@ export function writeLabels(repo: string): void {
  * # Writing the branch rules
  *
  * A ruleset named `main`, from [.github/ruleset.json](../reference/.github/ruleset.json), created or
- * replaced, so writing twice changes nothing. Other rulesets are left alone.
+ * replaced, so writing twice changes nothing. Other rulesets are left alone. A package's also
+ * requires `label`, the check its label workflow runs.
  */
-export function writeRuleset(repo: string): void {
+export function rulesetFor(pkg: Pkg): { rules: BranchRule[] } {
+  const set = json(".github/ruleset.json") as { rules: BranchRule[] };
+  if (pkg.private) return set;
+  for (const rule of set.rules) {
+    const checks = rule.parameters?.["required_status_checks"] as { context: string }[] | undefined;
+    if (checks) checks.push({ ...checks[0], context: "label" });
+  }
+  return set;
+}
+
+export function writeRuleset(repo: string, pkg: Pkg): void {
   const api = `repos/${OWNER}/${repo}`;
-  const ruleset = join(here, ".github", "ruleset.json");
   const sets = JSON.parse(gh("api", `${api}/rulesets`)) as { id: number; name: string }[];
   const main = sets.find((set) => set.name === "main");
-  if (main) gh("api", "--method", "PUT", `${api}/rulesets/${main.id}`, "--input", ruleset);
-  else gh("api", "--method", "POST", `${api}/rulesets`, "--input", ruleset);
+  const [method, path] = main ? ["PUT", `${api}/rulesets/${main.id}`] : ["POST", `${api}/rulesets`];
+  execFileSync("gh", ["api", "--method", method, path, "--input", "-"], {
+    input: JSON.stringify(rulesetFor(pkg)),
+    stdio: ["pipe", "pipe", "pipe"],
+  });
 }
 
 /** @prose

@@ -1,0 +1,47 @@
+# @prose
+# # One label
+#
+# A package's release notes are grouped by the label on each pull request, so a pull request
+# without one can't merge. The labels are the ones `.github/release.yml` names. The job is named
+# `label`, a check the `main` ruleset requires next to `ci`.
+#
+# It's a workflow of its own, so a label added or taken off runs only this, not `verify` again. It
+# reads one file and installs nothing, and a new commit runs it too, since a check belongs to a
+# commit.
+name: Label
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+# A label changed again cancels the run before it.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: .github/release.yml
+          sparse-checkout-cone-mode: false
+      - name: Label
+        env:
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: |
+          node -e '
+            const notes = require("node:fs").readFileSync(".github/release.yml", "utf8");
+            const known = [...notes.matchAll(/labels: \[(\w+)\]|^ +- (\w+)$/gm)].map((m) => m[1] ?? m[2]);
+            const have = JSON.parse(process.env.LABELS).filter((label) => known.includes(label));
+            if (have.length !== 1) {
+              const found = have.length ? have.join(", ") : "none";
+              console.error(`::error::Label this pull request with one of ${known.join(", ")}. It has ${found}.`);
+              process.exit(1);
+            }
+          '

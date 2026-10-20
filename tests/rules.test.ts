@@ -13,7 +13,8 @@ import { BROWSERS } from "../src/browsers.ts";
 import { COMPATIBILITY_DATE } from "../src/runtime.ts";
 import { BETA, RULES } from "../src/rules.ts";
 import { parts, stated } from "../src/stated.ts";
-import { CRAFTZ, VERSIONS, here, standard } from "../src/reference.ts";
+import { CRAFTZ, type Pkg, VERSIONS, here, standard } from "../src/reference.ts";
+import { rulesetFor } from "../src/settings.ts";
 import { CHECKS, type Repo, worker } from "../src/survey.ts";
 
 const checked = RULES.map((rule) => rule.id);
@@ -231,12 +232,28 @@ export default defineConfig({
 `);
 });
 
-test("a package's CI groups a label's run apart, and the fix writes it", () => {
+test("a package's CI leaves the label to label.yml, and the fix takes it out", () => {
   const ci = readFileSync(join(here, ".github/workflows/ci.yml"), "utf8");
-  const old = ci.replace(
-    /^# A new push[\s\S]*?^concurrency:\n.*\n/m,
-    "concurrency:\n  group: ci-${{ github.ref }}\n",
-  );
+  const step = `      # @prose
+      # # One label
+      - name: Label
+        run: |
+          node -e '
+            process.exit(0);
+          '
+
+`;
+  const old = ci
+    .replace(
+      "  pull_request:\n    branches: [main]\n",
+      (on) =>
+        `  # A label added or taken off runs it again.\n${on}    types: [opened, synchronize, reopened, labeled, unlabeled]\n`,
+    )
+    .replace(
+      /^# A new push.*\nconcurrency:\n.*\n/m,
+      "# Grouped apart.\nconcurrency:\n  group: ci-${{ github.ref }}\n",
+    )
+    .replace("      - run: pnpm install", `${step}      - run: pnpm install`);
   expect(old).not.toBe(ci);
   const dir = mkdtempSync(join(tmpdir(), "craftz-ci-"));
   writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "x" }));
@@ -244,13 +261,16 @@ test("a package's CI groups a label's run apart, and the fix writes it", () => {
   writeFileSync(join(dir, ".github/workflows/ci.yml"), old);
   const rule = RULES.find((r) => r.id === "releases-files");
   const files = { ".github/workflows/ci.yml": old };
-  expect(rule?.check({ pkg: { name: "x" }, files } as unknown as Repo)?.drift).toContain(
+  expect(rule?.check({ pkg: { name: "x" }, files } as unknown as Repo)?.drift).toEqual([
+    "no .github/workflows/release.yml",
+    "no .github/workflows/label.yml",
+    "no .github/release.yml",
+    "ci.yml checks the label, which label.yml does",
+    "ci.yml runs again when a label changes",
     "ci.yml's concurrency isn't craftz's",
-  );
+  ]);
   if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
-  expect(readFileSync(join(dir, ".github/workflows/ci.yml"), "utf8")).toContain(
-    ci.slice(ci.indexOf("concurrency:"), ci.indexOf("permissions:")),
-  );
+  expect(readFileSync(join(dir, ".github/workflows/ci.yml"), "utf8")).toBe(ci);
 });
 
 test("a prose site names .prose as its folder, and the fix writes it", () => {
@@ -338,4 +358,15 @@ test("the betas this repository is on are the ones the rules name", () => {
   const deps = { ...standard.dependencies, ...standard.devDependencies };
   const pre = Object.keys(deps).filter((name) => /^\d+\.\d+\.\d+-/.test(deps[name] ?? ""));
   expect(pre.sort()).toEqual([...BETA].sort());
+});
+
+test("a package's ruleset requires label next to ci, and others only ci", () => {
+  const contexts = (pkg: Pkg) =>
+    rulesetFor(pkg)
+      .rules.flatMap(
+        (rule) => (rule.parameters?.["required_status_checks"] ?? []) as { context: string }[],
+      )
+      .map((check) => check.context);
+  expect(contexts({ name: "x" })).toEqual(["ci", "label"]);
+  expect(contexts({ private: true })).toEqual(["ci"]);
 });
