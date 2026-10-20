@@ -1,27 +1,24 @@
 # Plan
 
-craftz 0.1.1 is on npm, and its docs are live at [craftz.amitkaps.com](https://craftz.amitkaps.com). What each release changed is in its [notes on GitHub](https://github.com/amitkaps/craftz/releases). This plan says what's next, in order, and what works now. [The design](design.md) is the whole of what craftz becomes.
+craftz 0.1.2 is on npm, and its docs are live at [craftz.amitkaps.com](https://craftz.amitkaps.com). What each release changed is in its [notes on GitHub](https://github.com/amitkaps/craftz/releases). This plan says what's next, in order, and what works now. [The design](design.md) is the whole of what craftz becomes.
 
 ## Next, in order
 
 Each step works in one repository before the next starts.
 
-1. **0.1.2.** Moving the repositories turned up these small issues. Each is ticked when its pull request merges, and 0.1.2 goes out once every one is. Then every repository moves once more. Each says what to do until then.
+1. **0.1.2 everywhere.** Each repository bumps craftz, runs `craftz fix`, and rewrites its plan in the same shape, in one pull request.
 
-   - [x] **A site's `publicDir` is the repository's.** `craftz()` set `.prose` for a static site without an `index.html`, and failed a config that set anything else, so a site Vite builds itself, with its files in `public/`, couldn't build. A site with its own `publicDir` is one Vite builds now, so it gets the browsers as `build.target`, and its folder stays its own. Until 0.1.2 is out, only the waiting private site needs it.
-   - [x] **`.wrangler/` is ignored.** A site's build leaves `.wrangler/tmp` behind, and only the app's `.gitignore` named it. craftz's `.gitignore`, which `new` copies, adds it, and `cloudflare-prose-site` asks for it. Until 0.1.2 is out, leave the folder out of a commit.
-   - [x] **The plugins fix formats what it writes.** When a config's `plugins` list spanned lines, the `toolchain-craftz` fix left `plugins: [craftz(), ` on a line of its own, which `vp check` fails. It puts `craftz()` on its own line now. Until 0.1.2 is out, run `vp fmt` after the fix.
-   - [x] **The plugins fix trims what `craftz()` sets.** A config's own `fmt` and `lint` kept the rules `craftz()` sets, like `proseWrap` and the lint plugins, so each was trimmed by hand to the repository's own keys, like its `ignorePatterns`. The fix takes out each key `craftz()` sets to the same value now. Until 0.1.2 is out, trim by hand.
-   - [x] **`craftz deploy` reads the config file.** It ran cf for a static site and wrangler for an app, chosen by the deploy axis. The file decides which tool can read it, so it picks by the file now, `cloudflare.config.ts` for cf and `wrangler.toml` for wrangler. Every static site is on cf, so nothing went wrong.
-   - [x] **`craftz status` says when cf isn't there.** The app has wrangler and no cf, so its status read "cf isn't logged in". It says cf isn't installed now. Until 0.1.2 is out, read the app's build in Cloudflare's dashboard.
-   - [x] **The old name goes.** Docs and comments in the moved repositories still linked the old repository's standard, and no rule found it. `docs-old-name` does now, and its fix points each link at craftz's rules, at the same heading. Wording that only reads like the old name, like "the standard", is done by hand. Until 0.1.2 is out, the old site still answers, so the links work.
-   - [x] **`gone` removes a merged branch's worktree.** Git won't delete a branch another worktree has checked out, so `gone` failed at it and deleted nothing after. It removes the worktree first now, keeps one with changes, and goes on. Until 0.1.2 is out, run `git worktree remove` before `pnpm gone`.
-   - [x] **`craftz status` shows the latest release.** It prints the tag and the notes' summary paragraph, and `--notes` prints them in full, so an agent finds what each release did where it already looks. Until 0.1.2 is out, run `gh release view`.
-   - [x] **The repositories are found by their topic.** align and drift read a list in craftz's code, which still held the old repository and left out craftz-test. They list the public repositories with the GitHub topic `craftz` now, which `craftz settings` adds, and an archived one drops off. Until 0.1.2 is out, the topic is added by hand.
-   - [x] **A pull request opened with its label runs CI twice.** `pnpm pr` opens it with the label, so GitHub sends `opened` and `labeled` at once, and the concurrency group cancelled one run. When the cancelled one reported last, the pull request stayed blocked though CI passed. A label's run is grouped apart now, so both finish, and `releases-files` checks and fixes the block. Until 0.1.2 is out, rerun the cancelled run with `gh run rerun`.
+   - [x] base, markz and sitez.
+   - [ ] prose, pagez and craftz-test. prose's "Current plan" rule changes to the same shape first, in prose.
 
-2. **The private site moves on Pagez.** It builds its site with Sitez and its stories with Pagez, in a second Vite build to its own folder. cf uploads one Vite build's output, so the stories would need glue to get there. Once Pagez builds several folders in one build, the site becomes one Pagez build and moves to craftz and `cloudflare.config.ts` together, with no wrangler. Until then, it stays on the old standard, and its work so far is kept on a branch.
-3. **The old repository retires.** The one that kept the rules before craftz is archived with its history, and its site redirects to craftz's, since every `AGENTS.md` links to it until step 2 has moved them all.
+2. **0.1.3.** Moving to 0.1.2 turned up these. Each is ticked when its pull request merges, and 0.1.3 goes out once every one is.
+
+   - [x] **`pnpm pr` starts where the title says.** On a branch other than `main`, it pushed into that branch, whatever its pull request. A change went into an open pull request under that one's title, and a branch whose pull request had merged opened a new one carrying the merged commits again. The branch's pull request decides now: the same title adds to it, a merged one starts a new branch from `origin/main`, and anything else stops. Until 0.1.3 is out, switch to `main` before each new change.
+   - [ ] **`.wrangler` has a fix.** `cloudflare-prose-site` asks for it in `.gitignore`, but no fix writes it, so markz and sitez added it by hand. Until then, add it by hand.
+   - [ ] **The old name's other links.** `docs-old-name` finds `ship.amitkaps.com`, but not a link to the old repository on GitHub, and it reads only the files the survey reads. sitez's `docs/sitez.md` linked the old standard on GitHub, and nothing found it. Until then, search each repository by hand as it moves.
+
+3. **The private site moves on Pagez.** It builds its site with Sitez and its stories with Pagez, in a second Vite build to its own folder. cf uploads one Vite build's output, so the stories would need glue to get there. Once Pagez builds several folders in one build, the site becomes one Pagez build and moves to craftz and `cloudflare.config.ts` together, with no wrangler. Until then, it stays on the old standard, and its work so far is kept on a branch.
+4. **The old repository retires.** The one that kept the rules before craftz is archived with its history, and its site redirects to craftz's, since every `AGENTS.md` links to it until step 3 has moved them all.
 
 If craftz doesn't work out, this repository is deleted, and the repositories carry on as they are.
 
@@ -29,11 +26,11 @@ If craftz doesn't work out, this repository is deleted, and the repositories car
 
 - **The rules, checked and fixed.** [The rules](rules.md) are worded once, and their checks and fixes are in [src/](../src/), against the files in [reference/](../reference/README.md). `craftz rules`, `check` and `fix` run them from the installed version, and a second `fix` changes nothing.
 - **GitHub's settings.** `craftz settings` writes only what has drifted and reads it back, with `--check` to only read.
-- **One toolchain.** `craftz()` sets every repository's `fmt` and `lint`, and fails a config that sets either differently. A site's config and `craftz deploy` read the deploy axis, and run cf or wrangler.
-- **Pull requests.** `pnpm pr` and `pnpm gone` run craftz's commands, in place of the scripts every repository copied.
-- **What's live.** `craftz status` reads CI on `main`, the open pull requests, npm's version, and a site's build and addresses.
-- **Releases.** The release workflow stages a version on npm and tags it once approved, from 0.1.1 on. align, new and release run the same rules, and `new` starts a repository that passes them, as craftz-test did.
-- **The repositories.** markz, prose, sitez, pagez, the app, craftz-test and a private repository depend on craftz 0.1.1. The public ones carry the topic `craftz`, which is how align and drift find them. One private site waits on Pagez, as Next says.
+- **One toolchain.** `craftz()` sets every repository's `fmt` and `lint`, and fails a config that sets either differently. A site's own `publicDir` stays its own, and `craftz deploy` runs cf or wrangler by the config file it finds.
+- **Pull requests.** `pnpm pr` and `pnpm gone` run craftz's commands, in place of the scripts every repository copied. `gone` removes a merged branch's worktree, and a label's CI run no longer cancels the push's.
+- **What's live.** `craftz status` reads CI on `main`, the open pull requests, npm's version and the latest release, and a site's build and addresses.
+- **Releases.** The release workflow stages a version on npm and tags it once approved, from 0.1.1 on, and 0.1.2's notes say what to change when a repository moves. align, new and release run the same rules, and `new` starts a repository that passes them, as craftz-test did.
+- **The repositories.** base, markz and sitez are on craftz 0.1.2, and prose, pagez, craftz-test and a private repository on 0.1.1. `docs-old-name` points their links to the old standard at craftz's rules. The public ones carry the topic `craftz`, which is how align and drift find them. One private site waits on Pagez, as Next says.
 
 ## Later
 

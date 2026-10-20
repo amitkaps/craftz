@@ -9,7 +9,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "vite-plus/test";
 import { goneIn } from "../src/gone.ts";
-import { branchOf, labelsIn } from "../src/pr.ts";
+import { branchOf, labelsIn, startOn } from "../src/pr.ts";
 import { here } from "../src/reference.ts";
 import { RULES } from "../src/rules.ts";
 
@@ -50,4 +50,16 @@ test("a scripts folder with the repository's own scripts stays", () => {
   for (const r of RULES) if (r.id === "scripts-pr" && r.fix?.in === "files") r.fix.apply(dir, here);
   expect(existsSync(join(dir, "scripts", "pr.ts"))).toBe(false);
   expect(existsSync(join(dir, "scripts", "own.ts"))).toBe(true);
+});
+
+test("a branch's pull request decides where a change goes", () => {
+  const pr = (state: string, title = "Plan") => ({ number: 55, title, state });
+  expect(startOn("main", "Fix")).toEqual({ from: "main" });
+  expect(startOn("by-hand", "Fix")).toEqual({ from: "here" });
+  expect(startOn("plan", "Plan", pr("OPEN"))).toEqual({ from: "here" });
+  expect(startOn("plan", "Fix", pr("OPEN"))).toEqual({
+    stop: 'plan is #55, "Plan", still open. Give its title to add to it, or switch to main.',
+  });
+  expect(startOn("plan", "Fix", pr("MERGED"))).toEqual({ from: "origin" });
+  expect(startOn("plan", "Fix", pr("CLOSED"))).toHaveProperty("stop");
 });

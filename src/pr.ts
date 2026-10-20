@@ -6,8 +6,8 @@
  * a person and an agent take the same steps everywhere, from the version the repository installs.
  *
  * On `main`, it starts a branch named after the title. It commits what's changed, with the title
- * as the message, runs `verify`, pushes, opens the pull request and turns on auto-merge. A branch
- * whose pull request is open already gets the push, and the pull request keeps its title.
+ * as the message, runs `verify`, pushes, opens the pull request and turns on auto-merge.
+ * ([Where it starts](#where-it-starts) says what it does on another branch.)
  *
  * A package's pull request takes one label, `--label <label>`, from the ones its
  * `.github/release.yml` groups the notes by. Without one it stops before anything is committed,
@@ -44,6 +44,33 @@ export const branchOf = (title: string): string =>
     .slice(0, 48)
     .replace(/-$/, "");
 
+/** @prose
+ * # Where it starts
+ *
+ * The title says which pull request a change is for, so on a branch other than `main`, the
+ * branch's pull request decides.
+ *
+ * - **Open, with the same title:** the change goes into it.
+ * - **Open, with another title:** it stops, since the change would merge under that title.
+ * - **Merged:** it starts a new branch from `origin/main`, carrying the working tree, so the
+ *   merged commits stay behind. A squash merge leaves them looking unmerged, and a new pull
+ *   request would carry them again. It stops if the branch has commits made after the merge.
+ * - **Closed without merging:** it stops.
+ * - **None:** the branch was made by hand, and the change goes on it.
+ */
+export type BranchPr = { number: number; title: string; state: string };
+export type Start = { from: "here" | "main" | "origin" } | { stop: string };
+
+export function startOn(branch: string, title: string, pr?: BranchPr): Start {
+  if (branch === "main") return { from: "main" };
+  if (!pr) return { from: "here" };
+  const it = `${branch} is #${pr.number}, "${pr.title}"`;
+  if (pr.state === "MERGED") return { from: "origin" };
+  if (pr.state === "CLOSED") return { stop: `${it}, closed without merging. Switch to main.` };
+  if (pr.title === title) return { from: "here" };
+  return { stop: `${it}, still open. Give its title to add to it, or switch to main.` };
+}
+
 /** Opens the pull request for what's in the working tree, and waits for it with `--wait`. */
 export async function pr(args: string[]): Promise<void> {
   const { values, positionals } = parseArgs({
@@ -71,9 +98,28 @@ export async function pr(args: string[]): Promise<void> {
   }
 
   let branch = output("git", "branch", "--show-current");
-  if (branch === "main") {
+  let found: (BranchPr & { headRefOid: string }) | undefined;
+  if (branch !== "main") {
+    try {
+      found = JSON.parse(
+        output("gh", "pr", "view", branch, "--json", "number,title,state,headRefOid"),
+      ) as BranchPr & { headRefOid: string };
+    } catch {}
+  }
+  const start = startOn(branch, title, found);
+  if ("stop" in start) fail(start.stop);
+  if (start.from === "origin" && found) {
+    let after = "0";
+    try {
+      after = output("git", "rev-list", "--count", `${found.headRefOid}..HEAD`);
+    } catch {}
+    if (after !== "0") fail(`${branch} has commits made after #${found.number} merged.`);
+    run("git", "fetch", "--quiet", "origin", "main");
+  }
+  if (start.from !== "here") {
     branch = branchOf(title);
-    run("git", "switch", "--create", branch);
+    const base = start.from === "origin" ? ["origin/main"] : [];
+    run("git", "switch", "--create", branch, ...base);
   }
 
   if (output("git", "status", "--porcelain")) {
