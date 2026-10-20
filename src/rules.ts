@@ -501,25 +501,6 @@ const DOCS = ["design.md", "plan.md", "development.md", "lessons.md"];
  * those links named, like `#releases`, are craftz's too, so a link keeps its place. What only
  * reads like the old name, such as "the standard", is left to do by hand.
  */
-const OLD_NAME = /ship\.amitkaps\.com|ship's standard/;
-const RENAMED: [RegExp, string][] = [
-  [
-    /https:\/\/ship\.amitkaps\.com\/docs\/standard\.md/g,
-    "https://craftz.amitkaps.com/docs/rules.md",
-  ],
-  [/\[ship\]\(https:\/\/ship\.amitkaps\.com/g, "[craftz](https://craftz.amitkaps.com"],
-  [/https:\/\/ship\.amitkaps\.com/g, "https://craftz.amitkaps.com"],
-  [/ship's standard/g, "craftz's rules"],
-];
-
-function renamed(dir: string): string[] {
-  const docs = existsSync(join(dir, "docs")) ? readdirSync(join(dir, "docs")) : [];
-  return [
-    ...readdirSync(dir).filter((name) => name.endsWith(".md")),
-    ...docs.filter((name) => name.endsWith(".md")).map((name) => `docs/${name}`),
-    "vite.config.ts",
-  ];
-}
 const nav = (text: string): string[] =>
   (/^nav:\s*\[([^\]]*)\]/m.exec(text)?.[1] ?? "")
     .split(",")
@@ -1025,7 +1006,8 @@ export const RULES: Rule[] = [
    * A site is a prose site when cf deploys it and `verify` runs `pnpm prose build`.
    *
    * The Vite config is code, so it's read with regular expressions. Its fix names `.prose` on the
-   * line after the plugins, and the rest is fixed by hand. `build` after
+   * line after the plugins and adds the folders `.gitignore` leaves out. The rest is fixed by
+   * hand. `build` after
    * `prose build` is `pnpm build` in a site, where it's `vp build`, and `vp build` in a
    * package, where `build` is `vp pack`.
    */
@@ -1057,12 +1039,21 @@ export const RULES: Rule[] = [
       apply: (dir) => {
         const file = join(dir, "vite.config.ts");
         const text = read(file);
-        if (!text || /\bpublicDir:/.test(text)) return;
-        const named = text.replace(
-          /^( {2}plugins: \[.*\bcloudflare\(.*\],\n)/m,
-          '$1\n  // The site is the folder `prose build` writes.\n  publicDir: ".prose",\n',
+        if (text && !/\bpublicDir:/.test(text)) {
+          const named = text.replace(
+            /^( {2}plugins: \[.*\bcloudflare\(.*\],\n)/m,
+            '$1\n  // The site is the folder `prose build` writes.\n  publicDir: ".prose",\n',
+          );
+          if (named !== text) writeFileSync(file, named);
+        }
+        const ignore = join(dir, ".gitignore");
+        const ignored = read(ignore) ?? "";
+        const missing = [".cloudflare", ".wrangler"].filter(
+          (folder) => !new RegExp(`^/?\\${folder}/?$`, "m").test(ignored),
         );
-        if (named !== text) writeFileSync(file, named);
+        if (!missing.length) return;
+        const end = ignored && !ignored.endsWith("\n") ? "\n" : "";
+        writeFileSync(ignore, `${ignored}${end}${missing.join("\n")}\n`);
       },
     },
   },
@@ -1224,25 +1215,6 @@ export const RULES: Rule[] = [
         if (had && missing.length && /^nav:\s*\[/m.test(had)) {
           const all = [...listed, ...missing].join(", ");
           writeFileSync(index, had.replace(/^nav:\s*\[[^\]]*\]/m, `nav: [${all}]`));
-        }
-      },
-    },
-  },
-  {
-    id: "docs-old-name",
-    check: ({ files }) =>
-      drifted(
-        Object.entries(files)
-          .filter(([file, text]) => !file.endsWith(".yml") && OLD_NAME.test(text))
-          .map(([file]) => `${file} names the old standard`),
-      ),
-    fix: {
-      in: "files",
-      apply: (dir) => {
-        for (const file of renamed(dir)) {
-          const text = read(join(dir, file));
-          const next = RENAMED.reduce((t, [from, to]) => t.replace(from, to), text);
-          if (next !== text) writeFileSync(join(dir, file), next);
         }
       },
     },

@@ -13,7 +13,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { OWNER, TOPIC, here, nodeMajor, root } from "./reference.ts";
+import { OWNER, TOPIC, VERSIONS, here, nodeMajor, root } from "./reference.ts";
 import type { Worker } from "./survey.ts";
 
 const json = (file: string): unknown => JSON.parse(readFileSync(join(here, file), "utf8"));
@@ -162,7 +162,6 @@ export function removeClassic(repo: string): void {
  * answer is the reason it can't, or nothing when it can.
  */
 export function cloudflareLogin(): string | undefined {
-  if (!cfBin()) return "cf isn't installed";
   if (process.env["CLOUDFLARE_ACCOUNT_ID"]) return undefined;
   let accounts: { id: string; name: string }[];
   try {
@@ -178,13 +177,18 @@ export function cloudflareLogin(): string | undefined {
 
 // craftz's own cf, or, where craftz is installed without it, the repository's, which a site has.
 // An app on wrangler has neither.
-const cfBin = (): string | undefined =>
-  [root, process.cwd()].map((dir) => join(dir, "node_modules", ".bin", "cf")).find(existsSync);
+// The repository's cf, or craftz's, or the reference's version fetched by pnpm, since a site on
+// wrangler has no cf of its own and its builds are read the same way.
+function cfCommand(): [string, ...string[]] {
+  const bin = [root, process.cwd()]
+    .map((dir) => join(dir, "node_modules", ".bin", "cf"))
+    .find(existsSync);
+  return bin ? [bin] : ["pnpm", "dlx", `cf@${VERSIONS["cf"]}`];
+}
 
 export function cf(...args: string[]): unknown {
-  const bin = cfBin();
-  if (!bin) throw new Error("cf isn't installed");
-  const out = execFileSync(bin, args, {
+  const [bin, ...pre] = cfCommand();
+  const out = execFileSync(bin, [...pre, ...args], {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
     env: { ...process.env, CF_QUIET: "1" },
