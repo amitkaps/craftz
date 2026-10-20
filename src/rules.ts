@@ -145,19 +145,46 @@ function pin(dir: string, std: string, name: string): void {
  * the config's plugins. Then the config holds only what's the repository's own.
  *
  * craftz goes in at the version the rules ask for, and the plugin is imported from the package.
- * The `fmt` and `lint` blocks go, each with the comments above it, where they're the ones the
- * plugin sets. A block that differs stays,
- * and the plugin then fails the config, naming each key to settle by hand. craftz's own config
- * imports the plugin from source, so it's left alone.
+ * `craftz()` goes on a line of its own when the plugins do, so `vp check` passes what it wrote.
+ * Each key in `fmt` and `lint` that the plugin sets to the same value goes, so the blocks keep
+ * only the repository's own keys, like `ignorePatterns`. A block left empty goes with the
+ * comments above it. A key that differs stays, and the plugin then fails the config, naming it
+ * to settle by hand. craftz's own config imports the plugin from source, so it's left alone.
  */
 const IMPORT = /^import \{ defineConfig \} from "vite-plus";\n/m;
-const RULED_FMT = /(?:^[ \t]*\/\/.*\n)*^[ \t]*fmt: \{ proseWrap: "never" \},\n(?:[ \t]*\n)?/m;
-const RULED_LINT = new RegExp(
-  String.raw`(?:^[ \t]*//.*\n)*^[ \t]*lint: \{\s*plugins: \["typescript", "unicorn", "import"\],\s*` +
-    String.raw`categories: \{ correctness: "error" \},\s*` +
-    String.raw`options: \{ typeAware: true, typeCheck: true \},\s*\},\n(?:[ \t]*\n)?`,
-  "m",
-);
+// The keys craftz() sets in `fmt` and `lint`, at the values it sets.
+const RULED_KEYS = [
+  String.raw`proseWrap: "never"`,
+  String.raw`plugins: \["typescript", "unicorn", "import"\]`,
+  String.raw`categories: \{ correctness: "error" \}`,
+  String.raw`options: \{ typeAware: true, typeCheck: true \}`,
+];
+const EMPTY_BLOCK = /(?:^[ \t]*\/\/.*\n)*^[ \t]*(?:fmt|lint): \{\s*\},?\n(?:[ \t]*\n)?/gm;
+
+// Takes out each key craftz() sets, on a line of its own or inline, then any block left empty.
+function trimRuled(text: string): string {
+  const trimmed = RULED_KEYS.reduce(
+    (t, key) =>
+      t
+        .replace(new RegExp(String.raw`^[ \t]*${key},?[ \t]*\n`, "m"), "")
+        .replace(new RegExp(String.raw`(?<=\{\s*)${key}\s*(?=\})`), "")
+        .replace(new RegExp(String.raw`${key},\s*`), "")
+        .replace(new RegExp(String.raw`,\s*${key}(?=\s*\})`), ""),
+    text,
+  );
+  return trimmed.replace(EMPTY_BLOCK, "");
+}
+
+// Puts craftz() first in Vite's plugins, on a line of its own when they're one to a line.
+// Oxlint's plugins are names in quotes, so they're passed over.
+const plugIn = (text: string): string =>
+  text.replace(/\bplugins:\s*\[(?!\s*")(\s*\])?(\n[ \t]*)?/, (_, empty?: string, line?: string) =>
+    empty
+      ? "plugins: [craftz()]"
+      : line
+        ? `plugins: [${line}craftz(),${line}`
+        : "plugins: [craftz(), ",
+  );
 
 function useCraftz(dir: string, std: string): void {
   const pkg = readPkg(dir);
@@ -173,13 +200,13 @@ function useCraftz(dir: string, std: string): void {
   const file = join(dir, "vite.config.ts");
   const text = read(file);
   if (!text || PLUGIN.test(text) || !IMPORT.test(text)) return;
-  const used = text
-    .replace(IMPORT, (line) => `${line}import { craftz } from "${CRAFTZ}";\n`)
-    .replace(/\bplugins:\s*\[/, "plugins: [craftz(), ");
+  const used = plugIn(
+    text.replace(IMPORT, (line) => `${line}import { craftz } from "${CRAFTZ}";\n`),
+  );
   const plugged = PLUGIN.test(used)
     ? used
     : used.replace(/defineConfig\(\{\n/, "defineConfig({\n  plugins: [craftz()],\n\n");
-  writeFileSync(file, plugged.replace(RULED_FMT, "").replace(RULED_LINT, ""));
+  writeFileSync(file, trimRuled(plugged));
 }
 
 /** @prose
