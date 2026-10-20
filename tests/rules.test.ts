@@ -183,6 +183,54 @@ export default defineConfig({
 `);
 });
 
+test("the fix keeps a config's own keys, and its plugins one to a line", () => {
+  const dir = mkdtempSync(join(tmpdir(), "craftz-trim-"));
+  writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "x" }));
+  writeFileSync(
+    join(dir, "vite.config.ts"),
+    `import { defineConfig } from "vite-plus";
+
+export default defineConfig({
+  plugins: [
+    cloudflare({ assetsOnly: true }),
+  ],
+
+  // Oxfmt.
+  fmt: { proseWrap: "never", ignorePatterns: ["dist/**"] },
+
+  // Oxlint.
+  lint: {
+    plugins: ["typescript", "unicorn", "import"],
+    categories: { correctness: "error" },
+    options: { typeAware: true, typeCheck: true },
+    ignorePatterns: ["dist/**"],
+  },
+});
+`,
+  );
+  const fix = RULES.find((r) => r.id === "toolchain-craftz")?.fix;
+  if (fix?.in === "files") fix.apply(dir, here);
+  expect(readFileSync(join(dir, "vite.config.ts"), "utf8"))
+    .toBe(`import { defineConfig } from "vite-plus";
+import { craftz } from "@amitkaps/craftz";
+
+export default defineConfig({
+  plugins: [
+    craftz(),
+    cloudflare({ assetsOnly: true }),
+  ],
+
+  // Oxfmt.
+  fmt: { ignorePatterns: ["dist/**"] },
+
+  // Oxlint.
+  lint: {
+    ignorePatterns: ["dist/**"],
+  },
+});
+`);
+});
+
 test("a Worker answers on its domain only, at the runtime's date, and the fixes write both", () => {
   const config = `export default defineConfig({
   worker: {

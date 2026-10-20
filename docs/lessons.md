@@ -57,6 +57,7 @@ Most were learned before craftz, when one repository kept the rules and copied t
 - **A pull request read as behind its own merge.** The first `--wait` after that change failed on a pull request that had merged. For about a second, the squash commit was on `main` and the pull request was still open, so GitHub called it behind, and updating it failed with nothing to update. A failed update now means asking again, and the next look sees it merged.
 - **`gone` stopped at a branch a worktree had checked out.** An agent's worktree kept a merged branch, git refused to delete it even with `--force`, and the error ended the run, so the branches after it stayed too. `gone` now removes that worktree first, without `--force`, so one with changes is kept with its branch, and the rest are still deleted.
 
+
 ## Releases
 
 - **Three copies of one release workflow had drifted.** Each staged differently, and only one had labels or a size budget. The workflow names no package now, so one file is copied everywhere and checked word for word.
@@ -149,3 +150,5 @@ Most were learned before craftz, when one repository kept the rules and copied t
 **A test can't install the version it's releasing.** The 0.1.1 release failed CI. `new` writes craftz's own version, `^0.1.1`, and the test ran `pnpm install` on it, a version npm wouldn't have until the release merged. Every release would have failed the same way. The test now overrides the dependency with this checkout, so it tests the craftz being released. It passed locally and failed again in CI, since the checkout's exports are its build, and only the local copy had a stale one. So the test builds it first. A test of what a release writes uses the release, not the registry.
 
 **A check runs on what will be committed.** The first dry run of the move failed prose's `verify`. Its lexer test lexes every file `git ls-files` lists, and align ran `verify` before staging, so git still listed the `scripts/pr.ts` and `scripts/gone.ts` the fix had deleted. `pnpm pr` commits first, so it never hit this. align now stages before `verify`, so a check sees what the pull request will hold.
+
+**A fix that matched whole blocks missed every real config.** `toolchain-craftz` took out `fmt` and `lint` only when they were exactly what `craftz()` sets, but each moved repository had its own `ignorePatterns` in them, so every one was trimmed by hand. Its plugins went in on one line, too, which `vp check` failed where they were one to a line. Write a fix against a real repository's file, not the reference's, and test it on one.
