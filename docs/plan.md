@@ -6,8 +6,6 @@ craftz 0.2.0 is on npm, and its docs are live at [craftz.amitkaps.com](https://c
 
 1. **The old repository retires.** The one that kept the rules before craftz is archived with its history, and its site redirects to craftz's, for the links outside these repositories. Every `AGENTS.md` links to craftz now.
 
-If craftz doesn't work out, this repository is deleted, and the repositories carry on as they are.
-
 ## Where it is
 
 - **The rules, checked and fixed.** [The rules](rules.md) are worded once, and their checks and fixes are in [src/](../src/), against the files in [reference/](../reference/README.md). `craftz rules`, `check` and `fix` run them from the installed version, and a second `fix` changes nothing.
