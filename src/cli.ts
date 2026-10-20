@@ -28,10 +28,11 @@
  * when anything has failed.
  *
  * `craftz deploy` deploys a site that's already built, as its `ship` script, which the Worker's
- * deploy command runs. What it runs follows from [the deploy axis](../docs/rules.md#axes). A
- * static site uploads the Build Output with `cf deploy --prebuilt`, and an app runs
- * `wrangler deploy`, which is held until cf can deploy one. Each tool is the repository's own
- * dependency, so the version the rules check is the one that deploys.
+ * deploy command runs. What it runs follows from the Worker config's file, since each tool reads
+ * only its own. `cloudflare.config.ts` uploads the Build Output with `cf deploy --prebuilt`, and
+ * `wrangler.toml` runs `wrangler deploy`, which an app is held on until cf can deploy one. Each
+ * tool is the repository's own dependency, so the version the rules check is the one that
+ * deploys.
  *
  * `craftz pr` opens a pull request that merges itself, as [pr.ts](pr.ts) says, and `craftz gone`
  * deletes the branches that merged, as [gone.ts](gone.ts) says. A repository runs them as
@@ -117,13 +118,13 @@ function deploy(dir: string): number {
     return 1;
   }
   const [tool, ...args] =
-    site.deploys === "static" ? ["cf", "deploy", "--prebuilt"] : ["wrangler", "deploy"];
+    site.file === "cloudflare.config.ts" ? ["cf", "deploy", "--prebuilt"] : ["wrangler", "deploy"];
   const bin = join(dir, "node_modules", ".bin", tool ?? "");
   if (!existsSync(bin)) {
-    console.error(`craftz deploy: ${site.name} is ${site.deploys}, so it needs ${tool} installed.`);
+    console.error(`craftz deploy: ${site.name} is in ${site.file}, so it needs ${tool} installed.`);
     return 1;
   }
-  console.log(`craftz deploy: ${site.name}, ${site.deploys}, with ${tool} ${args.join(" ")}`);
+  console.log(`craftz deploy: ${site.name}, from ${site.file}, with ${tool} ${args.join(" ")}`);
   return spawnSync(bin, args, { cwd: dir, stdio: "inherit" }).status ?? 1;
 }
 
