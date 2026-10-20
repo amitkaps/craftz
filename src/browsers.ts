@@ -8,14 +8,21 @@
  * A release counts once it's out, so a beta or a planned one doesn't. Samsung Internet names
  * the Chromium it runs on as its engine version.
  */
-import bcd from "@mdn/browser-compat-data" with { type: "json" };
+import { createRequire } from "node:module";
 
 type Release = { release_date?: string; status: string; engine_version?: string };
+
+// Read through require, which parses the 15 MB of JSON natively. A JSON import is turned into a
+// module first, which cost each test file 12 seconds.
+const bcd = createRequire(import.meta.url)("@mdn/browser-compat-data") as {
+  browsers: Record<string, { releases: Record<string, Release> }>;
+  __meta: { timestamp: string };
+};
 
 const OUT = ["retired", "current", "esr"];
 
 function released(browser: string): [string, Release][] {
-  const releases = (bcd.browsers as Record<string, { releases: Record<string, Release> }>)[browser];
+  const releases = bcd.browsers[browser];
   return Object.entries(releases?.releases ?? {}).filter(
     ([, r]) => r.release_date && r.release_date <= bcd.__meta.timestamp && OUT.includes(r.status),
   );

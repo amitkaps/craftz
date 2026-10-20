@@ -11,10 +11,11 @@
  * the craftz it's testing, and `package.json` stays as `new` wrote it. It's built first, since
  * its exports are the build, and `verify` builds after the tests.
  */
-import { execFileSync } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { promisify } from "node:util";
 import { beforeAll, expect, test } from "vite-plus/test";
 import { type Start, write } from "../src/new.ts";
 import { checkFolder } from "../src/survey.ts";
@@ -35,8 +36,9 @@ const starts: [string, Start][] = [
   ["an internal site", { package: false, site: true, private: false, internal: true }],
 ];
 
+// Each runs in a folder of its own, so they run at once, which takes a minute off `verify`.
 for (const [what, start] of starts) {
-  test(`${what} follows the rules and passes verify`, { timeout: 300_000 }, async () => {
+  test.concurrent(`${what} follows the rules and passes verify`, { timeout: 300_000 }, async () => {
     const dir = join(mkdtempSync(join(tmpdir(), "craftz-new-")), "example");
     await write(dir, "example", start, "An example, from craftz's test.");
     const { findings, worker } = await checkFolder(dir);
@@ -50,9 +52,10 @@ for (const [what, start] of starts) {
       settings,
       readFileSync(settings, "utf8").replace(/^overrides:\n/m, `$&${craftz}\n`),
     );
-    const run = (...args: string[]) => execFileSync("pnpm", args, { cwd: dir, stdio: "pipe" });
-    run("install");
-    run("run", "fix");
-    run("run", "verify");
+    const run = (...args: string[]) =>
+      promisify(execFile)("pnpm", args, { cwd: dir, maxBuffer: 64 * 1024 * 1024 });
+    await run("install");
+    await run("run", "fix");
+    await run("run", "verify");
   });
 }
