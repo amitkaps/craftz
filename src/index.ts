@@ -21,9 +21,10 @@
  *
  * A static site's config follows from [the deploy axis](../docs/rules.md#axes), read from the
  * Worker config beside `vite.config.ts`. With an `index.html`, Vite bundles the site's own code,
- * so `build.target` is the rules' [browsers](../docs/rules.md#toolchain-browsers). Without one,
- * the site is the folder `prose build` writes, so `publicDir` is `.prose`. An app's config is its
- * framework's, so it gets neither.
+ * so `build.target` is the rules' [browsers](../docs/rules.md#toolchain-browsers). A site that
+ * names its own `publicDir`, like `public`, is one Vite builds too, so it gets the browsers, and
+ * its folder is its own. Otherwise the site is the folder `prose build` writes, so `publicDir` is
+ * `.prose`. An app's config is its framework's, so it gets neither.
  *
  * The Cloudflare plugin stays in the repository's config. It's the repository's dependency, at
  * the version the rules check, and craftz would otherwise need it as a peer.
@@ -45,10 +46,11 @@ const RULED: Config = {
   },
 };
 
-// What a static site adds to the rules, from the files at its root.
-function site(root: string): Config {
+// What a static site adds to the rules, from the files at its root and its own `publicDir`.
+function site(root: string, publicDir: unknown): Config {
   if (workerIn(root)?.deploys !== "static") return {};
-  if (existsSync(join(root, "index.html"))) return { build: { target: BROWSERS } };
+  const own = publicDir !== undefined && publicDir !== ".prose";
+  if (own || existsSync(join(root, "index.html"))) return { build: { target: BROWSERS } };
   return { publicDir: ".prose" };
 }
 
@@ -81,7 +83,7 @@ export function craftz(): { name: string; config(config: Config): Config } {
     config(config) {
       const conflicts: string[] = [];
       const root = resolve(typeof config["root"] === "string" ? config["root"] : ".");
-      const added = fill({ ...RULED, ...site(root) }, config, "", conflicts);
+      const added = fill({ ...RULED, ...site(root, config["publicDir"]) }, config, "", conflicts);
       if (conflicts.length) {
         const list = conflicts.map((c) => `  ${c}`).join("\n");
         throw new Error(`craftz() won't override vite.config.ts. Take these out of it:\n${list}`);

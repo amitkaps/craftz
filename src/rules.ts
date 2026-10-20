@@ -104,7 +104,8 @@ function filled(
   site?: Worker,
 ): "target" | "prose" | undefined {
   if (!PLUGIN.test(vite) || site?.deploys !== "static") return undefined;
-  return files["index.html"] ? "target" : "prose";
+  const own = /\bpublicDir:/.test(vite) && !/\bpublicDir:\s*"\.prose"/.test(vite);
+  return files["index.html"] || own ? "target" : "prose";
 }
 
 // What GitHub couldn't answer. Its rate limit isn't drift: the check says it wasn't made.
