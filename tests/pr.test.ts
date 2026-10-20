@@ -23,8 +23,9 @@ test("a branch is named after the title, at most 48 characters", () => {
   expect(branchOf("a ".repeat(30))).toBe("a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a");
 });
 
-test("only branches whose upstream is gone are deleted", () => {
-  expect(goneIn("main \nmerged [gone]\nahead [ahead 1]\nold [gone]")).toEqual(["merged", "old"]);
+test("only branches whose upstream is gone are deleted, with their worktrees", () => {
+  const refs = "main\t\t/repo\nmerged\t[gone]\t\nahead\t[ahead 1]\t\nold\t[gone]\t/repo moved";
+  expect(goneIn(refs)).toEqual([{ branch: "merged" }, { branch: "old", worktree: "/repo moved" }]);
 });
 
 test("the fix runs the commands and deletes the copied scripts", () => {
