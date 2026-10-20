@@ -52,10 +52,10 @@ test("a build that's done says how, and one that's running isn't a failure", () 
 });
 
 test("a version npm doesn't have yet is said, not failed", () => {
-  expect(npmIn("0.1.0", "0.1.0").found).toBe("0.1.0, as package.json");
+  expect(npmIn("0.1.0", "0.1.0").found).toBe("0.1.0, as package.json on main");
   expect(npmIn("0.1.0", "0.1.1")).toEqual({
     what: "npm",
-    found: "0.1.0, and package.json is at 0.1.1, not released yet",
+    found: "0.1.0, and package.json on main is at 0.1.1, not released yet",
     ok: true,
   });
   expect(npmIn(undefined, "0.0.0").found).toBe("not published");

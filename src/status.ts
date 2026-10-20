@@ -8,7 +8,7 @@
  * - **CI**: the latest run on `main` of each workflow, like CI and Release.
  * - **Pull requests**: how many are open.
  * - **npm**, for a package: the version npm serves as `latest`, next to the one in
- *   `package.json`. A version npm doesn't have yet is waiting to be released or approved, which
+ *   `package.json` on `main`, not the clone's, which may not be pulled. A version npm doesn't have yet is waiting to be released or approved, which
  *   is said, not marked.
  * - **The release**, for a package: the latest one on GitHub, its tag and when. The summary that
  *   opens its notes prints after the lines, so an agent reads what the release did where it
@@ -87,13 +87,14 @@ export function buildIn(build: Build | undefined): Line {
   };
 }
 
-/** What npm serves as latest, next to the version in package.json. */
+/** What npm serves as latest, next to the version in package.json on main. */
 export function npmIn(latest: string | undefined, version: string | undefined): Line {
   if (!latest) return { what: "npm", found: "not published", ok: true };
-  if (latest === version) return { what: "npm", found: `${latest}, as package.json`, ok: true };
+  if (latest === version)
+    return { what: "npm", found: `${latest}, as package.json on main`, ok: true };
   return {
     what: "npm",
-    found: `${latest}, and package.json is at ${version}, not released yet`,
+    found: `${latest}, and package.json on main is at ${version}, not released yet`,
     ok: true,
   };
 }
@@ -146,7 +147,7 @@ async function addresses(site: Worker, dev?: string): Promise<Line[]> {
 /** Everything live about one repository, the latest build's id for `--log`, and the release. */
 export async function status(
   repo: string,
-  pkg: Pkg & { version?: string },
+  pkg: Pkg,
   site?: Worker,
 ): Promise<{ lines: Line[]; build?: string; release?: Release; summary?: string }> {
   const lines: Line[] = [];
@@ -185,7 +186,15 @@ export async function status(
       const latest = response.ok
         ? ((await response.json()) as { version: string }).version
         : undefined;
-      lines.push(npmIn(latest, pkg.version));
+      const main = JSON.parse(
+        gh(
+          "api",
+          `repos/${OWNER}/${repo}/contents/package.json?ref=main`,
+          "-H",
+          "Accept: application/vnd.github.raw",
+        ),
+      ) as { version?: string };
+      lines.push(npmIn(latest, main.version));
     } catch (error) {
       lines.push({
         what: "npm",
