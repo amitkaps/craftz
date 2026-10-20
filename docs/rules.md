@@ -240,12 +240,14 @@ Every repository has the same docs, so anyone, or any agent, finds the same thin
 | `README.md` | what it is, how it's used, and a link to `docs/` |
 | `docs/README.md` | the docs in reading order: `nav` in its metadata, and a line for each |
 | `docs/design.md` | what it is, why it's built this way, and what it isn't |
-| `docs/plan.md` | where it is, and its own next steps, later and open, not other repositories' |
+| `docs/plan.md` | its own next steps in order, then what works now, later and open, not other repositories' |
 | `docs/development.md` | only what's its own: its extra scripts, its site, beyond these rules |
 | `docs/lessons.md` | what building it taught, each lesson what happened and what to do about it |
 | `docs/usage.md` | a package's install and use, and a section for agents |
 
 The README is the site's home page when prose builds it, so it reads as one. It says what it is, gives a short example, and lists the commands a user runs, like a package's command. The repository's own scripts, like `dev` and `verify`, are the shared ones, and are left to `development.md`, which links these rules for the shared toolchain, scripts and workflows rather than describing them.
+
+The plan opens with what's next, since that's what it's read for. Its "Where it is" holds one line per thing that works now, rewritten when a release changes it, not a line per release. A release's notes on GitHub already say what it changed, and the plan links to them rather than copying them.
 
 A site has no `usage.md`, since the site is what people use, unless it has commands to run. Any other doc is the repository's own, like markz's grammar, and goes in the `nav` too. `development.md` links to these rules for what's shared rather than repeating it. `docs-files`'s fix writes a first version of each one that's missing, and adds it to the `nav`, so `new` starts with all of them.
 

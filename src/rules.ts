@@ -371,7 +371,7 @@ function firstDocs(name: string, shape: Shape, description: string): Record<stri
   const pages: Page[] = [
     ["design.md", "Design", "what it is, why it's built this way, and what it isn't."],
     ...(shape.package ? [usage] : []),
-    ["plan.md", "Plan", "what's done and what's next, in order."],
+    ["plan.md", "Plan", "what's next, in order, and what works now."],
     ["lessons.md", "Lessons", "what building it taught, for the next change."],
     [
       "development.md",
@@ -406,15 +406,15 @@ What it leaves out on purpose, so nobody adds it back.
 `,
     "docs/plan.md": `# Plan
 
-## Where it is
-
-### Started
-
-It follows [craftz's rules](${rules}).
+What's next, in order, and what works now.
 
 ## Next, in order
 
 1. The first thing ${name} does.
+
+## Where it is
+
+- **Started.** It follows [craftz's rules](${rules}).
 
 ## Later
 
