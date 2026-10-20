@@ -17,7 +17,7 @@
  * A folder named on the command line, like `pnpm drift ../markz`, is checked from disk in place
  * of the repositories. That checks a fix before it's pushed, with a listed repository's holds
  * found by the folder's name. It also checks one that follows the rules without being in
- * `REPOS`, such as a private repository, which a public page shouldn't name. The folder's
+ * the list, such as a private repository, which a public page shouldn't name. The folder's
  * name is taken as the repository's on GitHub.
  */
 import { basename, resolve } from "node:path";

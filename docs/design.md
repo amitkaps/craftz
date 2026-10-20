@@ -61,7 +61,7 @@ A repository isn't one type. It's four independent axes, as [the rules](rules.md
 | deploy: static | a Worker config with no code of its own | Cloudflare's plugin with `assetsOnly`, `cf deploy --prebuilt` |
 | deploy: app | a Worker config with an `entrypoint` or `main` | the adapter, `wrangler types`, and wrangler's deploy while it's held |
 | audience: internal | an Access application on the site's domain | its other addresses off, and Access's policy checked |
-| repository: private | GitHub | no `LICENSE`, and no place in `REPOS` |
+| repository: private | GitHub | no `LICENSE`, and off craftz's list |
 
 A static site's files can come from anywhere, like `.prose` as `publicDir` or Vite's own pages, and nothing about the deploy changes. The axes don't overlap, so there's nothing to choose between. The deploy axis is the one that could, and the Worker config settles it, since code to run makes it an app. So no repository ever writes its type down.
 
@@ -124,7 +124,7 @@ Each craftz release carries the versions of the tools it was tested with, like V
 
 It runs from anywhere, like `pnpm dlx @amitkaps/craftz align` in any folder. In each clone it bumps craftz first, then runs the new version's `craftz fix`, so the rules that apply are the ones the repository moves to. It only moves a repository to a released craftz, so a change in this repository reaches nobody until it's released.
 
-The sweeps hold no rules of their own. They find the repositories by looking for the ones that depend on `@amitkaps/craftz`, so a new repository joins when it installs craftz, and `REPOS` goes.
+The sweeps hold no rules of their own. They find the repositories by the GitHub topic `craftz`, which writing a repository's settings adds. So a new repository joins when its settings are written and leaves when it's archived, and no list in craftz needs a pull request. The list reads only public repositories, so craftz never names a private one.
 
 ## The dashboard
 

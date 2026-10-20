@@ -17,7 +17,8 @@ Each step works in one repository before the next starts.
    - [ ] **The old name goes.** Docs and comments in the moved repositories still say they follow the old repository's standard, and no rule finds it. A rule that does, with its fix, belongs before the old repository retires. Until then, the old site still answers, so the links work.
    - [x] **`gone` removes a merged branch's worktree.** Git won't delete a branch another worktree has checked out, so `gone` failed at it and deleted nothing after. It removes the worktree first now, keeps one with changes, and goes on. Until 0.1.2 is out, run `git worktree remove` before `pnpm gone`.
    - [x] **`craftz status` shows the latest release.** It prints the tag and the notes' summary paragraph, and `--notes` prints them in full, so an agent finds what each release did where it already looks. Until 0.1.2 is out, run `gh release view`.
-   - [ ] **align's list.** align's repositories still include the old one, which retires, and leave out craftz-test. Until then, name the repositories on the command line.
+   - [x] **The repositories are found by their topic.** align and drift read a list in craftz's code, which still held the old repository and left out craftz-test. They list the public repositories with the GitHub topic `craftz` now, which `craftz settings` adds, and an archived one drops off. Until 0.1.2 is out, the topic is added by hand.
+   - [ ] **A pull request opened with its label runs CI twice.** `pnpm pr` opens it with the label, so GitHub sends `opened` and `labeled` at once, and the concurrency group cancels one run. When the cancelled one reports last, the pull request stays blocked though CI passed. Until then, rerun the cancelled run with `gh run rerun`.
 
 2. **The private site moves on Pagez.** It builds its site with Sitez and its stories with Pagez, in a second Vite build to its own folder. cf uploads one Vite build's output, so the stories would need glue to get there. Once Pagez builds several folders in one build, the site becomes one Pagez build and moves to craftz and `cloudflare.config.ts` together, with no wrangler. Until then, it stays on the old standard, and its work so far is kept on a branch.
 3. **The old repository retires.** The one that kept the rules before craftz is archived with its history, and its site redirects to craftz's, since every `AGENTS.md` links to it until step 2 has moved them all.
@@ -32,7 +33,7 @@ If craftz doesn't work out, this repository is deleted, and the repositories car
 - **Pull requests.** `pnpm pr` and `pnpm gone` run craftz's commands, in place of the scripts every repository copied.
 - **What's live.** `craftz status` reads CI on `main`, the open pull requests, npm's version, and a site's build and addresses.
 - **Releases.** The release workflow stages a version on npm and tags it once approved, from 0.1.1 on. align, new and release run the same rules, and `new` starts a repository that passes them, as craftz-test did.
-- **The repositories.** markz, prose, sitez, pagez, the app, craftz-test and a private repository depend on craftz 0.1.1. One private site waits on Pagez, as Next says.
+- **The repositories.** markz, prose, sitez, pagez, the app, craftz-test and a private repository depend on craftz 0.1.1. The public ones carry the topic `craftz`, which is how align and drift find them. One private site waits on Pagez, as Next says.
 
 ## Later
 

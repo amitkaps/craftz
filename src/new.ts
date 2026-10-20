@@ -8,7 +8,7 @@
  * What it starts is two of [the axes](../docs/rules.md#axes): `--package` publishes it to npm,
  * and `--site` deploys a static site to Cloudflare. Either, both or neither, which is scripts run
  * on a laptop. An app starts from base instead. The other two axes are flags of their own.
- * `--private` makes the GitHub repository private and leaves it out of `REPOS`, and `--internal`
+ * `--private` makes the GitHub repository private, which keeps it off craftz's list, and `--internal`
  * puts a site behind Cloudflare Access, which its config then says.
  *
  * It writes only what's the new repository's own: its name and description, its source, the
@@ -24,8 +24,8 @@
  *
  * `--push` also creates the repository on GitHub, pushes the first commit and writes its GitHub
  * settings, as `pnpm align` does. That first push is the only one to `main` the rules allow, since
- * the branch rules aren't on yet. What's left is printed at the end: adding it to `REPOS`, and the Worker,
- * Access or npm's setup, which have no API to do them from here.
+ * the branch rules aren't on yet. Its settings include the topic `craftz`, so the sweeps find it.
+ * What's left is printed at the end: the Worker, Access or npm's setup, which have no API to do them from here.
  */
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -439,9 +439,9 @@ if (import.meta.main) {
 
   const left = [
     ...(push ? [] : [`Create ${OWNER}/${name} on GitHub, push main, then run pnpm align ${name}.`]),
-    start.private
-      ? `Leave it out of REPOS, since craftz is public. Check it with pnpm drift ../${name} in craftz.`
-      : `Add "${name}" to REPOS in craftz's src/survey.ts, in a pull request there.`,
+    ...(start.private
+      ? [`It's private, so craftz doesn't list it. Check it with pnpm drift ../${name} in craftz.`]
+      : []),
     ...(start.site
       ? [
           `Connect the Worker "${name}" to the repository, then run pnpm align ${name} to write its build settings.`,

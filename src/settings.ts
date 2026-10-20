@@ -13,7 +13,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { OWNER, here, nodeMajor, root } from "./reference.ts";
+import { OWNER, TOPIC, here, nodeMajor, root } from "./reference.ts";
 import type { Worker } from "./survey.ts";
 
 const json = (file: string): unknown => JSON.parse(readFileSync(join(here, file), "utf8"));
@@ -50,19 +50,24 @@ const labels = json(".github/labels.json") as {
   description: string;
 }[];
 
-/** The merge settings, compared with [.github/settings.json](../reference/.github/settings.json). */
+/** The merge settings, compared with [.github/settings.json](../reference/.github/settings.json), and the topic. */
 export function mergeDrift(repo: string): string[] {
   const found = JSON.parse(gh("api", `repos/${OWNER}/${repo}`)) as Record<string, unknown>;
-  return Object.entries(merging)
-    .filter(([key, want]) => found[key] !== want)
-    .map(([key, want]) => `GitHub ${key} is ${String(found[key])}, not ${String(want)}`);
+  const topics = (found["topics"] as string[] | undefined) ?? [];
+  return [
+    ...Object.entries(merging)
+      .filter(([key, want]) => found[key] !== want)
+      .map(([key, want]) => `GitHub ${key} is ${String(found[key])}, not ${String(want)}`),
+    ...(topics.includes(TOPIC) ? [] : [`GitHub topics leave out ${TOPIC}`]),
+  ];
 }
 
 /** @prose
  * # Writing GitHub's settings
  *
  * The merge settings come from [.github/settings.json](../reference/.github/settings.json): squash only,
- * branches deleted after merging, and auto-merge on.
+ * branches deleted after merging, and auto-merge on. The topic `craftz` is added, which is how
+ * the sweeps find the repository ([The repositories](survey.ts)).
  *
  * The branch rules and a package's labels are the fixes of `github-rules` and `releases-labels`,
  * in [rules.ts](rules.ts), written by `writeRuleset` and `writeLabels` below.
@@ -76,6 +81,7 @@ export function writeGitHub(repo: string): void {
     "--input",
     join(here, ".github", "settings.json"),
   );
+  gh("repo", "edit", `${OWNER}/${repo}`, "--add-topic", TOPIC);
 }
 
 /** @prose

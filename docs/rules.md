@@ -2,7 +2,7 @@
 
 How every repository builds, checks, deploys and releases. There's one way to do each thing. `drift` checks every repository against these rules and lists where each has drifted, and `align` brings them back in line. [Usage](usage.md) says how to run them.
 
-The repositories are the ones in `REPOS`, in [src/survey.ts](../src/survey.ts). Where this page gives a version, the real value is in [the reference](../reference/README.md), and `drift` reads it from there.
+The repositories are the owner's public ones with the GitHub topic `craftz`, listed in [src/survey.ts](../src/survey.ts). Where this page gives a version, the real value is in [the reference](../reference/README.md), and `drift` reads it from there.
 
 A rule `drift` checks is a list item that opens with its id as a span, like ``[`scripts-verify`]{#scripts-verify}``. An id is lowercase kebab case, its part and then its name, since an id can't hold a dot. Its first sentence is the rule, and the rest says why. `drift` prints the id on each line a repository drifted on, and `craftz rules <id>` prints the rule. The check, and the fix where one can be automated, are in [src/rules.ts](../src/rules.ts), under the same id. Some checks don't have an id yet, and they move over part by part.
 
@@ -217,7 +217,7 @@ Every `main` takes changes the same way. Work happens on a branch, in a pull req
 
 - [`github-rules`]{#github-rules}: `main` has one ruleset, named `main`, from [.github/ruleset.json](../reference/.github/ruleset.json). It requires a pull request with no approvals, since there's one maintainer, and the `ci` check. It keeps history linear, and blocks force pushes and deleting the branch. Nobody bypasses it.
 - [`github-actions`]{#github-actions}: every workflow uses the actions at the versions the reference's do, and there's no Dependabot. A repository can add steps of its own, but the versions move in the reference first, like every other version.
-- **Merge settings:** from [.github/settings.json](../reference/.github/settings.json). Squash is the only merge, a branch is deleted once it's merged, and auto-merge is on.
+- **Merge settings:** from [.github/settings.json](../reference/.github/settings.json). Squash is the only merge, a branch is deleted once it's merged, and auto-merge is on. The topic `craftz` goes with them, so the sweeps find the repository.
 
 `craftz settings` writes both for one repository, and asks before removing classic branch protection. `align` writes both to every repository or to the ones named, and removes classic protection without asking. `drift` checks the rules, which GitHub shows to anyone. Without a login, GitHub answers 60 requests an hour, so `drift` uses `gh`'s login when there is one, and a check the limit stopped shows as not checked, not as drift. With that login, it checks the merge settings too, which only the owner can read.
 
@@ -311,14 +311,14 @@ GitHub Actions runs one job, named `ci`, on pull requests and on `main`. It inst
 
 ## Repositories
 
-Every repository that follows these rules is in `REPOS`, in [src/survey.ts](../src/survey.ts), so `drift` checks it. A repository joins one of two ways, and both end the same: in `REPOS`, protected, and passing `drift`.
+Every public repository that follows these rules has the GitHub topic `craftz`, so `drift` checks it. Writing its GitHub settings adds the topic, and archiving it drops the repository from the list. A repository joins one of two ways, and both end the same: listed, protected, and passing `drift`.
 
 ### Bringing one in
 
-1. Add it to `REPOS`, in a pull request to craftz. `drift` then lists everything it's missing.
+1. Run `craftz settings` in it, which adds the topic along with the rest of GitHub's settings. `drift` then lists everything it's missing.
 2. Fix what drift lists, in the repository's own pull requests. Where a tool can't meet a rule yet, add a hold rather than a workaround.
 3. Connect a site's Worker to the repository, in Cloudflare's dashboard.
-4. Run `align <repo>`, for the branch rules, the merge settings, a package's labels and the Worker's build settings. A package still needs its trusted publisher on npm.
+4. Run `align <repo>`, for the branch rules, a package's labels and the Worker's build settings. A package still needs its trusted publisher on npm.
 
 ### Keeping them in line
 
@@ -331,7 +331,7 @@ A change to the rules, like a new check, is a pull request to craftz, and the ne
 
 ### Following it unlisted
 
-A private repository can follow these rules without joining `REPOS`, since craftz is public and would name it. `drift <folder>` checks it from disk, everything but its branch rules and labels, which `align <repo>` still writes. Where it can't follow a rule, its own docs say which and why.
+A private repository can follow these rules without being listed, since craftz is public and would name it. The list only reads public repositories, so a private one's topic doesn't put it there. `drift <folder>` checks it from disk, everything but its branch rules and labels, which `align <repo>` still writes. Where it can't follow a rule, its own docs say which and why.
 
 ### Starting one
 
@@ -344,8 +344,8 @@ new <name> --site static --internal --description "What it is, in a sentence." -
 new <name> --private --description "What it is, in a sentence." --push
 ```
 
-The flags are [the axes](#axes). `--package` publishes it and `--site static` deploys a static site, and with neither, it's scripts run on a laptop. `--private` makes the repository private on GitHub and leaves it out of `REPOS`. `--internal` says in a site's config that it's behind Access, and the Access application is the step left to do by hand.
+The flags are [the axes](#axes). `--package` publishes it and `--site static` deploys a static site, and with neither, it's scripts run on a laptop. `--private` makes the repository private on GitHub, which keeps it off the list. `--internal` says in a site's config that it's behind Access, and the Access application is the step left to do by hand.
 
-It writes only what's the repository's own: its name and description, its source, its Vite config and strict types, and CI. Each is built from the reference's files rather than a template. Then it runs every rule's fix, the ones `align` runs. They write the rest: the versions and engines, the shared scripts, the editor settings, the cooldown, the shared `AGENTS.md` sections, a package's release files and packing, and a first version of each doc. So a new repository can't follow the rules any less than `align` makes an old one. Then it installs, formats with `fix`, runs `verify` and makes the first commit. `--push` creates the repository on GitHub, pushes that commit and writes its GitHub settings, as `align` does. That first push is the only one to `main` the rules allow, since the rules aren't on yet. It prints what's left: adding the repository to `REPOS`, and the Worker or npm's setup. A SvelteKit app starts from base instead, and is brought in like any other.
+It writes only what's the repository's own: its name and description, its source, its Vite config and strict types, and CI. Each is built from the reference's files rather than a template. Then it runs every rule's fix, the ones `align` runs. They write the rest: the versions and engines, the shared scripts, the editor settings, the cooldown, the shared `AGENTS.md` sections, a package's release files and packing, and a first version of each doc. So a new repository can't follow the rules any less than `align` makes an old one. Then it installs, formats with `fix`, runs `verify` and makes the first commit. `--push` creates the repository on GitHub, pushes that commit and writes its GitHub settings, as `align` does. That first push is the only one to `main` the rules allow, since the rules aren't on yet. Its settings add the topic, so `drift` finds it. It prints what's left: the Worker or npm's setup. A SvelteKit app starts from base instead, and is brought in like any other.
 
 `new`'s test generates a package, a static site, a package with a site, scripts in a private repository and an internal site. It checks each against the survey and runs its `verify`, so the generator can't fall behind the rules.
