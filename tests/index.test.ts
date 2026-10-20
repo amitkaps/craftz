@@ -106,9 +106,16 @@ test("an app and a folder with no Worker get no site config", () => {
   }
 });
 
-test("a site's config set differently fails too", () => {
+test("a site's own publicDir is its own, and Vite builds it for the browsers", () => {
   const root = folder({ "cloudflare.config.ts": STATIC });
-  expect(() => craftz().config({ publicDir: "public", root })).toThrow(
-    '  publicDir is "public", and the rules set ".prose"',
+  const out = resolved({ publicDir: "public" }, root);
+  expect(out["publicDir"]).toBe("public");
+  expect(out["build"]).toEqual({ target: BROWSERS });
+});
+
+test("a site's build target set differently fails", () => {
+  const root = folder({ "cloudflare.config.ts": STATIC, "index.html": "" });
+  expect(() => craftz().config({ build: { target: ["chrome100"] }, root })).toThrow(
+    '  build.target is ["chrome100"]',
   );
 });

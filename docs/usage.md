@@ -47,7 +47,7 @@ export default defineConfig({
 
 `craftz()` sets the `fmt` and `lint` blocks the rules ask for, so `vite.config.ts` holds only what's the repository's own. It never overrides the config. A key the config leaves unset is filled in, and one it sets differently fails `vp` with the key named, so take that key out.
 
-A static site gets its config too, read from its Worker config. With an `index.html`, `build.target` is the rules' browsers. Without one, the site is the folder `prose build` writes, and `publicDir` is `.prose`. The Cloudflare plugin stays in the config, since it's the repository's own dependency.
+A static site gets its config too, read from its Worker config. With an `index.html`, or a `publicDir` of its own like `public`, Vite builds the site, and `build.target` is the rules' browsers. Otherwise the site is the folder `prose build` writes, and `publicDir` is `.prose`. The Cloudflare plugin stays in the config, since it's the repository's own dependency.
 
 ```ts
 import { cloudflare } from "@cloudflare/vite-plugin";
