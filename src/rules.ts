@@ -501,7 +501,9 @@ const DOCS = ["design.md", "plan.md", "development.md", "lessons.md"];
  * # The old name
  *
  * The old repository kept the rules as its standard before craftz did, and a repository that
- * moved can still link its site or say "ship's standard". The check reads the files the survey reads, and
+ * moved can still link its site or say "ship's standard".
+ *
+ * The check reads the files the survey reads, and
  * the fix every Markdown file at the top and in `docs/`, and the Vite config. The headings
  * those links named, like `#releases`, are craftz's too, so a link keeps its place. What only
  * reads like the old name, such as "the standard", is left to do by hand.
