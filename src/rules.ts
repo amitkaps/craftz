@@ -991,8 +991,10 @@ export const RULES: Rule[] = [
       const after = verify.slice(verify.indexOf("pnpm prose build"));
       const build = pkg.scripts?.build === "vp build" ? /&& (pnpm build|vp build)/ : /&& vp build/;
       if (!build.test(after)) drift.push("verify doesn't run vp build after pnpm prose build");
-      if (!/^\/?\.cloudflare\/?$/m.test(files[".gitignore"] ?? "")) {
-        drift.push(".gitignore doesn't ignore .cloudflare");
+      for (const folder of [".cloudflare", ".wrangler"]) {
+        if (!new RegExp(`^/?\\${folder}/?$`, "m").test(files[".gitignore"] ?? "")) {
+          drift.push(`.gitignore doesn't ignore ${folder}`);
+        }
       }
       return { value: "prose", drift };
     },

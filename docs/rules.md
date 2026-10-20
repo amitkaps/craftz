@@ -194,7 +194,7 @@ export default defineConfig({
 
 With `craftz()` in the plugins, the `publicDir` line goes, since the plugin sets it for a static site with no `index.html`.
 
-- [`cloudflare-prose-site`]{#cloudflare-prose-site}: a prose site serves `.prose` as Vite's `publicDir` through the Cloudflare plugin with `assetsOnly`, `verify` builds it after `prose build`, and `.gitignore` leaves out `.cloudflare`. With no `index.html` at the root, the plugin builds an empty entry and deletes it, so only the folder's files are deployed.
+- [`cloudflare-prose-site`]{#cloudflare-prose-site}: a prose site serves `.prose` as Vite's `publicDir` through the Cloudflare plugin with `assetsOnly`, `verify` builds it after `prose build`, and `.gitignore` leaves out `.cloudflare` and `.wrangler`, the folder the Cloudflare plugin leaves its temporary files in. With no `index.html` at the root, the plugin builds an empty entry and deletes it, so only the folder's files are deployed.
 
 In a site, the build after `prose build` is `pnpm build`, which is `vp build`. In a package, `build` is `vp pack`, so `verify` ends with `vp build` itself. Anything that adds to the site, like markz's Quality page, runs before it. `ship` is `craftz deploy`, which runs `cf deploy --prebuilt` to upload `.cloudflare/output/`.
 

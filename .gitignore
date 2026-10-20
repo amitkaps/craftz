@@ -21,3 +21,4 @@ Thumbs.db
 
 # Cloudflare Vite plugin
 .dev.vars*
+.wrangler
