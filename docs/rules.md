@@ -234,6 +234,7 @@ Explanations live in `@prose` comments, beside the code or setting they explain,
 Every repository has the same docs, so anyone, or any agent, finds the same things in the same places.
 
 - [`docs-files`]{#docs-files}: `docs/` has `design.md`, `plan.md`, `development.md` and `lessons.md`, and a package's has `usage.md`. Each is in the `nav` of `docs/README.md`, and `README.md` links to `docs/`.
+- [`docs-old-name`]{#docs-old-name}: The docs and comments link craftz's rules, never the old repository's standard at `ship.amitkaps.com`, or call it "ship's standard". That repository kept the rules before craftz, and its site goes when it retires, so a link there would break.
 
 | File | Holds |
 | --- | --- |

@@ -310,3 +310,19 @@ test("the betas this repository is on are the ones the rules name", () => {
   const pre = Object.keys(deps).filter((name) => /^\d+\.\d+\.\d+-/.test(deps[name] ?? ""));
   expect(pre.sort()).toEqual([...BETA].sort());
 });
+
+test("the old standard's links and name become craftz's", () => {
+  const dir = mkdtempSync(join(tmpdir(), "craftz-old-"));
+  mkdirSync(join(dir, "docs"));
+  const old = `What every repository shares is in [ship's standard](https://ship.amitkaps.com/docs/standard.md#releases), as [ship](https://ship.amitkaps.com) has it.\n`;
+  writeFileSync(join(dir, "docs/development.md"), old);
+  const rule = RULES.find((r) => r.id === "docs-old-name");
+  const files = { "docs/development.md": old, ".github/workflows/ci.yml": "" };
+  expect(rule?.check({ files } as unknown as Repo)?.drift).toEqual([
+    "docs/development.md names the old standard",
+  ]);
+  if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
+  expect(readFileSync(join(dir, "docs/development.md"), "utf8")).toBe(
+    `What every repository shares is in [craftz's rules](https://craftz.amitkaps.com/docs/rules.md#releases), as [craftz](https://craftz.amitkaps.com) has it.\n`,
+  );
+});

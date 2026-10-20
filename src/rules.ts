@@ -496,6 +496,35 @@ What an agent using ${name} should know, as a snippet to copy into its instructi
 }
 
 const DOCS = ["design.md", "plan.md", "development.md", "lessons.md"];
+
+/** @prose
+ * # The old name
+ *
+ * The old repository kept the rules as its standard before craftz did, and a repository that
+ * moved can still link its site or say "ship's standard". The check reads the files the survey reads, and
+ * the fix every Markdown file at the top and in `docs/`, and the Vite config. The headings
+ * those links named, like `#releases`, are craftz's too, so a link keeps its place. What only
+ * reads like the old name, such as "the standard", is left to do by hand.
+ */
+const OLD_NAME = /ship\.amitkaps\.com|ship's standard/;
+const RENAMED: [RegExp, string][] = [
+  [
+    /https:\/\/ship\.amitkaps\.com\/docs\/standard\.md/g,
+    "https://craftz.amitkaps.com/docs/rules.md",
+  ],
+  [/\[ship\]\(https:\/\/ship\.amitkaps\.com/g, "[craftz](https://craftz.amitkaps.com"],
+  [/https:\/\/ship\.amitkaps\.com/g, "https://craftz.amitkaps.com"],
+  [/ship's standard/g, "craftz's rules"],
+];
+
+function renamed(dir: string): string[] {
+  const docs = existsSync(join(dir, "docs")) ? readdirSync(join(dir, "docs")) : [];
+  return [
+    ...readdirSync(dir).filter((name) => name.endsWith(".md")),
+    ...docs.filter((name) => name.endsWith(".md")).map((name) => `docs/${name}`),
+    "vite.config.ts",
+  ];
+}
 const nav = (text: string): string[] =>
   (/^nav:\s*\[([^\]]*)\]/m.exec(text)?.[1] ?? "")
     .split(",")
@@ -1189,6 +1218,25 @@ export const RULES: Rule[] = [
         if (had && missing.length && /^nav:\s*\[/m.test(had)) {
           const all = [...listed, ...missing].join(", ");
           writeFileSync(index, had.replace(/^nav:\s*\[[^\]]*\]/m, `nav: [${all}]`));
+        }
+      },
+    },
+  },
+  {
+    id: "docs-old-name",
+    check: ({ files }) =>
+      drifted(
+        Object.entries(files)
+          .filter(([file, text]) => !file.endsWith(".yml") && OLD_NAME.test(text))
+          .map(([file]) => `${file} names the old standard`),
+      ),
+    fix: {
+      in: "files",
+      apply: (dir) => {
+        for (const file of renamed(dir)) {
+          const text = read(join(dir, file));
+          const next = RENAMED.reduce((t, [from, to]) => t.replace(from, to), text);
+          if (next !== text) writeFileSync(join(dir, file), next);
         }
       },
     },
