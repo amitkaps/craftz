@@ -31,7 +31,7 @@ const run = (command: string, ...args: string[]): void => {
 const output = (command: string, ...args: string[]): string =>
   execFileSync(command, args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
 
-/** The labels CI accepts, read from the notes config the way its Label step reads them. */
+/** The labels CI accepts, read from the notes config the way the label workflow reads them. */
 export const labelsIn = (notes: string): string[] =>
   [...notes.matchAll(/labels: \[(\w+)\]|^ +- (\w+)$/gm)].map((m) => m[1] ?? m[2] ?? "");
 

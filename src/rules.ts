@@ -29,7 +29,7 @@ import {
   standard,
   versionsIn,
 } from "./reference.ts";
-import { writeLabels, writeRuleset } from "./settings.ts";
+import { rulesetFor, writeLabels, writeRuleset } from "./settings.ts";
 import { BROWSERS, COMPATIBILITY_DATE } from "./pinned.ts";
 import { stated } from "./stated.ts";
 import type { BranchRule, Finding, Repo } from "./survey.ts";
@@ -67,14 +67,12 @@ const BUILT = ["dev", "build"];
 const REQUIRED = ["check", "fix", "verify", "prose"];
 const PNPM_COMMANDS = ["deploy", "publish", "audit", "ci", "pipeline", "pack"];
 
-const ruleset = JSON.parse(read(join(here, ".github", "ruleset.json"))) as { rules: BranchRule[] };
-
 // Each rule in the file has to be there, with the parameters the file sets. Other parameters,
 // and rules the file doesn't name, are the repository's own.
-function rulesDrift(found: BranchRule[]): string[] {
+function rulesDrift(found: BranchRule[], pkg: Pkg): string[] {
   if (!found.length) return ["main has no branch rules"];
   const drift: string[] = [];
-  for (const want of ruleset.rules) {
+  for (const want of rulesetFor(pkg).rules) {
     const name = want.type.replaceAll("_", " ");
     const have = found.find((rule) => rule.type === want.type);
     if (!have) {
@@ -511,36 +509,33 @@ const nav = (text: string): string[] =>
  * # Releases
  *
  * A package releases the way every package does, with the files in [package/](../reference/package/README.md)
- * copied in unchanged, and CI's `Label` step and `concurrency` from this repository's, word for word.
+ * copied in unchanged: the release workflow, the notes' config, and the `label` workflow that
+ * checks a pull request has one. CI's `concurrency` is this repository's, word for word.
  *
- * The fix copies
- * the files, puts the step before the install and the trigger on the pull request, and replaces
- * the `concurrency` block, where a workflow has them. One laid out otherwise is left to do by
- * hand, and the check still says so.
+ * CI had the label check as a step, and ran again when a label changed, so a pull request opened
+ * with its label ran `verify` twice. The fix copies the files and takes the step, its triggers
+ * and the old `concurrency` out of CI. One laid out otherwise is left to do by hand, and the
+ * check still says so.
  */
-const RELEASE_FILES = [".github/workflows/release.yml", ".github/release.yml"];
+const RELEASE_FILES = [
+  ".github/workflows/release.yml",
+  ".github/workflows/label.yml",
+  ".github/release.yml",
+];
 const CI = ".github/workflows/ci.yml";
-const LABEL_STEP = /^ {6}- name: Label\n[\s\S]*?\n {10}'\n/m;
-const LABEL_TRIGGER = /^ {4}types: \[.*labeled.*\]$/m;
-const INSTALL = /^ {6}- run: pnpm install/m;
-const TYPES = /^( {2}pull_request:\n(?: {4}branches: .*\n)?)(?: {4}types: .*\n)?/m;
-const CONCURRENCY = /^concurrency:\n(?: {2}.*\n)+/m;
+const LABEL_STEP = /(?:^ {6}#.*\n)*^ {6}- name: Label\n[\s\S]*?\n {10}'\n\n?/m;
+const LABEL_TRIGGER = /^ {2}# .*label.*\n(?= {2}pull_request:)|^ {4}types: \[.*\blabeled\b.*\]\n/gm;
+const CONCURRENCY = /^(?:# .*\n)*concurrency:\n(?: {2}.*\n)+/m;
 const referenceCi = read(join(here, CI));
-const labelStep = LABEL_STEP.exec(referenceCi)?.[0] ?? "";
-const labelTrigger = LABEL_TRIGGER.exec(referenceCi)?.[0] ?? "";
 const concurrency = CONCURRENCY.exec(referenceCi)?.[0] ?? "";
 const labelNames = (
   JSON.parse(read(join(here, ".github", "labels.json"))) as { name: string }[]
 ).map((label) => label.name);
 
-function addLabel(ci: string): string {
-  let text = ci;
-  if (!text.includes(labelStep)) text = text.replace(INSTALL, (line) => `${labelStep}\n${line}`);
-  if (!text.includes(labelTrigger)) {
-    text = text.replace(TYPES, (_, head: string) => `${head}${labelTrigger}\n`);
-  }
-  if (!text.includes(concurrency)) text = text.replace(CONCURRENCY, () => concurrency);
-  return text;
+// CI without the label step and its triggers, which the label workflow has now.
+function withoutLabel(ci: string): string {
+  const text = ci.replace(LABEL_STEP, "").replace(LABEL_TRIGGER, "");
+  return text.includes(concurrency) ? text : text.replace(CONCURRENCY, () => concurrency);
 }
 
 // Sets a script to the rules', in a repository the rule applies to.
@@ -1102,9 +1097,9 @@ export const RULES: Rule[] = [
   },
   {
     id: "github-rules",
-    check: ({ rules }) => {
+    check: ({ rules, pkg }) => {
       if (!rules) return undefined;
-      return rules instanceof Error ? unread(rules) : drifted(rulesDrift(rules));
+      return rules instanceof Error ? unread(rules) : drifted(rulesDrift(rules, pkg));
     },
     fix: { in: "github", apply: writeRuleset },
   },
@@ -1230,8 +1225,10 @@ export const RULES: Rule[] = [
           : [`${file} differs from craftz's`];
       });
       const ci = files[CI] ?? "";
-      if (!ci.includes(labelStep)) drift.push("ci.yml doesn't have craftz's Label step");
-      if (!ci.includes(labelTrigger)) drift.push("ci.yml doesn't run again when a label changes");
+      if (/^ {6}- name: Label$/m.test(ci))
+        drift.push("ci.yml checks the label, which label.yml does");
+      if (/^ {4}types: \[.*\blabeled\b/m.test(ci))
+        drift.push("ci.yml runs again when a label changes");
       if (!ci.includes(concurrency)) drift.push("ci.yml's concurrency isn't craftz's");
       return drifted(drift);
     },
@@ -1244,7 +1241,7 @@ export const RULES: Rule[] = [
           writeFileSync(join(dir, file), readFileSync(join(std, "package", file)));
         }
         const ci = read(join(dir, CI));
-        if (ci) writeFileSync(join(dir, CI), addLabel(ci));
+        if (ci) writeFileSync(join(dir, CI), withoutLabel(ci));
       },
     },
   },

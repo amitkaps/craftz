@@ -62,6 +62,7 @@ const FILES = [
   "CLAUDE.md",
   ".github/workflows/ci.yml",
   ".github/workflows/release.yml",
+  ".github/workflows/label.yml",
   ".github/release.yml",
   ".github/dependabot.yml",
   "README.md",
