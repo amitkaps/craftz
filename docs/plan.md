@@ -40,6 +40,7 @@ If craftz doesn't work out, this repository is deleted, and the repositories car
 - The beta packages that [`versions-beta`](rules.md#versions-beta) names move to their releases when they graduate, which the sweeps report.
 - The app moves to cf when SvelteKit's adapter writes cf's Build Output, and wrangler leaves the catalog with it.
 - The app moves to TypeScript 7 when svelte-check's peer range takes it.
+- A size budget for packages a browser loads, measured as markz's `pnpm size` does: bundled, minified and gzipped. It waits for a second package that needs one, since a Node tool like craftz pays for its install, not its bundle. Speed stays each package's own, since what it times differs.
 
 ## Open questions
 
