@@ -65,7 +65,7 @@ export default defineConfig({
 pnpm craftz deploy
 ```
 
-`craftz deploy` deploys the site the folder has built, and a site's `ship` script runs it, which is the Worker's deploy command. A static site uploads its Build Output with `cf deploy --prebuilt`. An app runs `wrangler deploy`, until cf can deploy one. To see what would go up without uploading it, run `pnpm exec cf deploy --prebuilt --dry-run` after the build.
+`craftz deploy` deploys the site the folder has built, and a site's `ship` script runs it, which is the Worker's deploy command. The Worker config's file picks the tool, since each reads only its own. `cloudflare.config.ts` uploads the Build Output with `cf deploy --prebuilt`, and `wrangler.toml` runs `wrangler deploy`, which an app is on until cf can deploy one. To see what would go up without uploading it, run `pnpm exec cf deploy --prebuilt --dry-run` after the build.
 
 ## Pull requests
 
