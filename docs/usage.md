@@ -91,13 +91,14 @@ It needs `gh` logged in as the owner, and `cf` for a site's Worker. Classic bran
 ## What's live
 
 ```sh
-pnpm craftz status        # CI, pull requests, npm, and the site's build and addresses
-pnpm craftz status --log  # and the latest build's log
+pnpm craftz status          # CI, pull requests, npm, the release, and the site's build and addresses
+pnpm craftz status --notes  # and the latest release's notes
+pnpm craftz status --log    # and the latest build's log
 ```
 
-`craftz status` reads what the repository has out in the world, where `check` reads its files and `settings` its setup. It lists the latest run on `main` of each workflow, the open pull requests, and for a package the version npm serves next to the one in `package.json`. For a site, it lists the Worker's latest build, with its outcome, commit and deploy command, and whether the domain answers and `workers.dev` doesn't. Each line is marked `✓` or `✗`, and it exits 1 when any is `✗`. A run or build still going isn't a failure, and neither is a version waiting to be released.
+`craftz status` reads what the repository has out in the world, where `check` reads its files and `settings` its setup. It lists the latest run on `main` of each workflow, the open pull requests, and for a package the version npm serves next to the one in `package.json`, and its latest release on GitHub. The summary that opens the release's notes prints after the lines. For a site, it lists the Worker's latest build, with its outcome, commit and deploy command, and whether the domain answers and `workers.dev` doesn't. Each line is marked `✓` or `✗`, and it exits 1 when any is `✗`. A run or build still going isn't a failure, and neither is a version waiting to be released.
 
-Use it after a merge or a release, to see that CI, the deploy and npm went through. `--log` prints the build's log, which is where a failed deploy says why. It needs `gh` logged in, and `cf` for a site.
+Use it after a merge or a release, to see that CI, the deploy and npm went through. `--notes` prints the release's notes in full. `--log` prints the build's log, which is where a failed deploy says why. It needs `gh` logged in, and `cf` for a site. An app on wrangler has no cf, so its build line says cf isn't installed.
 
 ## Checking every repository
 

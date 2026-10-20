@@ -6,7 +6,7 @@
  * Cloudflare is left to running it.
  */
 import { expect, test } from "vite-plus/test";
-import { buildIn, npmIn, runsIn } from "../src/status.ts";
+import { buildIn, npmIn, releaseIn, runsIn } from "../src/status.ts";
 
 const run = (workflowName: string, status: string, conclusion: string, headSha = "abcdef123") => ({
   workflowName,
@@ -59,4 +59,18 @@ test("a version npm doesn't have yet is said, not failed", () => {
     ok: true,
   });
   expect(npmIn(undefined, "0.0.0").found).toBe("not published");
+});
+
+test("a release's line is its tag, and its summary is the paragraph above GitHub's notes", () => {
+  const release = {
+    tagName: "v0.1.1",
+    publishedAt: "2026-10-19T21:34:30Z",
+    body: "What it did.\n\n<!-- generated -->\n\n## What's Changed\n* a",
+  };
+  expect(releaseIn(release)).toEqual({
+    line: { what: "GitHub release", found: "v0.1.1, 2026-10-19 21:34 UTC", ok: true },
+    summary: "What it did.",
+  });
+  expect(releaseIn({ ...release, body: "## What's Changed\n* a" }).summary).toBeUndefined();
+  expect(releaseIn(undefined).line.found).toBe("none yet");
 });

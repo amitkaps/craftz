@@ -8,7 +8,7 @@ This repository follows [craftz's rules](https://craftz.amitkaps.com/docs/rules.
 
 - Change the toolchain, scripts, versions or deploys in craftz first, then bring each repository in line. Don't change them in one repository alone.
 - Open a pull request with `pnpm pr "<title>"`. It branches from `main`, commits, runs `pnpm run verify`, pushes and turns on auto-merge, and the pull request is squash-merged once CI passes. Nobody pushes to `main`. After a merge, `pnpm gone` deletes the merged branches.
-- To see what's live, run `pnpm craftz status`. It reads CI on `main`, the open pull requests, the version on npm, and a site's latest build and addresses, and `--log` adds the build's log. Use it rather than reading GitHub, npm or Cloudflare another way.
+- To see what's live, run `pnpm craftz status`. It reads CI on `main`, the open pull requests, the version on npm and the latest release, and a site's latest build and addresses. `--notes` adds the release's notes, and `--log` the build's log. Use it rather than reading GitHub, npm or Cloudflare another way.
 - In a package, give it one label for the release notes, `pnpm pr "<title>" --label <label>`: `breaking`, `added`, `fixed`, `improved`, `docs`, or `internal` for tests, tooling, site and lessons. CI fails without one.
 - Run tools through `pnpm run …` and `pnpm exec`, not global installs.
 - A held check is a tool's limit, not a choice. The rules give its reason, so leave it until the reason goes away.

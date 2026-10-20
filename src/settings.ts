@@ -156,6 +156,7 @@ export function removeClassic(repo: string): void {
  * answer is the reason it can't, or nothing when it can.
  */
 export function cloudflareLogin(): string | undefined {
+  if (!cfBin()) return "cf isn't installed";
   if (process.env["CLOUDFLARE_ACCOUNT_ID"]) return undefined;
   let accounts: { id: string; name: string }[];
   try {
@@ -170,9 +171,13 @@ export function cloudflareLogin(): string | undefined {
 }
 
 // craftz's own cf, or, where craftz is installed without it, the repository's, which a site has.
+// An app on wrangler has neither.
+const cfBin = (): string | undefined =>
+  [root, process.cwd()].map((dir) => join(dir, "node_modules", ".bin", "cf")).find(existsSync);
+
 export function cf(...args: string[]): unknown {
-  const own = join(root, "node_modules", ".bin", "cf");
-  const bin = existsSync(own) ? own : join(process.cwd(), "node_modules", ".bin", "cf");
+  const bin = cfBin();
+  if (!bin) throw new Error("cf isn't installed");
   const out = execFileSync(bin, args, {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],

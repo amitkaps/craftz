@@ -23,8 +23,9 @@
  * Worker.
  *
  * `craftz status` reads what's live: CI on `main`, the open pull requests, a package's version on
- * npm, and a site's latest build and addresses, as [status.ts](status.ts) says. `--log` prints the
- * latest build's log too. It exits 1 when anything has failed.
+ * npm and its latest release, and a site's latest build and addresses, as [status.ts](status.ts)
+ * says. `--log` prints the latest build's log too, and `--notes` the release's notes. It exits 1
+ * when anything has failed.
  *
  * `craftz deploy` deploys a site that's already built, as its `ship` script, which the Worker's
  * deploy command runs. What it runs follows from [the deploy axis](../docs/rules.md#axes). A
@@ -58,8 +59,8 @@ const HELP = `Usage: craftz <command>
   fix [dir]    writes every fix, then checks what's left
   settings [dir] [--check] [--yes]
                writes the settings on GitHub and Cloudflare, then reads them back
-  status [dir] [--log]
-               reads what's live: CI, pull requests, npm, the site's build and addresses
+  status [dir] [--log] [--notes]
+               reads what's live: CI, pull requests, npm, the release, the site's build and addresses
   deploy       deploys the site the current folder built, as its ship script
   pr "<title>" [--label <label>] [--body <text>] [--wait]
                opens a pull request that merges itself once CI passes
@@ -127,15 +128,17 @@ function deploy(dir: string): number {
 }
 
 // Prints what's live for a repository, and returns whether anything has failed.
-async function live(dir: string, log: boolean): Promise<boolean> {
+async function live(dir: string, log: boolean, notes: boolean): Promise<boolean> {
   const { repo, pkg, site } = target(dir);
-  const { lines, build } = await status(repo, pkg, site);
+  const { lines, build, release, summary } = await status(repo, pkg, site);
   const failed = lines.some((line) => !line.ok);
   console.log(failed ? `✗ ${repo}` : `✓ ${repo}`);
   const width = Math.max(...lines.map((line) => line.what.length));
   for (const line of lines) {
     console.log(`    ${line.ok ? "✓" : "✗"} ${line.what.padEnd(width)}  ${line.found}`);
   }
+  if (notes && release) console.log(`\n${release.body.trim()}`);
+  else if (summary) console.log(`\n${summary}`);
   if (log && build) console.log(`\n${buildLog(build).join("\n")}`);
   return failed;
 }
@@ -212,11 +215,16 @@ if (command === "rules" && !rest.length) {
 } else if (command === "status") {
   const flags = [arg, ...rest].filter((it) => it?.startsWith("--"));
   const dirs = [arg, ...rest].filter((it) => it !== undefined && !it.startsWith("--"));
-  if (dirs.length > 1 || flags.some((f) => f !== "--log")) {
+  if (dirs.length > 1 || flags.some((f) => f !== "--log" && f !== "--notes")) {
     console.error(HELP);
     process.exit(1);
   }
-  process.exitCode = (await live(resolve(dirs[0] ?? "."), flags.includes("--log"))) ? 1 : 0;
+  const failed = await live(
+    resolve(dirs[0] ?? "."),
+    flags.includes("--log"),
+    flags.includes("--notes"),
+  );
+  process.exitCode = failed ? 1 : 0;
 } else if (command === "deploy" && !arg) {
   process.exitCode = deploy(process.cwd());
 } else if (command === "pr") {
