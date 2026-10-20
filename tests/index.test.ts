@@ -116,6 +116,6 @@ test("a site's own publicDir is its own, and Vite builds it for the browsers", (
 test("a site's build target set differently fails", () => {
   const root = folder({ "cloudflare.config.ts": STATIC, "index.html": "" });
   expect(() => craftz().config({ build: { target: ["chrome100"] }, root })).toThrow(
-    "  build.target is [\"chrome100\"]",
+    '  build.target is ["chrome100"]',
   );
 });
