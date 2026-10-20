@@ -6,7 +6,7 @@
  * not yet, is under one of the doc's parts.
  */
 import { expect, test } from "vite-plus/test";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { BROWSERS } from "../src/browsers.ts";
@@ -229,6 +229,28 @@ export default defineConfig({
   },
 });
 `);
+});
+
+test("a package's CI groups a label's run apart, and the fix writes it", () => {
+  const ci = readFileSync(join(here, ".github/workflows/ci.yml"), "utf8");
+  const old = ci.replace(
+    /^# A new push[\s\S]*?^concurrency:\n.*\n/m,
+    "concurrency:\n  group: ci-${{ github.ref }}\n",
+  );
+  expect(old).not.toBe(ci);
+  const dir = mkdtempSync(join(tmpdir(), "craftz-ci-"));
+  writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "x" }));
+  mkdirSync(join(dir, ".github/workflows"), { recursive: true });
+  writeFileSync(join(dir, ".github/workflows/ci.yml"), old);
+  const rule = RULES.find((r) => r.id === "releases-files");
+  const files = { ".github/workflows/ci.yml": old };
+  expect(rule?.check({ pkg: { name: "x" }, files } as unknown as Repo)?.drift).toContain(
+    "ci.yml's concurrency isn't craftz's",
+  );
+  if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
+  expect(readFileSync(join(dir, ".github/workflows/ci.yml"), "utf8")).toContain(
+    ci.slice(ci.indexOf("concurrency:"), ci.indexOf("permissions:")),
+  );
 });
 
 test("a Worker answers on its domain only, at the runtime's date, and the fixes write both", () => {

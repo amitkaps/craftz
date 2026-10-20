@@ -506,11 +506,12 @@ const nav = (text: string): string[] =>
  * # Releases
  *
  * A package releases the way every package does, with the files in [package/](../reference/package/README.md)
- * copied in unchanged, and CI's `Label` step from this repository's, word for word.
+ * copied in unchanged, and CI's `Label` step and `concurrency` from this repository's, word for word.
  *
  * The fix copies
- * the files, and puts the step before the install and the trigger on the pull request, where a
- * workflow has them. One laid out otherwise is left to do by hand, and the check still says so.
+ * the files, puts the step before the install and the trigger on the pull request, and replaces
+ * the `concurrency` block, where a workflow has them. One laid out otherwise is left to do by
+ * hand, and the check still says so.
  */
 const RELEASE_FILES = [".github/workflows/release.yml", ".github/release.yml"];
 const CI = ".github/workflows/ci.yml";
@@ -518,9 +519,11 @@ const LABEL_STEP = /^ {6}- name: Label\n[\s\S]*?\n {10}'\n/m;
 const LABEL_TRIGGER = /^ {4}types: \[.*labeled.*\]$/m;
 const INSTALL = /^ {6}- run: pnpm install/m;
 const TYPES = /^( {2}pull_request:\n(?: {4}branches: .*\n)?)(?: {4}types: .*\n)?/m;
+const CONCURRENCY = /^concurrency:\n(?: {2}.*\n)+/m;
 const referenceCi = read(join(here, CI));
 const labelStep = LABEL_STEP.exec(referenceCi)?.[0] ?? "";
 const labelTrigger = LABEL_TRIGGER.exec(referenceCi)?.[0] ?? "";
+const concurrency = CONCURRENCY.exec(referenceCi)?.[0] ?? "";
 const labelNames = (
   JSON.parse(read(join(here, ".github", "labels.json"))) as { name: string }[]
 ).map((label) => label.name);
@@ -531,6 +534,7 @@ function addLabel(ci: string): string {
   if (!text.includes(labelTrigger)) {
     text = text.replace(TYPES, (_, head: string) => `${head}${labelTrigger}\n`);
   }
+  if (!text.includes(concurrency)) text = text.replace(CONCURRENCY, () => concurrency);
   return text;
 }
 
@@ -1202,6 +1206,7 @@ export const RULES: Rule[] = [
       const ci = files[CI] ?? "";
       if (!ci.includes(labelStep)) drift.push("ci.yml doesn't have craftz's Label step");
       if (!ci.includes(labelTrigger)) drift.push("ci.yml doesn't run again when a label changes");
+      if (!ci.includes(concurrency)) drift.push("ci.yml's concurrency isn't craftz's");
       return drifted(drift);
     },
     fix: {

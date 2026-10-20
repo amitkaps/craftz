@@ -14,8 +14,10 @@ on:
     branches: [main]
     types: [opened, synchronize, reopened, labeled, unlabeled]
 
+# A new push cancels the run before it. A label's run is grouped apart, since a pull request
+# opened with its label starts both at once, and one cancelling the other can leave it blocked.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ contains(github.event.action, 'labeled') }}
   cancel-in-progress: true
 
 permissions:
