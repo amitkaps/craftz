@@ -87,16 +87,14 @@ test("a value set differently fails, naming each key", () => {
   );
 });
 
-test("a static site with an index.html gets the browsers as its build target", () => {
-  const root = folder({ "cloudflare.config.ts": STATIC, "index.html": "<!doctype html>" });
-  expect(resolved({}, root)["build"]).toEqual({ target: BROWSERS });
-  expect(resolved({}, root)["publicDir"]).toBeUndefined();
-});
-
-test("a static site without one serves the folder prose writes", () => {
-  const root = folder({ "cloudflare.config.ts": STATIC });
-  expect(resolved({}, root)["publicDir"]).toBe(".prose");
-  expect(resolved({}, root)["build"]).toBeUndefined();
+test("a static site gets the browsers as its build target, and never a folder", () => {
+  for (const root of [
+    folder({ "cloudflare.config.ts": STATIC, "index.html": "<!doctype html>" }),
+    folder({ "cloudflare.config.ts": STATIC }),
+  ]) {
+    expect(resolved({}, root)["build"]).toEqual({ target: BROWSERS });
+    expect(resolved({}, root)["publicDir"]).toBeUndefined();
+  }
 });
 
 test("an app and a folder with no Worker get no site config", () => {
@@ -106,11 +104,11 @@ test("an app and a folder with no Worker get no site config", () => {
   }
 });
 
-test("a site's own publicDir is its own, and Vite builds it for the browsers", () => {
+test("a site's folder is the publicDir it names", () => {
   const root = folder({ "cloudflare.config.ts": STATIC });
-  const out = resolved({ publicDir: "public" }, root);
-  expect(out["publicDir"]).toBe("public");
-  expect(out["build"]).toEqual({ target: BROWSERS });
+  for (const publicDir of [".prose", "public"]) {
+    expect(resolved({ publicDir }, root)["publicDir"]).toBe(publicDir);
+  }
 });
 
 test("a site's build target set differently fails", () => {

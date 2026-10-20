@@ -96,17 +96,10 @@ const drifted = (drift: string[]): Finding => ({ drift });
 // A config with `craftz()` in its plugins has what the plugin sets, or fails when it conflicts.
 const PLUGIN = /\bplugins:\s*\[[^\]]*\bcraftz\(\)/;
 
-// What `craftz()` fills in for a static site: `build.target` with its own page, and `publicDir`
-// as `.prose` without one. Its src/index.ts says why.
-function filled(
-  vite: string,
-  files: Record<string, string>,
-  site?: Worker,
-): "target" | "prose" | undefined {
-  if (!PLUGIN.test(vite) || site?.deploys !== "static") return undefined;
-  const own = /\bpublicDir:/.test(vite) && !/\bpublicDir:\s*"\.prose"/.test(vite);
-  return files["index.html"] || own ? "target" : "prose";
-}
+// Whether `craftz()` fills in `build.target`, as it does for a static site. Its src/index.ts
+// says why.
+const filled = (vite: string, site?: Worker): boolean =>
+  PLUGIN.test(vite) && site?.deploys === "static";
 
 // What GitHub couldn't answer. Its rate limit isn't drift: the check says it wasn't made.
 export function unread(error: Error): Finding {
@@ -847,11 +840,9 @@ export const RULES: Rule[] = [
       const vite = files["vite.config.ts"] ?? "";
       const pack = /\bpack:\s*\{/.test(vite) && !/platform:\s*"node"/.test(vite);
       // A site Vite bundles from source, unlike one that serves a folder `prose build` wrote.
-      const fills = filled(vite, files, site);
-      const served = /publicDir:\s*"\.prose"/.test(vite) || fills === "prose";
-      const bundled = Boolean(site) && !served;
+      const bundled = Boolean(site) && !/publicDir:\s*"\.prose"/.test(vite);
+      if (!pack && filled(vite, site)) return { value: BROWSERS.join(" "), drift: [] };
       if (!pack && !bundled) return undefined;
-      if (!pack && fills === "target") return { value: BROWSERS.join(" "), drift: [] };
       const have = targetsIn(vite);
       const where = pack ? "pack.target" : "build.target";
       if (!have.length) return drifted([`${where} isn't set`]);
@@ -1031,8 +1022,10 @@ export const RULES: Rule[] = [
   /** @prose
    * # A prose site on cf
    *
-   * A site is a prose site when cf deploys it and `verify` runs `pnpm prose build`. The Vite
-   * config is code, so it's read with regular expressions and fixed by hand. `build` after
+   * A site is a prose site when cf deploys it and `verify` runs `pnpm prose build`.
+   *
+   * The Vite config is code, so it's read with regular expressions. Its fix names `.prose` on the
+   * line after the plugins, and the rest is fixed by hand. `build` after
    * `prose build` is `pnpm build` in a site, where it's `vp build`, and `vp build` in a
    * package, where `build` is `vp pack`.
    */
@@ -1045,9 +1038,7 @@ export const RULES: Rule[] = [
       }
       const vite = files["vite.config.ts"] ?? "";
       const drift: string[] = [];
-      if (!/publicDir:\s*"\.prose"/.test(vite) && filled(vite, files, site) !== "prose") {
-        drift.push("vite.config.ts doesn't serve .prose");
-      }
+      if (!/publicDir:\s*"\.prose"/.test(vite)) drift.push("vite.config.ts doesn't serve .prose");
       if (!/cloudflare\(\{\s*assetsOnly:\s*true\s*\}\)/.test(vite)) {
         drift.push("vite.config.ts doesn't use the Cloudflare plugin with assetsOnly");
       }
@@ -1060,6 +1051,19 @@ export const RULES: Rule[] = [
         }
       }
       return { value: "prose", drift };
+    },
+    fix: {
+      in: "files",
+      apply: (dir) => {
+        const file = join(dir, "vite.config.ts");
+        const text = read(file);
+        if (!text || /\bpublicDir:/.test(text)) return;
+        const named = text.replace(
+          /^( {2}plugins: \[.*\bcloudflare\(.*\],\n)/m,
+          '$1\n  // The site is the folder `prose build` writes.\n  publicDir: ".prose",\n',
+        );
+        if (named !== text) writeFileSync(file, named);
+      },
     },
   },
   /** @prose

@@ -253,6 +253,25 @@ test("a package's CI groups a label's run apart, and the fix writes it", () => {
   );
 });
 
+test("a prose site names .prose as its folder, and the fix writes it", () => {
+  const vite =
+    "export default defineConfig({\n  plugins: [craftz(), cloudflare({ assetsOnly: true })],\n});\n";
+  const dir = mkdtempSync(join(tmpdir(), "craftz-prose-site-"));
+  writeFileSync(join(dir, "vite.config.ts"), vite);
+  const rule = RULES.find((r) => r.id === "cloudflare-prose-site");
+  const repo = (text: string) =>
+    ({
+      files: { "vite.config.ts": text, ".gitignore": ".cloudflare\n.wrangler\n" },
+      pkg: { scripts: { build: "vp pack", verify: "pnpm prose build && vp build" } },
+      worker: { file: "cloudflare.config.ts" },
+    }) as unknown as Repo;
+  expect(rule?.check(repo(vite))?.drift).toEqual(["vite.config.ts doesn't serve .prose"]);
+  if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
+  const fixed = readFileSync(join(dir, "vite.config.ts"), "utf8");
+  expect(fixed).toContain('  publicDir: ".prose",\n');
+  expect(rule?.check(repo(fixed))?.drift).toEqual([]);
+});
+
 test("a Worker answers on its domain only, at the runtime's date, and the fixes write both", () => {
   const config = `export default defineConfig({
   worker: {
