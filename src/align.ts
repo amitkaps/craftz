@@ -1,7 +1,8 @@
 /** @prose
  * # Align
  *
- * Brings repositories in line with the rules: `pnpm align` does craftz and every one in `REPOS`,
+ * Brings repositories in line with the rules: `pnpm align` does craftz and every one
+ * [listed](survey.ts) by its topic,
  * and `pnpm align markz` does one. It's what writes, where [drift.ts](drift.ts) only reads, and it
  * needs `gh` logged in as the owner.
  *
@@ -26,7 +27,7 @@ import { promisify } from "node:util";
 import { writeSettings } from "./apply.ts";
 import { fixFiles } from "./rules.ts";
 import { OWNER, TOOLS, catalog, here } from "./reference.ts";
-import { HELD, REPOS, worker } from "./survey.ts";
+import { HELD, repos, worker } from "./survey.ts";
 import { cloudflareLogin, githubLogin } from "./settings.ts";
 
 const SELF = "craftz";
@@ -42,7 +43,7 @@ if (cloudflare) console.log(`not written: the Workers' build settings, since ${c
 const args = process.argv.slice(2);
 const local = args.includes("--local");
 const named = args.filter((arg) => arg !== "--local");
-const targets = named.length ? named : [SELF, ...REPOS];
+const targets = named.length ? named : [SELF, ...(await repos())];
 const work = mkdtempSync(join(tmpdir(), "align-"));
 
 type Pkg = {

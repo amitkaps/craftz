@@ -2,7 +2,7 @@
  * # The reference
  *
  * What the other modules read as the rules: the files in [reference/](../reference/), laid out
- * as a repository has them, their owner on GitHub, and its `package.json`, whose versions, engines and scripts
+ * as a repository has them, their owner and topic on GitHub, and its `package.json`, whose versions, engines and scripts
  * are the rules'. `root` is craftz itself, for the tools it runs. It imports nothing of
  * theirs, so any of them can import it.
  */
@@ -11,6 +11,9 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const OWNER = "amitkaps";
+
+// The GitHub topic every repository that follows the rules carries.
+export const TOPIC = "craftz";
 
 export const CRAFTZ = "@amitkaps/craftz";
 

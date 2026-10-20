@@ -14,12 +14,36 @@
 import { basename, join } from "node:path";
 import { type Rule, RULES } from "./rules.ts";
 import { parts, stated } from "./stated.ts";
-import { OWNER, type Pkg, read } from "./reference.ts";
+import { OWNER, TOPIC, type Pkg, read } from "./reference.ts";
 import { type Worker, worker } from "./worker.ts";
 
 export { type Worker, worker };
 
-export const REPOS = ["base", "markz", "prose", "pagez", "sitez", "ship"];
+/** @prose
+ * # The repositories
+ *
+ * Every public repository of the owner's with the topic `craftz`, other than craftz itself and
+ * any that's archived. `craftz settings` adds the topic, so a repository joins when its settings
+ * are written, and leaves when it's archived. A private one isn't listed, since craftz is public
+ * and would name it.
+ *
+ * GitHub's search answers without a login, and only with public repositories then, so the site's
+ * build lists the same ones a laptop does.
+ */
+export async function repos(): Promise<string[]> {
+  const q = `topic:${TOPIC} user:${OWNER} is:public archived:false`;
+  const token = process.env["GITHUB_TOKEN"];
+  const res = await fetch(
+    `https://api.github.com/search/repositories?q=${encodeURIComponent(q)}&per_page=100`,
+    { headers: token ? { authorization: `Bearer ${token}` } : {} },
+  );
+  if (!res.ok) throw new Error(`GitHub's search returned HTTP ${res.status}`);
+  const { items } = (await res.json()) as { items: { name: string }[] };
+  return items
+    .map((it) => it.name)
+    .filter((name) => name !== "craftz")
+    .sort();
+}
 
 const FILES = [
   "package.json",
@@ -296,14 +320,14 @@ async function check(repo: string): Promise<Result> {
 }
 
 export async function survey(): Promise<Result[]> {
-  return Promise.all(REPOS.map((repo) => check(repo)));
+  return Promise.all((await repos()).map((repo) => check(repo)));
 }
 
 /** @prose
  * # A folder
  *
  * Checks a folder from disk: a checkout of a listed repository, to see a fix before it's pushed,
- * or one that isn't in `REPOS`, like one `pnpm new` just wrote or a private one.
+ * or one that isn't listed, like one `pnpm new` just wrote or a private one.
  *
  * A listed
  * repository's holds apply, found by the folder's name. Branch rules and labels aren't read,
