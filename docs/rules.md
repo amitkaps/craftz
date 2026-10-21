@@ -125,26 +125,26 @@ A hold is for what a tool can't do, never for a preference. The point of one set
 
 Every repository uses these names, and runs them with `pnpm run …` in anything automated.
 
-| Script    | Does                                                                      |
-| --------- | ------------------------------------------------------------------------- |
-| `dev`     | the dev server, or `vp pack --watch` for a package                        |
-| `build`   | the production build                                                      |
-| `preview` | a site's: serves what `build` wrote, with `vp preview`                    |
-| `check`   | format, lint and types: `vp check`, and a framework's own checker         |
-| `fix`     | writes the format and lint fixes: `vp check --fix`                        |
-| `test`    | the tests, when there are any                                             |
-| `verify`  | `check`, `prose check`, `test` and `build`, then the site if there is one |
-| `ship`    | uploads what `verify` built: `craftz deploy`                              |
-| `prose`   | reads the repository as a document: `prose`, so `pnpm prose build` works  |
-| `pr`      | opens a pull request that merges itself once CI passes                    |
-| `gone`    | deletes the local branches that merged                                    |
-| `craftz`  | runs craftz, so `pnpm craftz rules` works                                 |
+| Script | Does |
+| --- | --- |
+| `dev` | the dev server, or `vp pack --watch` for a package |
+| `build` | the production build |
+| `preview` | a site's: serves what `build` wrote, with `vp preview` |
+| `check` | format, lint and types: `vp check`, and a framework's own checker |
+| `fix` | writes the format and lint fixes: `vp check --fix` |
+| `test` | the tests, when there are any |
+| `verify` | `check`, `prose check`, `craftz check`, `test` and `build`, then the site if there is one |
+| `ship` | uploads what `verify` built: `craftz deploy` |
+| `prose` | reads the repository as a document: `prose`, so `pnpm prose build` works |
+| `pr` | opens a pull request that merges itself once CI passes |
+| `gone` | deletes the local branches that merged |
+| `craftz` | runs craftz, so `pnpm craftz rules` works |
 
-- [`scripts-required`]{#scripts-required}: `check`, `fix`, `verify` and `prose` are in every repository, `dev` and `build` in every site and package, and `ship` in every site. A tool has nothing to serve or build, so its `verify` is `check`, `prose check` and `test`. `test` is there when there are tests.
+- [`scripts-required`]{#scripts-required}: `check`, `fix`, `verify` and `prose` are in every repository, `dev` and `build` in every site and package, and `ship` in every site. A tool has nothing to serve or build, so its `verify` is `check`, `prose check`, `craftz check` and `test`. `test` is there when there are tests.
 - [`scripts-check`]{#scripts-check}: on Vite+, `check` runs `vp check`. A framework can add its own steps around it, like SvelteKit's `svelte-kit sync` before and `svelte-check` after.
 - [`scripts-fix`]{#scripts-fix}: on Vite+, `fix` is exactly `vp check --fix`.
 - [`scripts-one-checker`]{#scripts-one-checker}: on Vite+, there are no `lint` or `fmt` scripts. `check` and `fix` cover both, and a framework adds no second formatter or linter.
-- [`scripts-verify`]{#scripts-verify}: `verify` runs `pnpm prose check`. It fails on what the text gets wrong, which `prose build` only prints, so a mistake in a doc or a comment stops a merge the way a lint error does.
+- [`scripts-verify`]{#scripts-verify}: `verify` runs `pnpm prose check`, then `pnpm craftz check`. prose check fails on what the text gets wrong, which `prose build` only prints, so a mistake in a doc or a comment stops a merge the way a lint error does. craftz check fails on what has drifted from the rules of the craftz the repository installs, so a pull request can't drift, and one that moves craftz is checked against the release it moves to. Neither needs a login. The fix adds `pnpm craftz check` after `pnpm prose check`.
 - [`scripts-prose`]{#scripts-prose}: `prose` is exactly `prose`, so `pnpm prose build` works. prose's own repository runs its command line from source.
 - [`scripts-preview`]{#scripts-preview}: `preview` is a site's, the same as the reference's. A package, whose build is `dist/`, has none.
 - [`scripts-pr`]{#scripts-pr}: `pr` is `craftz pr`, and there's no `scripts/pr.ts`. `pnpm pr "<title>"` starts a branch when it's on `main`, or on a branch whose pull request merged. On a branch whose pull request is open, it adds to it only when given the same title. It commits, runs `verify`, pushes, opens the pull request and turns on auto-merge. A package's pull request takes `--label <label>`, and stops without one, before anything is committed. `--wait` waits for the merge, updating the branch when another merge leaves it behind `main`, then switches to `main` and pulls. craftz's own repository runs it from source.

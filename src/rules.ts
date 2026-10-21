@@ -546,6 +546,11 @@ function setScript(dir: string, std: string, name: string, applies: (pkg: Pkg) =
   pkg.scripts = { ...pkg.scripts, [name]: want };
   writePkg(dir, pkg);
 }
+// What every verify runs, as whole steps between `&&`.
+const VERIFIED = ["pnpm prose check", "pnpm craftz check"];
+const runs = (verify: string, step: string): boolean =>
+  verify.split("&&").some((it) => it.trim() === step);
+
 const onVitePlus = (pkg: Pkg): boolean =>
   Boolean(pkg.dependencies?.["vite-plus"] ?? pkg.devDependencies?.["vite-plus"]);
 
@@ -920,10 +925,25 @@ export const RULES: Rule[] = [
       const verify = pkg.scripts?.verify;
       if (!verify) return undefined;
       return drifted(
-        /(^|&& )pnpm prose check( &&|$)/.test(verify)
-          ? []
-          : ["verify doesn't run pnpm prose check"],
+        VERIFIED.filter((step) => !runs(verify, step)).map((step) => `verify doesn't run ${step}`),
       );
+    },
+    fix: {
+      in: "files",
+      // craftz check goes after prose check, and a verify without prose check is fixed by hand.
+      apply: (dir) => {
+        const pkg = readPkg(dir);
+        const verify = pkg.scripts?.verify;
+        if (!verify || runs(verify, "pnpm craftz check") || !runs(verify, "pnpm prose check")) {
+          return;
+        }
+        const fixed = verify.replace(
+          /(^|&& )pnpm prose check( &&|$)/,
+          "$1pnpm prose check && pnpm craftz check$2",
+        );
+        pkg.scripts = { ...pkg.scripts, verify: fixed };
+        writePkg(dir, pkg);
+      },
     },
   },
   {

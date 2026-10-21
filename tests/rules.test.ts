@@ -292,6 +292,23 @@ test("a prose site names .prose as its folder, and the fix writes it", () => {
   expect(rule?.check(repo(fixed))?.drift).toEqual([]);
 });
 
+test("verify runs craftz check after prose check, and the fix puts it there once", () => {
+  const dir = mkdtempSync(join(tmpdir(), "craftz-verify-"));
+  const file = join(dir, "package.json");
+  const verify = "pnpm check && pnpm prose check && pnpm test";
+  writeFileSync(file, JSON.stringify({ scripts: { verify } }));
+  const rule = RULES.find((r) => r.id === "scripts-verify");
+  const read = () => JSON.parse(readFileSync(file, "utf8")) as Pkg;
+  expect(rule?.check({ pkg: read() } as Repo)?.drift).toEqual([
+    "verify doesn't run pnpm craftz check",
+  ]);
+  for (let i = 0; i < 2; i++) if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
+  expect(read().scripts?.["verify"]).toBe(
+    "pnpm check && pnpm prose check && pnpm craftz check && pnpm test",
+  );
+  expect(rule?.check({ pkg: read() } as Repo)?.drift).toEqual([]);
+});
+
 test("the prose site's fix adds the folders .gitignore leaves out, once", () => {
   const dir = mkdtempSync(join(tmpdir(), "craftz-prose-ignore-"));
   writeFileSync(join(dir, ".gitignore"), "node_modules\n.cloudflare");
