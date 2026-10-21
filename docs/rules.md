@@ -266,10 +266,10 @@ markz, prose, pagez and sitez are packages, published to npm. A package is any r
 - [`releases-types`]{#releases-types}: Types come from Oxc. The pack block sets `dts: { generator: "oxc" }`, so `vp pack` writes the `.d.ts` files without the TypeScript compiler, and fails on an export whose type isn't written out. It's set there, not as `isolatedDeclarations` in `tsconfig.json`, which the editor would apply to tests and config too. A package has no `typescript` dependency, like a site: `vp check` type-checks with tsgolint, which Vite+ installs.
 - [`releases-bundled`]{#releases-bundled}: Our own packages are bundled, not depended on. prose and sitez have markz as a dev dependency, and `vp pack` puts it inside `dist/`. So a package's users never install a second markz, and each package releases on its own, in any order. Picking up a new markz takes a release of the package that bundles it.
 
-To release, run `release` with the package and its new version.
+To release, run `craftz release` in the package with its new version.
 
 ```sh
-release sitez 0.5.0 --notes "What to change when you upgrade …"
+pnpm craftz release 0.5.0 --notes "What to change when you upgrade …"
 ```
 
 It opens a pull request that bumps `version`, from a branch named `release-X.Y.Z`, titled `vX.Y.Z` and labelled `internal`, and turns on auto-merge. Its description, down to the first `---` line, is the release's summary, like what to change in a breaking release. Without `--notes`, the editor opens for it.

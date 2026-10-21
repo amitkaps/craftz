@@ -2,7 +2,7 @@
 
 craftz is used through its commands and its plugin.
 
-Any repository has `craftz rules`, `craftz check`, `craftz fix`, `craftz upgrade`, `craftz settings`, `craftz status`, `craftz deploy`, `craftz pr`, `craftz gone` and the `craftz()` plugin, and `craftz new` starts one. The last part, [Keeping every repository](#keeping-every-repository), is for whoever keeps them all, from a checkout of craftz.
+Any repository has `craftz rules`, `craftz check`, `craftz fix`, `craftz upgrade`, `craftz settings`, `craftz status`, `craftz deploy`, `craftz pr`, `craftz gone`, `craftz release` and the `craftz()` plugin, and `craftz new` starts one. The last part, [Keeping every repository](#keeping-every-repository), is for whoever keeps them all, from a checkout of craftz.
 
 ## Install
 
@@ -88,6 +88,14 @@ pnpm gone                         # delete the branches that merged
 
 A repository's `pr` and `gone` scripts run `craftz pr` and `craftz gone`, and every change reaches `main` this way. A package's pull request takes one label for the release notes, and stops without one before anything is committed. A site or a tool takes none.
 
+## Releasing a package
+
+```sh
+pnpm craftz release 0.5.0 --notes "What this release is about."
+```
+
+`craftz release` opens the `v0.5.0` pull request for the package the folder's `origin` names, with `version` set and auto-merge on. It works on GitHub, so it releases what's on `main`, whatever the folder has changed. Without `--notes` it opens your editor for the summary. Once it merges, approve the staged version on npmjs.com. It needs `gh` logged in.
+
 ## Writing the settings
 
 ```sh
@@ -128,7 +136,7 @@ The commands use the logins `gh` and `cf` already have, so there's no token to k
 
 ## Keeping every repository
 
-These are scripts in a checkout of craftz, not commands of the package, after `pnpm install`. They're for whoever keeps the repositories, and a repository needs none of them to follow the rules. drift runs without a login and reads less. align, bump and release need `gh`, and align writes the Worker settings only with `cf`.
+These are scripts in a checkout of craftz, not commands of the package, after `pnpm install`. They're for whoever keeps the repositories, and a repository needs none of them to follow the rules. drift runs without a login and reads less. align and bump need `gh`, and align writes the Worker settings only with `cf`.
 
 ### Checking every repository
 
@@ -160,14 +168,6 @@ pnpm bump
 ```
 
 The reference pins the versions every repository uses, like Vite+, TypeScript and wrangler, so they move only when craftz's reference does. bump moves it to the newest versions pnpm's one-day wait allows, runs craftz's fixes from source against them, and opens craftz's pull request. Run it before a release, so the release carries them, then `pnpm align` takes them to the others.
-
-### Releasing a package
-
-```sh
-pnpm release sitez 0.5.0 --notes "What this release is about."
-```
-
-release opens the `v0.5.0` pull request on GitHub, with `version` set and auto-merge on, so no checkout is needed. Without `--notes` it opens your editor for the summary. Once it merges, approve the staged version on npmjs.com.
 
 ## For agents
 

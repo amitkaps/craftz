@@ -44,6 +44,7 @@ craftz owns a repository's conventions and its lifecycle commands. Vite+ and eac
 | `craftz settings` | writes the GitHub and Cloudflare settings, with your login |
 | `craftz status` | reads what's live: CI, pull requests, npm, and a site's build and addresses |
 | `craftz pr`, `craftz gone` | open a pull request that merges itself, and delete merged branches |
+| `craftz release` | opens the pull request that releases a package |
 | `craftz deploy` | deploys the way the repository's deploy axis says, run by the `ship` script |
 | `craftz new` | starts a repository that already follows the rules |
 | `craftz()` | a Vite plugin that sets `fmt`, `lint` and a site's config for what it deploys |
@@ -132,7 +133,7 @@ Each craftz release carries the versions of the tools it was tested with, like V
 
 ## Every repository at once
 
-`craftz check` runs only when a repository opens a pull request. A repository nobody is working on can fall behind, and CI can't read GitHub's or Cloudflare's settings without a login. So two sweeps run on the laptop, never in the cloud. They're scripts in this repository, not commands of the package, since they serve whoever keeps the repositories, and a repository needs neither to follow the rules. `pnpm release`, which opens the pull request that releases a package, is one too.
+`craftz check` runs only when a repository opens a pull request. A repository nobody is working on can fall behind, and CI can't read GitHub's or Cloudflare's settings without a login. So two sweeps run on the laptop, never in the cloud. They're scripts in this repository, not commands of the package, since they serve whoever keeps the repositories, and a repository needs neither to follow the rules.
 
 - `pnpm drift` reports each repository's craftz version and runs `craftz settings --check`.
 - `pnpm align` runs `craftz upgrade` in each repository and opens a pull request.

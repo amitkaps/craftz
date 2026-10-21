@@ -85,3 +85,9 @@ test("upgrade leaves craftz itself to pnpm bump", () => {
   expect(upgraded.status).toBe(1);
   expect(upgraded.stderr).toContain("pnpm bump");
 });
+
+test("release asks for a version before it reads GitHub", () => {
+  const released = craftz("release", "next");
+  expect(released.status).toBe(1);
+  expect(released.stderr).toContain("craftz release <X.Y.Z>");
+});
