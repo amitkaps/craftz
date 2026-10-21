@@ -31,12 +31,3 @@ overrides:
 peerDependencyRules:
   allowAny:
     - vite
-
-# @prose
-# The versions of the shared tools this repository doesn't use itself. Nothing here installs
-# them, and pnpm leaves a catalog entry alone when nothing uses it. `pnpm drift` holds every
-# repository that uses one to the version written here, and `pnpm align` moves them.
-catalog:
-  publint: ^0.3.25
-  typescript: ^7.0.2
-  wrangler: ^4.151.2

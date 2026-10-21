@@ -93,19 +93,19 @@ Bump deliberately, everywhere at once. Being on the latest pnpm doesn't matter. 
 
 ## Other versions
 
-The tools every repository shares are on one version, written the same way, so moving one never leaves two repositories to reconcile. The reference's [package.json](../reference/package.json) has the version, or the `catalog` in its [pnpm-workspace.yaml](../reference/pnpm-workspace.yaml) does for a tool it doesn't install. npm isn't read. A new release is drift only once the reference moves to it, past pnpm's one-day wait.
+The tools every repository shares are on one version, written the same way, so moving one never leaves two repositories to reconcile. The reference's [package.json](../reference/package.json) has each at an exact version, not a range, so the version a repository names is the one it installs, and nothing moves but through a release of craftz. npm isn't read. A new release is drift only once the reference moves to it, past pnpm's one-day wait.
 
 - [`versions-types-node`]{#versions-types-node}: `@types/node` is the reference's, where a repository has it. It's the major of the Node that `engines` allows, so code can't use newer APIs.
 - [`versions-vite-plus`]{#versions-vite-plus}: every repository is on the reference's `vite-plus`, with the override at the same version and no direct `vite`. [Toolchain](#toolchain-vite) says why.
-- [`versions-typescript`]{#versions-typescript}: `typescript` is the catalog's, where a repository has it.
+- [`versions-typescript`]{#versions-typescript}: `typescript` is the reference's, where a repository has it.
 - [`versions-prose`]{#versions-prose}: `@amitkaps/prose` is the reference's, where a repository has it.
 - [`versions-markz`]{#versions-markz}: `@amitkaps/markz` is the reference's, where a repository has it.
-- [`versions-craftz`]{#versions-craftz}: `@amitkaps/craftz` is at craftz's own version, as a caret range, so a release of craftz is what moves every repository to its rules.
+- [`versions-craftz`]{#versions-craftz}: `@amitkaps/craftz` is at craftz's own version, exactly, so the rules a repository names are the rules it's checked against, and a release of craftz is what moves every repository to them.
 - [`versions-cf`]{#versions-cf}: `cf` is the reference's, where a repository deploys with it.
 - [`versions-cf-vite-plugin`]{#versions-cf-vite-plugin}: `@cloudflare/vite-plugin` is the reference's, where a repository deploys with cf, at the build that goes with `cf`.
 - [`versions-beta`]{#versions-beta}: only `cf` and `@cloudflare/vite-plugin` are on a pre-release, each pinned to an exact build.
-- [`versions-wrangler`]{#versions-wrangler}: `wrangler` is the catalog's, while a repository is still on it.
-- [`versions-publint`]{#versions-publint}: `publint` is the catalog's, where a package has it.
+- [`versions-wrangler`]{#versions-wrangler}: `wrangler` is the reference's, while a repository is still on it.
+- [`versions-publint`]{#versions-publint}: `publint` is the reference's, where a package has it.
 
 A beta's tags don't say which build goes with which, so it's moved by hand. `align` lists one in its pull request once npm's latest is a release, and then it leaves `versions-beta`. [Development](development.md#beta-packages) says how.
 

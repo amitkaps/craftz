@@ -1,9 +1,9 @@
 /** @prose
  * # The reference
  *
- * What the other modules read as the rules: the files in [reference/](../reference/), laid out
- * as a repository has them, their owner and topic on GitHub, and its `package.json`, whose versions, engines and scripts
- * are the rules'. `root` is craftz itself, for the tools it runs. It imports nothing of
+ * The other modules read the rules from here. They're the files in [reference/](../reference/),
+ * laid out as a repository has them, and their owner and topic on GitHub. Its `package.json` holds
+ * the versions, engines and scripts. `root` is craftz itself, for the tools it runs. It imports nothing of
  * theirs, so any of them can import it.
  */
 import { existsSync, readFileSync } from "node:fs";
@@ -50,9 +50,9 @@ export const nodeMajor = /\d+/.exec(standard.engines?.node ?? "")?.[0];
  * Every repository that uses one of these tools is on the version this repository names, written
  * the same way, so moving one never leaves two repositories to reconcile.
  *
- * Most come from this repository's own `package.json`. The ones it doesn't use, like wrangler,
- * are named in the `catalog` of its `pnpm-workspace.yaml`, which nothing here installs. npm isn't
- * read. A new release is drift only once this repository moves to it, which `pnpm bump` does.
+ * They're in the reference's `package.json`, each at one exact version, so the version a
+ * repository names is the one it installs. npm isn't read. A new release is drift only once the
+ * reference moves to it, which `pnpm bump` does.
  */
 export const TOOLS = [
   "@types/node",
@@ -66,20 +66,10 @@ export const TOOLS = [
   "@amitkaps/craftz",
 ];
 
-// `name: version` lines under `catalog:`, quoted or not. A regular expression is enough, since
-// the block is flat.
-export function catalog(workspace: string): Record<string, string> {
-  const block = /^catalog:\n((?:[ \t]+.*\n?)*)/m.exec(workspace)?.[1] ?? "";
-  return Object.fromEntries(
-    [...block.matchAll(/^\s+"?([^":\s]+)"?:\s*"?([^"\s]+)"?/gm)].map((m) => [m[1], m[2]]),
-  );
-}
-
 /** The versions a folder names, as this one names the rules': `pnpm align` reads its clone. */
 export function versionsIn(dir: string): Record<string, string | undefined> {
   const pkg = JSON.parse(read(join(dir, "package.json")) || "{}") as Pkg;
   return {
-    ...catalog(read(join(dir, "pnpm-workspace.yaml"))),
     ...pkg.dependencies,
     ...pkg.devDependencies,
     ...craftzAt(dirname(dir)),
@@ -95,7 +85,7 @@ export function versionsIn(dir: string): Record<string, string | undefined> {
  */
 function craftzAt(dir: string): Record<string, string> {
   const pkg = JSON.parse(read(join(dir, "package.json")) || "{}") as Pkg & { version?: string };
-  return pkg.name === CRAFTZ && pkg.version ? { [CRAFTZ]: `^${pkg.version}` } : {};
+  return pkg.name === CRAFTZ && pkg.version ? { [CRAFTZ]: pkg.version } : {};
 }
 
 export const VERSIONS = versionsIn(here);

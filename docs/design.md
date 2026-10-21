@@ -101,7 +101,7 @@ It writes remote state, so it's held to more than a file fix.
 
 ## Releases
 
-Each repository takes craftz as a caret range, and its lockfile holds the version, so an install never moves it, and moving it is a pull request. A release's label says what that pull request asks of a repository.
+Each repository names craftz at an exact version, as it does every shared tool, so an install never moves it, and moving it is a pull request. A release's label says what that pull request asks of a repository.
 
 - **Patch:** nothing changes for a repository. The rules' wording changes, or a check gets a fix, and a repository that passed still passes.
 - **Minor:** `craftz fix` makes the change on its own, like a new line in a managed file or a new rule with a fix.

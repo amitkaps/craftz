@@ -29,7 +29,7 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import { writeSettings } from "./apply.ts";
 import { fixFiles } from "./rules.ts";
-import { CRAFTZ, OWNER, TOOLS, catalog } from "./reference.ts";
+import { CRAFTZ, OWNER, TOOLS } from "./reference.ts";
 import { repos } from "./survey.ts";
 import { workerIn } from "./worker.ts";
 import { cloudflareLogin, githubLogin } from "./settings.ts";
@@ -58,8 +58,6 @@ type Pkg = {
 type Deps = Record<string, string>;
 
 const readJson = <T>(file: string): T => JSON.parse(readFileSync(file, "utf8")) as T;
-const writeJson = (file: string, value: unknown): void =>
-  writeFileSync(file, JSON.stringify(value, null, 2) + "\n");
 const depsOf = (pkg: Pkg): Deps => ({ ...pkg.dependencies, ...pkg.devDependencies });
 
 // Runs a command in a clone, with its output kept in the repository's log.
@@ -132,9 +130,9 @@ async function update(dir: string, log: string[], skip: string[]): Promise<strin
  *
  * The reference is installed where it stands, as a project of its own, and moves its libraries and
  * tools as above, and the Vite+ override with `vite-plus`. What the install writes there is
- * removed, so only `package.json` and `pnpm-workspace.yaml` change. The `catalog` of the tools it
- * doesn't use is resolved by pnpm in an empty folder with the same settings, so the wait applies
- * there too.
+ * removed, so only `package.json` and `pnpm-workspace.yaml` change. Every tool is in its
+ * `package.json`, wrangler too, so one update moves them all, within pnpm's one-day wait, and each
+ * stays exact.
  */
 async function updateReference(dir: string, log: string[]): Promise<string[]> {
   try {
@@ -150,37 +148,10 @@ async function moveReference(dir: string, log: string[]): Promise<string[]> {
   const majors = await update(dir, log, []);
   const vitePlus = depsOf(readJson<Pkg>(join(dir, "package.json")))["vite-plus"];
   const workspace = join(dir, "pnpm-workspace.yaml");
-  let text = readFileSync(workspace, "utf8").replace(
-    /vite-plus-core@[\w.-]+/,
-    `vite-plus-core@${vitePlus}`,
-  );
-
-  const listed = catalog(text);
-  const scratch = mkdtempSync(join(work, "catalog-"));
-  writeJson(join(scratch, "package.json"), { name: "catalog", private: true });
-  // Without its catalog, since pnpm writes `catalog:` for a tool the catalog names.
   writeFileSync(
-    join(scratch, "pnpm-workspace.yaml"),
-    text.replace(/^catalog:\n(?:[ \t].*\n?)*/m, ""),
+    workspace,
+    readFileSync(workspace, "utf8").replace(/vite-plus-core@[\w.-]+/, `vite-plus-core@${vitePlus}`),
   );
-  const names = Object.keys(listed);
-  if (!names.length) {
-    writeFileSync(workspace, text);
-    return majors;
-  }
-  await sh(scratch, log, "pnpm", "add", "-D", "--lockfile-only", "--ignore-scripts", ...names);
-  const resolved = depsOf(readJson<Pkg>(join(scratch, "package.json")));
-  for (const [name, from] of Object.entries(listed)) {
-    const to = resolved[name];
-    if (!to || to === from) continue;
-    if (breaking(from.replace(/^\D+/, ""), to.replace(/^\D+/, ""))) {
-      majors.push(`${name} ${to} in the catalog, from ${from}`);
-      continue;
-    }
-    const old = from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    text = text.replace(new RegExp(`^(\\s+"?${name}"?:\\s*)"?${old}"?$`, "m"), `$1${to}`);
-  }
-  writeFileSync(workspace, text);
   return majors;
 }
 
@@ -204,7 +175,7 @@ async function alignTo(dir: string, repo: string, log: string[]): Promise<string
     return [...majors, ...(await update(dir, log, [...TOOLS, "vite-plus"]))];
   }
   await sh(dir, log, "pnpm", "install");
-  await sh(dir, log, "pnpm", "add", "--save-dev", `${CRAFTZ}@latest`);
+  await sh(dir, log, "pnpm", "add", "--save-dev", "--save-exact", `${CRAFTZ}@latest`);
   // fix exits 1 when something's left to do by hand, which verify reports.
   await sh(dir, log, "pnpm", "exec", "craftz", "fix").catch(() => undefined);
   await sh(dir, log, "pnpm", "install");
