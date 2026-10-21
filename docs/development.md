@@ -10,7 +10,7 @@ pnpm dev
 pnpm verify    # what CI runs
 ```
 
-`pnpm craftz rules` runs the command from `src/`, with no build, and `pnpm drift`, `pnpm align`, `pnpm new` and `pnpm release` run the same way. pnpm runs a script before a command of the same name, so inside this repository `pnpm craftz` is always the source, never an installed copy.
+`pnpm craftz rules` runs the command from `src/`, with no build, and so does `pnpm new`. `pnpm drift`, `pnpm align` and `pnpm release` are this repository's own scripts, and run from `src/` too. pnpm runs a script before a command of the same name, so inside this repository `pnpm craftz` is always the source, never an installed copy.
 
 ## Changing the rules
 
@@ -22,11 +22,11 @@ A change to how things are done starts here, in [the rules](rules.md) and in [th
 
 [reference/](../reference/README.md) holds the files a rule compares with, laid out as a repository has them, like the workflows, the editor settings and the catalog. A rule reads its value from there, so it's never written out twice. These files are checked by `prose check` like any other, so their links have to work where they stand.
 
-`pnpm align` moves the reference's versions, not craftz's own. It installs the reference in a clone as a project of its own, updates it, and then aligns craftz with it like any other repository. `pnpm new` builds a repository from the reference, and from craftz's own `vite.config.ts`, `.gitignore` and `LICENSE`, which every repository has the same.
+`pnpm align` moves the reference's versions, not craftz's own. It installs the reference in a clone as a project of its own, updates it, and then aligns craftz with it like any other repository. `craftz new` builds a repository from the reference and from craftz's own `LICENSE`. The reference holds `.gitignore` as `gitignore`, since npm leaves a dotted one out of a package, and a test keeps it the same as craftz's own.
 
 ## The command
 
-[src/cli.ts](../src/cli.ts) is the `craftz` command, built by `vp pack` into `dist/cli.js`, with the rules' checks and fixes bundled in. The package publishes `dist/`, `docs/rules.md`, which `craftz rules` prints, and `reference/`, which the checks compare with. It has no dependencies.
+[src/cli.ts](../src/cli.ts) is the `craftz` command, built by `vp pack` into `dist/cli.js`, with the rules' checks and fixes bundled in. The package publishes `dist/`, `docs/rules.md`, which `craftz rules` prints, and `reference/`, which the checks compare with. It has no dependencies, and takes Vite+ as a peer, which only `new` loads.
 
 Two values come from dev dependencies, the browsers from browser-compat-data and the Workers' date from cf. `vp pack` works them out and writes them in, as [src/pinned.ts](../src/pinned.ts) says, and leaves both packages out of the bundle. `pnpm pack` and running `dist/cli.js` from the unpacked tarball shows what a user gets.
 

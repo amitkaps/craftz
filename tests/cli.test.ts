@@ -10,9 +10,11 @@
  *
  * A folder is the repository its `origin` names, whatever the folder is called, so a worktree
  * gets its repository's holds.
+ *
+ * `craftz new` runs from the package too, so the files it writes from have to be in it.
  */
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { beforeAll, expect, inject, test } from "vite-plus/test";
@@ -57,6 +59,15 @@ test("check finds what fix puts back", () => {
 test("a rule prints with its part", () => {
   const { status, stdout } = craftz("rules", "releases-packing");
   expect([status, stdout]).toEqual([0, expect.stringMatching(/^releases-packing, under /)]);
+});
+
+test("new runs from the package, with the files it writes", () => {
+  const craftzDir = join(dir, "node_modules/@amitkaps/craftz");
+  expect(["reference/gitignore", "LICENSE"].filter((f) => !existsSync(join(craftzDir, f)))).toEqual(
+    [],
+  );
+  const { status, stderr } = craftz("new");
+  expect([status, stderr]).toEqual([1, expect.stringMatching(/^Usage: craftz new /)]);
 });
 
 test("a folder is the repository its origin names", () => {

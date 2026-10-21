@@ -11,14 +11,18 @@
  * instead, so the test runs the craftz it's releasing, as a repository would install it, and
  * `package.json` stays as `new` wrote it. `new` writes it formatted, so `verify` passes with no
  * `fix` first.
+ *
+ * The reference holds `.gitignore` as `gitignore`, since npm leaves the dotted one out of a
+ * package, and it has to stay craftz's own.
  */
 import { execFile } from "node:child_process";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { expect, inject, test } from "vite-plus/test";
 import { type Start, write } from "../src/new.ts";
+import { here, root } from "../src/reference.ts";
 import { checkFolder } from "../src/survey.ts";
 import { usePacked } from "./packed.ts";
 
@@ -50,3 +54,8 @@ for (const [what, start] of starts) {
     await run("run", "verify");
   });
 }
+
+test("the reference's gitignore is craftz's own", () => {
+  const read = (file: string): string => readFileSync(file, "utf8");
+  expect(read(join(here, "gitignore"))).toBe(read(join(root, ".gitignore")));
+});
