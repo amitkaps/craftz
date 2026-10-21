@@ -4,8 +4,7 @@ craftz 0.2.0 is on npm, and its docs are live at [craftz.amitkaps.com](https://c
 
 ## Next, in order
 
-1. **rules.ts splits in two.** The rules stay, and the code that edits a Vite or Worker config moves out. A fix should edit a repository's config only where the plugin can't do the job, since most fixes that missed real configs edited them.
-2. **The old repository retires.** The one that kept the rules before craftz is archived with its history, and its site redirects to craftz's, for the links outside these repositories. Every `AGENTS.md` links to craftz now.
+1. **The old repository retires.** The one that kept the rules before craftz is archived with its history, and its site redirects to craftz's, for the links outside these repositories. Every `AGENTS.md` links to craftz now.
 
 Once these are done, one release takes them to the repositories.
 
@@ -26,6 +25,7 @@ Once these are done, one release takes them to the repositories.
 - The app moves to TypeScript 7 when svelte-check's peer range takes it.
 - A site's `vp check` loads Cloudflare's plugin, though only `vp build` uses it. Vite+ loads the whole config for `fmt` and `lint` too, and the plugin takes a second to import, most of it compiling its 4 MB bundle and miniflare's 6 MB one. So a site checks in about 7 seconds where a package takes under 3, and three sites are most of craftz's test time. A config can't load it only to build, since `vp check` passes it `command: "build"`, as `vp build` does. It waits for Vite+ to tell a check from a build, or for the plugin to load less until it's used.
 - Errors, warnings and notes, as [the design](design.md#errors-warnings-and-notes) has them. A hold moves into the repository it holds, as a warning, and only on a rule craftz marks as one a tool can block. `check` notes a newer craftz. It waits for a second repository that needs a hold, since base is the only one, and its two holds are tools' limits.
+- `tsconfig.json` extends one the package ships, as `vite.config.ts` uses `craftz()`, so the strict options live in craftz and a repository's file only points at them. `toolchain-types` checks them now, which works since JSON reads cleanly.
 - A size budget for packages a browser loads, measured as markz's `pnpm size` does: bundled, minified and gzipped. It waits for a second package that needs one, since a Node tool like craftz pays for its install, not its bundle. Speed stays each package's own, since what it times differs.
 
 ## Open questions
@@ -38,4 +38,4 @@ Once these are done, one release takes them to the repositories.
 
 - **Keeping the docs fresh.** The docs are checked for their files, not their sections, and that stays. What goes stale is what they say, like `development.md` describing a setting the rules have moved past, and a check can't tell. One cheap signal: the dashboard could show when each doc last changed beside when the code did, so a doc untouched through many changes stands out, without failing anything.
 
-- **Editing code by regular expression.** The fixes read and edit `vite.config.ts`, `cloudflare.config.ts`, CI and `pnpm-workspace.yaml` with regular expressions, which depend on how each file is laid out. Most of the lessons about fixes come from there. A small parser for the flat YAML, or fewer edits, would remove that kind of fault.
+- **Editing code by regular expression.** The fixes edit `vite.config.ts`, `cloudflare.config.ts`, CI and `pnpm-workspace.yaml` with regular expressions, which depend on how each file is laid out. Most of the lessons about fixes come from there. Those edits are all in [edit.ts](../src/edit.ts) now, each a function from a file's text to its fixed text, and only where `craftz()` can't do the job. A small parser for the flat YAML, or fewer edits, would remove that kind of fault.
