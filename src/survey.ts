@@ -263,22 +263,11 @@ function fromRule(rule: Rule): Check {
   };
 }
 
-const ruled = (prefix: string): Check[] =>
-  RULES.filter((rule) => rule.id.startsWith(prefix)).map(fromRule);
-
-const listed: Check[] = [
-  ...ruled("versions-"),
-  ...ruled("toolchain-"),
-  ...ruled("scripts-"),
-  ...ruled("cloudflare-"),
-  ...ruled("github-"),
-  ...ruled("agents-"),
-  ...ruled("docs-"),
-  ...ruled("releases-"),
-];
-
+// Every rule, in the order of the rules' parts, and within a part in the order rules.ts lists it.
 const order = parts();
-export const CHECKS = listed.toSorted((a, b) => order.indexOf(a.group) - order.indexOf(b.group));
+export const CHECKS = RULES.map(fromRule).toSorted(
+  (a, b) => order.indexOf(a.group) - order.indexOf(b.group),
+);
 
 export type Result = {
   repo: string;

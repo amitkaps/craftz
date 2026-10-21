@@ -34,7 +34,7 @@ export type Target = {
   pkg: Pkg;
   site?: Worker;
   // Why the Worker can't be read or written, like `cf` not being logged in.
-  cloudflare?: string;
+  noCloudflare?: string;
 };
 
 // The rules with a fix on GitHub, like `github-rules`, are checked as the survey checks them.
@@ -47,7 +47,7 @@ async function ruled(repo: string, pkg: Pkg, rule: Rule): Promise<string[]> {
   return rule.check(it)?.drift ?? [];
 }
 
-function parts({ repo, pkg, site, cloudflare }: Target): Part[] {
+function parts({ repo, pkg, site, noCloudflare }: Target): Part[] {
   const merge: Part = {
     name: "the merge settings",
     read: async () => mergeDrift(repo),
@@ -61,7 +61,7 @@ function parts({ repo, pkg, site, cloudflare }: Target): Part[] {
     ];
   });
   const worker: Part[] =
-    site && !cloudflare
+    site && !noCloudflare
       ? [
           {
             name: `${site.name}'s build settings`,
@@ -90,8 +90,8 @@ export async function checkSettings(target: Target): Promise<string[]> {
   const found = await Promise.all(parts(target).map(read));
   const lines = found.flatMap((it) => (it instanceof Error ? [it.message] : it));
   if (hasClassic(target.repo)) lines.push("classic branch protection is on main");
-  if (target.site && target.cloudflare)
-    lines.push(`not checked: ${target.site.name}'s build settings, since ${target.cloudflare}`);
+  if (target.site && target.noCloudflare)
+    lines.push(`not checked: ${target.site.name}'s build settings, since ${target.noCloudflare}`);
   return lines;
 }
 
@@ -148,7 +148,7 @@ export async function writeSettings(target: Target, removing = false): Promise<s
           : "fixed: classic branch protection is off main",
     );
   }
-  if (target.site && target.cloudflare)
-    lines.push(`left: ${target.site.name}'s build settings, since ${target.cloudflare}`);
+  if (target.site && target.noCloudflare)
+    lines.push(`left: ${target.site.name}'s build settings, since ${target.noCloudflare}`);
   return lines;
 }
