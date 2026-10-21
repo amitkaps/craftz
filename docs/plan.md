@@ -4,7 +4,12 @@ craftz 0.3.0 is on npm, and its docs are live at [craftz.amitkaps.com](https://c
 
 ## Next, in order
 
-Every repository is on 0.3.0. Nothing is next until a Later item's reason goes, or a review finds more.
+Every repository is on 0.3.0. craftz started as a repository that checked the others from a laptop, and these finish thinking of it as a package. Each is its own pull request, and 0.4.0 carries them once there's enough to release.
+
+1. **Exact versions, in one list.** Every shared tool is pinned exactly, and craftz too, so the version a repository names is the one it runs, and nothing moves but through a release. The list is `reference/package.json`, with the catalog folded in, so `pnpm bump` is a plain update with no second list to resolve.
+2. **`craftz upgrade`.** One command moves a repository to the latest craftz. It adds it, runs its fix, installs and formats. align becomes that, in a clone of each repository, then `verify`, a pull request and the settings.
+3. **`craftz release` moves into the package.** A package releases from its own folder, like `pr` and `status`, with no checkout of craftz.
+4. **drift goes.** Each repository's CI checks its files against the craftz it installs, and what needs a login stays on the laptop. `status` says whether a site is public, `pnpm align --local` reads the settings and changes nothing, and the docs follow. The dashboard leaves the design, since it was drift as a page.
 
 ## Where it is
 
@@ -35,6 +40,6 @@ Every repository is on 0.3.0. Nothing is next until a Later item's reason goes, 
 
   prose's `built` plugin runs oxfmt, which only formats. Lowering syntax is in reach: `vite-plus` exports `transformWithOxc` for JS, and Lightning CSS's `transform({ targets })` does CSS, as a devDependency. But at today's floors there's little to lower, and Oxc's lowering can add `require` of its runtime helpers, which a page script can't load. An API past a floor, like `::highlight()`, can't be lowered at all, so the lint is the part that matters.
 
-- **Keeping the docs fresh.** The docs are checked for their files, not their sections, and that stays. What goes stale is what they say, like `development.md` describing a setting the rules have moved past, and a check can't tell. One cheap signal: the dashboard could show when each doc last changed beside when the code did, so a doc untouched through many changes stands out, without failing anything.
+- **Keeping the docs fresh.** The docs are checked for their files, not their sections, and that stays. What goes stale is what they say, like `development.md` describing a setting the rules have moved past, and a check can't tell. One cheap signal is when each doc last changed beside when the code did, so a doc untouched through many changes stands out, without failing anything.
 
 - **Editing code by regular expression.** The fixes edit `vite.config.ts`, `cloudflare.config.ts`, CI and `pnpm-workspace.yaml` with regular expressions, which depend on how each file is laid out. Most of the lessons about fixes come from there. Those edits are all in [edit.ts](../src/edit.ts) now, each a function from a file's text to its fixed text, and only where `craftz()` can't do the job. A small parser for the flat YAML, or fewer edits, would remove that kind of fault.
