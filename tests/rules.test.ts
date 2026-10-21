@@ -292,6 +292,22 @@ test("a prose site names .prose as its folder, and the fix writes it", () => {
   expect(rule?.check(repo(fixed))?.drift).toEqual([]);
 });
 
+test("a CI whose only prose was the label step's gets the reference's opening comment", () => {
+  const ci = readFileSync(join(here, ".github/workflows/ci.yml"), "utf8");
+  const step =
+    "      # @prose\n      # # One label\n      - name: Label\n        run: |\n          node -e '\n            process.exit(0);\n          '\n\n";
+  const old = ci
+    .replace(/^(?:#.*\n)+/, "")
+    .replace("      - run: pnpm install", `${step}      - run: pnpm install`);
+  const dir = mkdtempSync(join(tmpdir(), "craftz-ci-prose-"));
+  writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "x" }));
+  mkdirSync(join(dir, ".github/workflows"), { recursive: true });
+  writeFileSync(join(dir, ".github/workflows/ci.yml"), old);
+  const fix = RULES.find((r) => r.id === "releases-files")?.fix;
+  if (fix?.in === "files") fix.apply(dir, here);
+  expect(readFileSync(join(dir, ".github/workflows/ci.yml"), "utf8")).toBe(ci);
+});
+
 test("verify runs craftz check after prose check, and the fix puts it there once", () => {
   const dir = mkdtempSync(join(tmpdir(), "craftz-verify-"));
   const file = join(dir, "package.json");

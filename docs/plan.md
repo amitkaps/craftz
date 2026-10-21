@@ -4,11 +4,10 @@ craftz 0.2.0 is on npm, and its docs are live at [craftz.amitkaps.com](https://c
 
 ## Next, in order
 
-1. **align moves a repository only to a released craftz.** align fixes the others against the reference in craftz's `main`, just updated. Their `verify` then runs the craftz they install, whose versions are older, so each moved version should fail. The design says align moves only to a release. Either align reads the latest release's reference, or the run releases craftz first.
-2. **The design says what ships.** It lists `craftz align`, `drift`, `new` and `release`, but the package ships none of them. They run only as scripts in this repository. Either the command gains them, or the design calls them this repository's own. The same goes for noting a newer release in `check`, and for the peer dependencies.
-3. **What `craftz()` sets is stated once.** The plugin's values are in [index.ts](../src/index.ts), and `toolchain-craftz`'s fix keeps its own copy as regular expressions. The fix should build them from the plugin's.
-4. **rules.ts splits in two.** The rules stay, and the code that edits a Vite or Worker config moves out. A fix should edit a repository's config only where the plugin can't do the job, since most fixes that missed real configs edited them.
-5. **The old repository retires.** The one that kept the rules before craftz is archived with its history, and its site redirects to craftz's, for the links outside these repositories. Every `AGENTS.md` links to craftz now.
+1. **The design says what ships.** It lists `craftz align`, `drift`, `new` and `release`, but the package ships none of them. They run only as scripts in this repository. Either the command gains them, or the design calls them this repository's own. The same goes for noting a newer release in `check`, and for the peer dependencies.
+2. **What `craftz()` sets is stated once.** The plugin's values are in [index.ts](../src/index.ts), and `toolchain-craftz`'s fix keeps its own copy as regular expressions. The fix should build them from the plugin's.
+3. **rules.ts splits in two.** The rules stay, and the code that edits a Vite or Worker config moves out. A fix should edit a repository's config only where the plugin can't do the job, since most fixes that missed real configs edited them.
+4. **The old repository retires.** The one that kept the rules before craftz is archived with its history, and its site redirects to craftz's, for the links outside these repositories. Every `AGENTS.md` links to craftz now.
 
 Once these are done, one release takes them to the repositories.
 
@@ -19,7 +18,7 @@ Once these are done, one release takes them to the repositories.
 - **One toolchain.** `craftz()` sets every repository's `fmt` and `lint`, and fails a config that sets either differently. A static site names its own folder as Vite's `publicDir`, and `craftz()` never guesses one. `craftz deploy` runs cf, or wrangler for an app cf can't build yet.
 - **Pull requests.** `pnpm pr` and `pnpm gone` run craftz's commands, in place of the scripts every repository copied. `pr` starts where the title says, and stops when the branch has nothing new for `main`. A package's label is checked by `label.yml`, so a pull request runs `verify` once. `gone` removes a merged branch's worktree.
 - **What's live.** `craftz status` reads CI on `main`, the open pull requests, npm's version against `package.json` on `main`, the latest release, and a site's build and addresses, on cf or wrangler.
-- **Releases.** The release workflow stages a version on npm and tags it once approved, and each release's notes say what to change when a repository moves. align, new and release run the same rules, and `new` starts a repository that passes them, as craftz-test did.
+- **Releases.** The release workflow stages a version on npm and tags it once approved, and each release's notes say what to change when a repository moves. align moves each repository to the latest craftz on npm and runs that version's `craftz fix`, so a change reaches the others only once it's released. new and release run the same rules, and `new` starts a repository that passes them, as craftz-test did.
 - **The repositories.** The public ones carry the topic `craftz`, which is how align and drift find them.
 
 ## Later
