@@ -1,8 +1,9 @@
 /** @prose
  * # The command's test
  *
- * Runs `craftz check` and `craftz fix` from source on a package that `pnpm new` writes, after
- * taking its `prepack` script out. check has to name the rule and fail, and fix has to put it
+ * Runs `craftz check` and `craftz fix` as a repository runs them, from the package
+ * [packed.ts](packed.ts) packed, installed in a package that `pnpm new` writes, after taking its
+ * `prepack` script out. check has to name the rule and fail, and fix has to put it
  * back, so the command and `pnpm align` can't disagree on what a fix does.
  *
  * fix has to name the one file it changed, and a second run has to change nothing.
@@ -10,25 +11,31 @@
  * A folder is the repository its `origin` names, whatever the folder is called, so a worktree
  * gets its repository's holds.
  */
-import { spawnSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
-import { expect, test } from "vite-plus/test";
+import { beforeAll, expect, inject, test } from "vite-plus/test";
 import { write } from "../src/new.ts";
 import { repoIn } from "../src/survey.ts";
+import { usePacked } from "./packed.ts";
 
+const dir = join(mkdtempSync(join(tmpdir(), "craftz-cli-")), "example");
 const craftz = (...args: string[]) =>
-  spawnSync("node", [join(import.meta.dirname, "../src/cli.ts"), ...args], { encoding: "utf8" });
+  spawnSync(join(dir, "node_modules/.bin/craftz"), args, { cwd: dir, encoding: "utf8" });
 
-test("check finds what fix puts back", { timeout: 60_000 }, async () => {
-  const dir = join(mkdtempSync(join(tmpdir(), "craftz-cli-")), "example");
+beforeAll(async () => {
   await write(
     dir,
     "example",
     { package: true, site: false, private: false, internal: false },
     "An example, from craftz's test.",
   );
+  usePacked(dir, inject("tarball"));
+  execFileSync("pnpm", ["install"], { cwd: dir, stdio: "pipe" });
+}, 120_000);
+
+test("check finds what fix puts back", () => {
   const file = join(dir, "package.json");
   const pkg = JSON.parse(readFileSync(file, "utf8")) as { scripts: Record<string, string> };
   delete pkg.scripts["prepack"];

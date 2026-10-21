@@ -7,23 +7,20 @@
  * before a new repository starts out of line.
  *
  * Each one depends on craftz at this checkout's version, which npm doesn't have while it's being
- * released. An override in its pnpm settings installs this checkout instead, so the test runs
- * the craftz it's testing, and `package.json` stays as `new` wrote it. It's built first, since
- * its exports are the build, and `verify` builds after the tests.
+ * released. An override in its pnpm settings installs the package [packed.ts](packed.ts) packed
+ * instead, so the test runs the craftz it's releasing, as a repository would install it, and
+ * `package.json` stays as `new` wrote it. `new` writes it formatted, so `verify` passes with no
+ * `fix` first.
  */
-import { execFile, execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { execFile } from "node:child_process";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { promisify } from "node:util";
-import { beforeAll, expect, test } from "vite-plus/test";
+import { expect, inject, test } from "vite-plus/test";
 import { type Start, write } from "../src/new.ts";
 import { checkFolder } from "../src/survey.ts";
-
-const here = resolve(import.meta.dirname, "..");
-beforeAll(() => {
-  execFileSync("pnpm", ["run", "build"], { cwd: here, stdio: "pipe" });
-}, 120_000);
+import { usePacked } from "./packed.ts";
 
 const starts: [string, Start][] = [
   ["a package", { package: true, site: false, private: false, internal: false }],
@@ -46,16 +43,10 @@ for (const [what, start] of starts) {
     // Every site answers only on its domain, internal or not.
     if (worker) expect([worker.workersDev, worker.previewUrls]).toEqual([false, false]);
     expect(worker?.deploys).toBe(start.site ? "static" : undefined);
-    const settings = join(dir, "pnpm-workspace.yaml");
-    const craftz = `  "@amitkaps/craftz": "link:${here}"`;
-    writeFileSync(
-      settings,
-      readFileSync(settings, "utf8").replace(/^overrides:\n/m, `$&${craftz}\n`),
-    );
+    usePacked(dir, inject("tarball"));
     const run = (...args: string[]) =>
       promisify(execFile)("pnpm", args, { cwd: dir, maxBuffer: 64 * 1024 * 1024 });
     await run("install");
-    await run("run", "fix");
     await run("run", "verify");
   });
 }

@@ -41,5 +41,6 @@ export default defineConfig({
   test: {
     expect: { requireAssertions: true },
     include: ["tests/**/*.test.ts"],
+    globalSetup: ["tests/packed.ts"],
   },
 });

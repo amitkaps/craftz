@@ -2,8 +2,9 @@
  * # New
  *
  * Starts a repository that follows the rules from its first commit. It writes the folder in the
- * current one, installs, formats, runs `verify` and makes the first commit, so what it hands over
- * already passes.
+ * current one, formatted, then installs, runs `verify` and makes the first commit, so what it
+ * hands over already passes. It formats with oxfmt's own `format`, with the options `craftz()`
+ * sets, so nothing about the format is copied here.
  *
  * What it starts is two of [the axes](../docs/rules.md#axes): `--package` publishes it to npm,
  * and `--site` deploys a static site to Cloudflare. Either, both or neither, which is scripts run
@@ -28,12 +29,14 @@
  * What's left is printed at the end: the Worker, Access or npm's setup, which have no API to do them from here.
  */
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { COMPATIBILITY_DATE } from "./runtime.ts";
 import { type Shape, fixFiles, listed, shipping } from "./rules.ts";
 import { CRAFTZ, OWNER, VERSIONS, here, root } from "./reference.ts";
 import { writeSettings } from "./apply.ts";
+import { craftz } from "./index.ts";
+import { type FormatConfig, format } from "vite-plus/fmt";
 
 /** What `new` starts: the axes it reads, with the repository's visibility and the site's audience. */
 export type Start = Shape & { private: boolean; internal: boolean };
@@ -364,6 +367,16 @@ export async function write(
     writeFileSync(join(dir, file), text);
   }
   fixFiles(dir, here);
+  // Formatted as `vp fmt` formats it, with what `craftz()` sets, so the repository starts out formatted.
+  const { fmt } = craftz().config({ root: dir }) as { fmt: FormatConfig };
+  for (const file of readdirSync(dir, { recursive: true, encoding: "utf8" })) {
+    const path = join(dir, file);
+    if (!/\.(json|ts|md|ya?ml|html)$/.test(file)) continue;
+    const text = readFileSync(path, "utf8");
+    const { code, errors } = await format(file, text, fmt);
+    if (errors.length) throw new Error(`${file} doesn't format: ${errors[0]?.message}`);
+    if (code !== text) writeFileSync(path, code);
+  }
 }
 
 if (import.meta.main) {
@@ -412,9 +425,7 @@ if (import.meta.main) {
   const run = (command: string, ...a: string[]): void => {
     execFileSync(command, a, { cwd: dir, stdio: "inherit" });
   };
-  // oxfmt formats what was written, so the generator needn't copy its rules.
   run("pnpm", "install");
-  run("pnpm", "run", "fix");
   run("pnpm", "run", "verify");
   run("git", "init", "-q", "-b", "main");
   run("git", "add", "-A");
