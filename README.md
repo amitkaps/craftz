@@ -15,6 +15,7 @@ Every repository makes the same choices, like its toolchain, versions, workflows
 | `craftz deploy` | deploys a site the way its Worker config says |
 | `craftz pr`, `craftz gone` | open a pull request that merges itself once CI passes, and delete the branches that merged |
 | `craftz rules [id]` | prints the rules, or one rule, from the installed version |
+| `craftz new` | starts a repository that already follows the rules |
 | `craftz()` | a Vite plugin that sets `fmt`, `lint` and a site's config, and never overrides the repository's |
 
 An agent reads the rules with `craftz rules`, from the version the repository installed, so it never works from a fetched page or an older copy.
@@ -39,5 +40,7 @@ pnpm craftz check                 # what's out of line
 pnpm craftz fix                   # fix what can be fixed
 pnpm craftz rules scripts-verify  # what one rule asks, and why
 ```
+
+To start a repository instead, run `pnpm dlx @amitkaps/craftz new`. To move to a new craftz, add it again at `@latest` and run `pnpm craftz fix`, as [its usage](docs/usage.md#moving-to-a-new-craftz) says.
 
 Read [the docs](docs/README.md) for its design, [the rules](docs/rules.md), [its usage](docs/usage.md), the plan and the lessons.

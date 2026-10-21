@@ -2,7 +2,7 @@
 
 craftz is used through its commands and its plugin.
 
-Any repository has `craftz rules`, `craftz check`, `craftz fix`, `craftz settings`, `craftz status`, `craftz deploy`, `craftz pr`, `craftz gone` and the `craftz()` plugin, and `craftz new` starts one. This repository adds three scripts for keeping them all: `pnpm drift` checks every repository, `pnpm align` brings them in line and `pnpm release` releases a package.
+Any repository has `craftz rules`, `craftz check`, `craftz fix`, `craftz settings`, `craftz status`, `craftz deploy`, `craftz pr`, `craftz gone` and the `craftz()` plugin, and `craftz new` starts one. The last part, [Keeping every repository](#keeping-every-repository), is for whoever keeps them all, from a checkout of craftz.
 
 ## Install
 
@@ -26,13 +26,13 @@ pnpm craftz rules scripts-verify  # one rule, with the part it's under
 
 ```sh
 pnpm craftz check          # this folder
-pnpm craftz check ../markz # another one
+pnpm craftz check ../markz # another one, with this folder's craftz
 pnpm craftz fix            # write every fix, then check again
 ```
 
 `craftz check` runs every rule on the folder's files, with the installed version's rules, and prints what has drifted, each with its `see:` line. It exits 1 when anything has. It reads no settings and asks GitHub nothing, so it needs no login. A held check is found by the repository the folder's `origin` names, so a worktree gets the same holds as its checkout.
 
-`craftz fix` writes every fix that can be automated, the same ones `pnpm align` runs. It lists each file it changed, then checks again and prints what's left to do by hand. A second run changes nothing. A fix can move versions, so run `pnpm install` next, then `pnpm run fix` for the format.
+`craftz fix` writes every fix that can be automated. It lists each file it changed, then checks again and prints what's left to do by hand. A second run changes nothing. A fix can move versions, so run `pnpm install` next, then `pnpm run fix` for the format.
 
 ## The plugin
 
@@ -45,9 +45,9 @@ export default defineConfig({
 });
 ```
 
-`craftz()` sets the `fmt` and `lint` blocks the rules ask for, so `vite.config.ts` holds only what's the repository's own. It never overrides the config. A key the config leaves unset is filled in, and one it sets differently fails `vp` with the key named, so take that key out.
+`craftz()` sets the `fmt` and `lint` blocks the rules ask for, so `vite.config.ts` holds only what's the repository's own. It never overrides the config. A key the config leaves unset is filled in, and one it sets differently fails `vp` with the key named, so take that key out. `pnpm craftz rules toolchain-lint` and `toolchain-wrap` say what it sets.
 
-A static site gets its config too, read from its Worker config. With an `index.html`, or a `publicDir` of its own like `public`, Vite builds the site, and `build.target` is the rules' browsers. Otherwise the site is the folder `prose build` writes, and `publicDir` is `.prose`. The Cloudflare plugin stays in the config, since it's the repository's own dependency.
+A static site, read from its Worker config, also gets `build.target`, the rules' browsers. The site names its own folder as `publicDir`, since `craftz()` doesn't guess one: `.prose` for a prose site, and none for a site with an `index.html`, which Vite builds. The Cloudflare plugin stays in the config, since it's the repository's own dependency.
 
 ```ts
 import { cloudflare } from "@cloudflare/vite-plugin";
@@ -56,8 +56,22 @@ import { defineConfig } from "vite-plus";
 
 export default defineConfig({
   plugins: [craftz(), cloudflare({ assetsOnly: true })],
+
+  // The site is the folder `prose build` writes.
+  publicDir: ".prose",
 });
 ```
+
+## Moving to a new craftz
+
+```sh
+pnpm add -D @amitkaps/craftz@latest
+pnpm craftz fix
+pnpm install
+pnpm run fix
+```
+
+A new craftz brings its rules, and the versions of the tools it was tested with. `craftz fix` writes what changed, then checks again and prints what's left by hand. Each release's [notes](https://github.com/amitkaps/craftz/releases) say what a repository has to change when it moves. Open the result as its own pull request, which runs `verify` with the new version.
 
 ## Deploying a site
 
@@ -100,9 +114,26 @@ pnpm craftz status --log    # and the latest build's log
 
 Use it after a merge or a release, to see that CI, the deploy and npm went through. `--notes` prints the release's notes in full. `--log` prints the build's log, which is where a failed deploy says why. It needs `gh` logged in, and cf logged in for a site. A site with no cf of its own, like an app on wrangler, has its builds read by the reference's cf, which pnpm fetches.
 
-## Checking every repository
+## Starting a repository
 
-In a checkout of this repository, after `pnpm install`:
+```sh
+pnpm dlx @amitkaps/craftz new example --package --description "What it is, in a sentence."
+pnpm dlx @amitkaps/craftz new example --site static --internal --description "…" --push
+```
+
+`--package` publishes it to npm, and `--site static` deploys a static site on Cloudflare. Either, both or neither, which is scripts run on a laptop. An app starts from base. `--private` makes the GitHub repository private, and `--internal` puts a site behind Cloudflare Access. [The axes](rules.md#axes) say what each means. new writes `./example` in the folder it's run from, installs, runs `verify` and makes the first commit. `--push` also creates the repository on GitHub and writes its settings. It ends with a list of what's left by hand, like connecting the Worker. It needs nothing installed but Node and pnpm.
+
+## Logins
+
+The commands use the logins `gh` and `cf` already have, so there's no token to keep. `check`, `fix` and `rules` need neither. `settings`, `status`, `pr` and `new --push` need `gh`, and a site's settings and status need `cf`.
+
+`gh auth login` logs in to GitHub, as the owner. `pnpm exec cf auth login` logs in to Cloudflare, for the Workers' build settings. When the login sees more than one account, craftz uses the one named like the GitHub owner, and `CLOUDFLARE_ACCOUNT_ID` overrides it. A `pnpm ship` by hand picks none, so set the variable there.
+
+## Keeping every repository
+
+These are scripts in a checkout of craftz, not commands of the package, after `pnpm install`. They're for whoever keeps the repositories, and a repository needs none of them to follow the rules. drift runs without a login and reads less. align and release need `gh`, and align writes the Worker settings only with `cf`.
+
+### Checking every repository
 
 ```sh
 pnpm drift            # every repository
@@ -113,7 +144,7 @@ Each repository gets a line, ✓ or ✗, with what has drifted below it, and eac
 
 drift only reads, so it's safe to run any time.
 
-## Aligning every repository
+### Aligning every repository
 
 ```sh
 pnpm align                 # craftz first, then every repository
@@ -125,28 +156,13 @@ align clones each repository's `main` into a temporary folder, adds the latest c
 
 `--local` stops before the push, so a clone can be read or compared with another run. It writes no settings either.
 
-## Starting a repository
-
-```sh
-pnpm dlx @amitkaps/craftz new example --package --description "What it is, in a sentence."
-pnpm dlx @amitkaps/craftz new example --site static --internal --description "…" --push
-```
-
-`--package` publishes it to npm, and `--site static` deploys a static site on Cloudflare. Either, both or neither, which is scripts run on a laptop. An app starts from base. `--private` makes the GitHub repository private, and `--internal` puts a site behind Cloudflare Access. [The axes](rules.md#axes) say what each means. new writes `./example` in the folder it's run from, installs, runs `verify` and makes the first commit. `--push` also creates the repository on GitHub and writes its settings. It ends with a list of what's left by hand, like connecting the Worker.
-
-## Releasing a package
+### Releasing a package
 
 ```sh
 pnpm release sitez 0.5.0 --notes "What this release is about."
 ```
 
 release opens the `v0.5.0` pull request on GitHub, with `version` set and auto-merge on, so no checkout is needed. Without `--notes` it opens your editor for the summary. Once it merges, approve the staged version on npmjs.com.
-
-## Logins
-
-The commands use the logins `gh` and `cf` already have, so there's no token to keep. drift runs without them, and reads less. align, release and `new --push` need `gh`, and align writes the Worker settings only with `cf`.
-
-`gh auth login` logs in to GitHub, as the owner, which drift needs for the merge settings. `pnpm exec cf auth login` logs in to Cloudflare, which it needs for the Workers' build settings. When the login sees more than one account, craftz uses the one named like the GitHub owner, and `CLOUDFLARE_ACCOUNT_ID` overrides it. A `pnpm ship` by hand picks none, so set the variable there.
 
 ## For agents
 
