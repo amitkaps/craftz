@@ -30,7 +30,7 @@ pnpm craftz check ../markz # another one
 pnpm craftz fix            # write every fix, then check again
 ```
 
-`craftz check` runs every rule on the folder's files, with the installed version's rules, and prints what has drifted, each with its `see:` line. It exits 1 when anything has. It reads no settings, so it needs no login. It only asks GitHub whether the repository is private, under the folder's name.
+`craftz check` runs every rule on the folder's files, with the installed version's rules, and prints what has drifted, each with its `see:` line. It exits 1 when anything has. It reads no settings and asks GitHub nothing, so it needs no login. A held check is found by the repository the folder's `origin` names, so a worktree gets the same holds as its checkout.
 
 `craftz fix` writes every fix that can be automated, the same ones `pnpm align` runs. It lists each file it changed, then checks again and prints what's left to do by hand. A second run changes nothing. A fix can move versions, so run `pnpm install` next, then `pnpm run fix` for the format.
 

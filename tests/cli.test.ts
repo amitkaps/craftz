@@ -6,13 +6,17 @@
  * back, so the command and `pnpm align` can't disagree on what a fix does.
  *
  * fix has to name the one file it changed, and a second run has to change nothing.
+ *
+ * A folder is the repository its `origin` names, whatever the folder is called, so a worktree
+ * gets its repository's holds.
  */
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { expect, test } from "vite-plus/test";
 import { write } from "../src/new.ts";
+import { repoIn } from "../src/survey.ts";
 
 const craftz = (...args: string[]) =>
   spawnSync("node", [join(import.meta.dirname, "../src/cli.ts"), ...args], { encoding: "utf8" });
@@ -46,4 +50,13 @@ test("check finds what fix puts back", { timeout: 60_000 }, async () => {
 test("a rule prints with its part", () => {
   const { status, stdout } = craftz("rules", "releases-packing");
   expect([status, stdout]).toEqual([0, expect.stringMatching(/^releases-packing, under /)]);
+});
+
+test("a folder is the repository its origin names", () => {
+  const dir = mkdtempSync(join(tmpdir(), "craftz-worktree-"));
+  const git = (...args: string[]) => spawnSync("git", ["-C", dir, ...args]);
+  git("init", "-q");
+  expect(repoIn(dir)).toBe(basename(dir));
+  git("remote", "add", "origin", "git@github.com:amitkaps/base.git");
+  expect(repoIn(dir)).toBe("base");
 });

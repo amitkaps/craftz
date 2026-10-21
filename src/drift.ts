@@ -16,13 +16,13 @@
  *
  * A folder named on the command line, like `pnpm drift ../markz`, is checked from disk in place
  * of the repositories. That checks a fix before it's pushed, with a listed repository's holds
- * found by the folder's name. It also checks one that follows the rules without being in
- * the list, such as a private repository, which a public page shouldn't name. The folder's
- * name is taken as the repository's on GitHub.
+ * found by the repository its `origin` names. It also checks one that follows the rules without
+ * being in the list, such as a private repository, which a public page shouldn't name. A folder
+ * with no `origin` on GitHub is taken by its own name.
  */
-import { basename, resolve } from "node:path";
+import { resolve } from "node:path";
 import { stated } from "./stated.ts";
-import { type Finding, type Worker, checkFolder, survey } from "./survey.ts";
+import { type Finding, type Worker, checkFolder, repoIn, survey } from "./survey.ts";
 import { accessDrift, cloudflareLogin, githubLogin, mergeDrift, workerDrift } from "./settings.ts";
 
 const folders = process.argv.slice(2);
@@ -71,7 +71,7 @@ let drifted = false;
 for (const folder of folders) {
   const { findings, worker: site } = await checkFolder(resolve(folder));
   const drift = findings.flatMap((f) => (f.held ? [] : lines(f)));
-  const repo = basename(resolve(folder));
+  const repo = repoIn(resolve(folder));
   const notes: string[] = [];
   // A folder that isn't on GitHub yet has no merge settings to check. Only that is caught, so
   // a Worker's error isn't taken for it.
