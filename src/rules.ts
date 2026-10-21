@@ -11,8 +11,7 @@
  * being stated.
  *
  * A check returns `undefined` when its rule doesn't apply, like `scripts-preview` for a package.
- * What it `wants`, like a version, goes before the rule on the dashboard. A fix in `files` edits
- * a clone to match [the reference](../reference/), and `pnpm align` puts it in the
+ * A fix in `files` edits a clone to match [the reference](../reference/), and `pnpm align` puts it in the
  * repository's pull request. It changes nothing in a clone already in line, so it's safe to run
  * on every one. A fix in `github` is written directly, since there's no file to review. A rule
  * with no fix is fixed by hand, as the rules say.
@@ -55,7 +54,6 @@ export type Fix =
 
 export type Rule = {
   id: string;
-  wants?: string;
   check: (repo: Repo) => Finding | undefined;
   fix?: Fix;
 };
@@ -63,7 +61,7 @@ export type Rule = {
 const pnpm = standard.packageManager?.replace(/^pnpm@/, "");
 const standardScripts = standard.scripts ?? {};
 
-/** The shared script names, in the order the dashboard lists them. */
+/** The shared script names, in the order the rules list them. */
 export const SHARED = [
   "dev",
   "build",
@@ -163,7 +161,6 @@ function useCraftz(dir: string, std: string): void {
  */
 const version = (id: string, name: string): Rule => ({
   id,
-  wants: VERSIONS[name],
   check: ({ deps }) => {
     const value = deps[name];
     if (!value) return undefined;
@@ -527,7 +524,6 @@ const commandScript = (id: string, name: string): Rule => ({
 export const RULES: Rule[] = [
   {
     id: "versions-node",
-    wants: node?.version,
     check: ({ pkg }) => {
       const runtime = pkg.devEngines?.runtime;
       const drift: string[] = [];
@@ -555,7 +551,6 @@ export const RULES: Rule[] = [
   },
   {
     id: "versions-pnpm",
-    wants: pnpm,
     check: ({ pkg }) => {
       const drift: string[] = [];
       if (pkg.packageManager !== `pnpm@${pnpm}`) {
@@ -584,7 +579,6 @@ export const RULES: Rule[] = [
   version("versions-types-node", "@types/node"),
   {
     id: "versions-vite-plus",
-    wants: vitePlus,
     check: ({ files, deps, vitePlus: own }) => {
       if (!own) return { drift: ["not on Vite+"] };
       const drift: string[] = [];
@@ -691,7 +685,6 @@ export const RULES: Rule[] = [
   },
   {
     id: "toolchain-craftz",
-    wants: VERSIONS[CRAFTZ],
     check: ({ pkg, files, deps, vitePlus: own }) => {
       if (!own) return undefined;
       const drift: string[] = [];
@@ -703,7 +696,6 @@ export const RULES: Rule[] = [
   },
   {
     id: "toolchain-browsers",
-    wants: BROWSERS.join(" "),
     check: ({ files, worker: site }) => {
       const vite = files["vite.config.ts"] ?? "";
       const pack = /\bpack:\s*\{/.test(vite) && !/platform:\s*"node"/.test(vite);
@@ -977,7 +969,6 @@ export const RULES: Rule[] = [
   },
   {
     id: "cloudflare-date",
-    wants: COMPATIBILITY_DATE,
     check: ({ files, worker: site }) => {
       if (site?.file !== "cloudflare.config.ts") return undefined;
       const config = files[site.file] ?? "";

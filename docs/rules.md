@@ -1,10 +1,10 @@
 # Rules
 
-How every repository builds, checks, deploys and releases. There's one way to do each thing. `drift` checks every repository against these rules and lists where each has drifted, and `align` brings them back in line. [Usage](usage.md) says how to run them.
+How every repository builds, checks, deploys and releases. There's one way to do each thing. Each repository's `craftz check` lists where it has drifted from these rules, `craftz settings --check` does the same for its settings, and `align` brings every repository back in line. [Usage](usage.md) says how to run them.
 
-The repositories are the owner's public ones with the GitHub topic `craftz`, which [src/survey.ts](../src/survey.ts) finds. Where this page gives a version, the real value is in [the reference](../reference/README.md), and `drift` reads it from there.
+The repositories are the owner's public ones with the GitHub topic `craftz`, which [src/survey.ts](../src/survey.ts) finds. Where this page gives a version, the real value is in [the reference](../reference/README.md), and `craftz check` reads it from there.
 
-A rule `drift` checks is a list item that opens with its id as a span, like ``[`scripts-verify`]{#scripts-verify}``. An id is lowercase kebab case, its part and then its name, since an id can't hold a dot. Its first sentence is the rule, and the rest says why. `drift` prints the id on each line a repository drifted on, and `craftz rules <id>` prints the rule. The check, and the fix where one can be automated, are in [src/rules.ts](../src/rules.ts), under the same id.
+A rule `craftz check` checks is a list item that opens with its id as a span, like ``[`scripts-verify`]{#scripts-verify}``. An id is lowercase kebab case, its part and then its name, since an id can't hold a dot. Its first sentence is the rule, and the rest says why. `craftz check` prints the id on each line a repository drifted on, and `craftz rules <id>` prints the rule. The check, and the fix where one can be automated, are in [src/rules.ts](../src/rules.ts), under the same id.
 
 ## Axes
 
@@ -69,7 +69,7 @@ Code shipped to browsers works in the browsers people use, with a floor for each
 
 - [`toolchain-browsers`]{#toolchain-browsers}: a build that bundles code for browsers targets these browsers, in `build.target` for a site Vite bundles from source and in `pack.target` for a package that isn't `platform: "node"`. `craftz()` sets `build.target` for every static site. A package that runs in Node too adds its Node to the list.
 
-The list is worked out from MDN's browser-compat-data, by [src/browsers.ts](../src/browsers.ts), as of the date of the data. The package is one of craftz's own dependencies, so a craftz release moves it, and the floors move with it, with `drift` listing what then needs the new list.
+The list is worked out from MDN's browser-compat-data, by [src/browsers.ts](../src/browsers.ts), as of the date of the data. The package is one of craftz's own dependencies, so a craftz release moves it, and the floors move with it, with `craftz check` listing what then needs the new list.
 
 A target only rewrites syntax, like CSS nesting or a regular expression's flags. It adds no polyfills, so it doesn't stop code that calls an API too new for a floor. Something newer than a floor, like `::highlight()` on Firefox's ESR, is fine where it fails cleanly and the page still works. The floor is for what has to work. A prose site's page scripts and styles aren't built by Vite, so the target doesn't reach them.
 
@@ -117,9 +117,9 @@ A repository's own libraries, like svelte or micromark, are its own to choose. `
 
 ## Held
 
-When a tool a repository depends on can't support a rule yet, the check is held. `drift` prints it with its reason, and doesn't count it as drift. Each hold says when to look again, like svelte-check accepting TypeScript 7. Holds are listed in [src/survey.ts](../src/survey.ts).
+When a tool a repository depends on can't support a rule yet, the check is held. `craftz check` prints it with its reason, and doesn't count it as drift. Each hold says when to look again, like svelte-check accepting TypeScript 7. Holds are listed in [src/survey.ts](../src/survey.ts).
 
-A hold is for what a tool can't do, never for a preference. The point of one set of rules is that a choice like Vite+ is made once and paid for once, not argued again in each repository. A hold whose check stops drifting fails `drift` until it's removed, so none outlives its reason.
+A hold is for what a tool can't do, never for a preference. The point of one set of rules is that a choice like Vite+ is made once and paid for once, not argued again in each repository. A hold whose check stops drifting fails `craftz check` until it's removed, so none outlives its reason.
 
 ## Scripts
 
@@ -168,7 +168,7 @@ A repository with a site deploys it to a Cloudflare Worker with static assets.
 - [`cloudflare-date`]{#cloudflare-date}: a site's `compatibilityDate` is the build date of the workerd that the reference's cf installs, and it sets no Node.js compatibility flag. That's the newest date the local runtime knows, so dev and tests run what production does, and from 2026-08-04 the date turns on Node.js compatibility itself.
 - [`cloudflare-wrangler`]{#cloudflare-wrangler}: an app cf can't build yet, like SvelteKit's, keeps `wrangler.toml`, never `wrangler.jsonc`. prose reads comments in TOML but not in JSONC. `cloudflare-addresses` and `cloudflare-date` read `cloudflare.config.ts`, so they apply once a site moves to it.
 - **Deploys:** the Worker's Git integration (Workers Builds) builds and deploys `main`. There's no deploy step in GitHub Actions, and no API token or secret.
-- **The Worker's settings** are the same on every Worker. Cloudflare's config has no field for them, so `align` writes them with `cf`, and `drift` checks them when `cf` is logged in. Only connecting the Worker to its repository is left to Cloudflare's dashboard.
+- **The Worker's settings** are the same on every Worker. Cloudflare's config has no field for them, so `align` writes them with `cf`, and `craftz settings --check` reads them. Only connecting the Worker to its repository is left to Cloudflare's dashboard.
 
 ```text
 Build command      pnpm run verify
@@ -209,7 +209,7 @@ Any site can be public or internal, in a public repository or a private one. An 
 - **Access covers its domain.** A Cloudflare Access application on the site's domain, with a policy that lets in only who it's for. Access is turned on once per account, in the Zero Trust dashboard.
 - **Its other addresses are off,** as on every site, by `cloudflare-addresses`. Access covers the domain, not the Worker, so `workers.dev` or a preview URL would serve the site without a login.
 
-The config says so in its `@prose` comment. With `cf` logged in, `drift` looks up Access for every site's domain. An application with no policy has drifted. With no application, the site is public, and drift says so on its own line, without counting it, so a site meant to be internal doesn't go public unseen.
+The config says so in its `@prose` comment. With `cf` logged in, `craftz status` looks up Access for the site's domain and says whether it's public or internal, so a site meant to be internal doesn't go public unseen. An application with no policy is marked, since it lets nobody in.
 
 ## GitHub
 
@@ -217,9 +217,9 @@ Every `main` takes changes the same way. Work happens on a branch, in a pull req
 
 - [`github-rules`]{#github-rules}: `main` has one ruleset, named `main`, from [.github/ruleset.json](../reference/.github/ruleset.json). It requires a pull request with no approvals, since there's one maintainer, and the `ci` check, and a package's the `label` check too. It keeps history linear, and blocks force pushes and deleting the branch. Nobody bypasses it.
 - [`github-actions`]{#github-actions}: every workflow uses the actions at the versions the reference's do, and there's no Dependabot. A repository can add steps of its own, but the versions move in the reference first, like every other version.
-- **Merge settings:** from [.github/settings.json](../reference/.github/settings.json). Squash is the only merge, a branch is deleted once it's merged, and auto-merge is on. The topic `craftz` goes with them, so the sweeps find the repository.
+- **Merge settings:** from [.github/settings.json](../reference/.github/settings.json). Squash is the only merge, a branch is deleted once it's merged, and auto-merge is on. The topic `craftz` goes with them, so `align` finds the repository.
 
-`craftz settings` writes both for one repository, and asks before removing classic branch protection. `align` writes both to every repository or to the ones named, and removes classic protection without asking. `drift` checks the rules, which GitHub shows to anyone. Without a login, GitHub answers 60 requests an hour, so `drift` uses `gh`'s login when there is one, and a check the limit stopped shows as not checked, not as drift. With that login, it checks the merge settings too, which only the owner can read.
+`craftz settings` writes both for one repository, and asks before removing classic branch protection. `align` writes both to every repository or to the ones named, and removes classic protection without asking. `craftz settings --check` reads both. GitHub shows the branch rules to anyone, but the merge settings only to the owner, so it needs `gh`'s login. A check GitHub's rate limit stopped shows as not checked, not as drift.
 
 ## Agents
 
@@ -311,27 +311,27 @@ GitHub Actions runs one job, named `ci`, on pull requests and on `main`. It inst
 
 ## Repositories
 
-Every public repository that follows these rules has the GitHub topic `craftz`, so `drift` checks it. Writing its GitHub settings adds the topic, and archiving it drops the repository from the list. A repository joins one of two ways, and both end the same: listed, protected, and passing `drift`.
+Every public repository that follows these rules has the GitHub topic `craftz`, so `align` moves it. Writing its GitHub settings adds the topic, and archiving it drops the repository from the list. A repository joins one of two ways, and both end the same: listed, protected, and passing `craftz check` and `craftz settings --check`.
 
 ### Bringing one in
 
-1. Run `craftz settings` in it, which adds the topic along with the rest of GitHub's settings. `drift` then lists everything it's missing.
-2. Fix what drift lists, in the repository's own pull requests. Where a tool can't meet a rule yet, add a hold rather than a workaround.
+1. Run `craftz settings` in it, which adds the topic along with the rest of GitHub's settings. Then `craftz upgrade`, which adds craftz and its fixes, and lists what's left by hand.
+2. Fix what's left, in the repository's own pull requests. Where a tool can't meet a rule yet, add a hold rather than a workaround.
 3. Connect a site's Worker to the repository, in Cloudflare's dashboard.
 4. Run `align <repo>`, for the branch rules, a package's labels and the Worker's build settings. A package still needs its trusted publisher on npm.
 
 ### Keeping them in line
 
-`drift` reads and `align` writes, each for every repository or the ones named.
+Each repository checks its own files in CI, with `craftz check` against the craftz it installs, so a pull request can't drift from the rules it names. What needs a login stays on the laptop.
 
-- **drift** checks every repository's files, from GitHub's `main`, or from a folder named on the command line, to see a fix before it's pushed. With `gh` logged in it checks the merge settings too, and with `cf` the Workers' build settings, and without a login it says what it couldn't check.
-- **align** brings each repository in line with the reference, from a fresh clone of each `main`. Every shared tool, the override and the editor settings come from the reference, and each repository's own libraries move within their majors. A pull request opens where `verify` passes, with auto-merge on, and lists any new major left for review. GitHub's settings and the Worker's are written directly, since there's no file to review.
+- **`craftz settings --check`** reads one repository's settings on GitHub and its Worker, and `craftz status` what's live.
+- **align** brings each repository in line with the reference, from a fresh clone of each `main`. Every shared tool, the override and the editor settings come from the reference, and each repository's own libraries move within their majors. A pull request opens where `verify` passes, with auto-merge on, and lists any new major left for review. GitHub's settings and the Worker's are written directly, since there's no file to review. `align --local` changes nothing, and lists every repository's settings that have drifted.
 
 A change to the rules, like a new check, is a pull request to craftz. It reaches the others in craftz's next release, which `align` moves them to.
 
 ### Following it unlisted
 
-A private repository can follow these rules without being listed, since craftz is public and would name it. The list only reads public repositories, so a private one's topic doesn't put it there. `drift <folder>` checks it from disk, everything but its branch rules and labels, which `align <repo>` still writes. Where it can't follow a rule, its own docs say which and why.
+A private repository can follow these rules without being listed, since craftz is public and would name it. The list only reads public repositories, so a private one's topic doesn't put it there. Its own `craftz check` and `craftz settings` work as in any repository, and `align <repo>` still writes its settings. Where it can't follow a rule, its own docs say which and why.
 
 ### Starting one
 
@@ -346,6 +346,6 @@ new <name> --private --description "What it is, in a sentence." --push
 
 The flags are [the axes](#axes). `--package` publishes it and `--site static` deploys a static site, and with neither, it's scripts run on a laptop. `--private` makes the repository private on GitHub, which keeps it off the list. `--internal` says in a site's config that it's behind Access, and the Access application is the step left to do by hand.
 
-It writes only what's the repository's own: its name and description, its source, its Vite config and strict types, and CI. Each is built from the reference's files rather than a template. Then it runs every rule's fix, the ones `align` runs. They write the rest: the versions and engines, the shared scripts, the editor settings, the cooldown, the shared `AGENTS.md` sections, a package's release files and packing, and a first version of each doc. So a new repository can't follow the rules any less than `align` makes an old one. Then it installs, formats with `fix`, runs `verify` and makes the first commit. `--push` creates the repository on GitHub, pushes that commit and writes its GitHub settings, as `align` does. That first push is the only one to `main` the rules allow, since the rules aren't on yet. Its settings add the topic, so `drift` finds it. It prints what's left: the Worker or npm's setup. A SvelteKit app starts from base instead, and is brought in like any other.
+It writes only what's the repository's own: its name and description, its source, its Vite config and strict types, and CI. Each is built from the reference's files rather than a template. Then it runs every rule's fix, the ones `align` runs. They write the rest: the versions and engines, the shared scripts, the editor settings, the cooldown, the shared `AGENTS.md` sections, a package's release files and packing, and a first version of each doc. So a new repository can't follow the rules any less than `align` makes an old one. Then it installs, formats with `fix`, runs `verify` and makes the first commit. `--push` creates the repository on GitHub, pushes that commit and writes its GitHub settings, as `align` does. That first push is the only one to `main` the rules allow, since the rules aren't on yet. Its settings add the topic, so `align` finds it. It prints what's left: the Worker or npm's setup. A SvelteKit app starts from base instead, and is brought in like any other.
 
 `new`'s test generates a package, a static site, a package with a site, scripts in a private repository and an internal site. It checks each against the survey and runs its `verify`, so the generator can't fall behind the rules.

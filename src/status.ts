@@ -18,6 +18,9 @@
  * - **The addresses**, for a site: the domain answers, and `workers.dev` doesn't when the config
  *   turns it off. A site behind Cloudflare Access answers with a redirect to its login, which
  *   counts as answering.
+ * - **The audience**, for a site: public, or internal behind Access, read as
+ *   [Access](settings.ts#access) says. Either is fine, and saying which means a site meant to be
+ *   internal doesn't go public unseen. An Access application with no policy is marked.
  *
  * `--log` prints the latest build's log after, which is where a failed deploy says why, and
  * `--notes` prints the latest release's notes in full.
@@ -27,7 +30,7 @@
  * is said, and marked `✗`, rather than taken as fine.
  */
 import { execFileSync } from "node:child_process";
-import { cf, cloudflareLogin, workerTag } from "./settings.ts";
+import { accessDrift, cf, cloudflareLogin, workerTag } from "./settings.ts";
 import { OWNER, type Pkg } from "./reference.ts";
 import type { Worker } from "./worker.ts";
 
@@ -145,6 +148,17 @@ async function addresses(site: Worker, dev?: string): Promise<Line[]> {
   return lines;
 }
 
+/** Who the site is for, as Access says. */
+function audienceOf(site: Worker): Line {
+  const access = accessDrift(site);
+  if (access.drift.length) return { what: "audience", found: access.drift.join("; "), ok: false };
+  return {
+    what: "audience",
+    found: access.public ? "public, with no Access application" : "internal, behind Access",
+    ok: true,
+  };
+}
+
 /** Everything live about one repository, the latest build's id for `--log`, and the release. */
 export async function status(
   repo: string,
@@ -223,7 +237,7 @@ export async function status(
   const builds = cf("builds", "list", "--external-script-id", found.id) as Build[];
   const build = builds[0];
   lines.push(buildIn(build));
-  lines.push(...(await addresses(site, found.dev)));
+  lines.push(...(await addresses(site, found.dev)), audienceOf(site));
   return { lines, ...out, ...(build ? { build: build.build_uuid } : {}) };
 }
 

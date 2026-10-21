@@ -1,15 +1,11 @@
 /** @prose
  * # The survey
  *
- * Reads every repository and checks it against the rules, returning what it found as data.
- * `pnpm drift` prints it, and a page can show it as tables.
+ * Checks a repository's files against the rules, from a folder, and lists the repositories that
+ * follow them, for `pnpm align`.
  *
  * Each repository is compared with the files in [reference/](../reference/), so there's no second
  * copy of them to keep in step. [The rules](../docs/rules.md) say what each check means.
- *
- * Every repository is read from GitHub, from `main`, so a check run on a laptop and one run in CI
- * see the same thing. To check a fix before it's pushed, `pnpm drift` takes the folder instead
- * ([A folder](#a-folder)).
  */
 import { execFileSync } from "node:child_process";
 import { basename, join } from "node:path";
@@ -28,8 +24,8 @@ export { type Worker, worker };
  * are written, and leaves when it's archived. A private one isn't listed, since craftz is public
  * and would name it.
  *
- * GitHub's search answers without a login, and only with public repositories then, so the site's
- * build lists the same ones a laptop does.
+ * GitHub's search answers without a login, and only with public repositories then, so a login
+ * never adds a private one to the list.
  */
 export async function repos(): Promise<string[]> {
   const q = `topic:${TOPIC} user:${OWNER} is:public archived:false`;
@@ -83,46 +79,11 @@ function fromDisk(dir: string): Files {
   return Object.fromEntries(FILES.map((file) => [file, read(join(dir, file))]));
 }
 
-// A missing file is an empty one, as on disk. Any other failure means the repository couldn't
-// be read, and the survey says so rather than reporting drift that isn't there.
-async function fromGitHub(repo: string): Promise<Files> {
-  const entries = await Promise.all(
-    FILES.map(async (file) => {
-      const url = `https://raw.githubusercontent.com/${OWNER}/${repo}/main/${file}`;
-      const res = await fetch(url);
-      if (res.status === 404) return [file, ""];
-      if (!res.ok) throw new Error(`${file} returned HTTP ${res.status}`);
-      return [file, await res.text()];
-    }),
-  );
-  return Object.fromEntries(entries);
-}
-
-/** @prose
- * # A package's release
- *
- * The version npm gives a user today, read from npm when the survey runs, so the page shows what
- * people install rather than what's on `main`. A package npm doesn't have yet has no version.
- */
-export type Release = { name: string; version?: string } | Error;
-
-async function release(name: string): Promise<Release> {
-  try {
-    const res = await fetch(`https://registry.npmjs.org/${name}/latest`);
-    if (res.status === 404) return { name };
-    if (!res.ok) throw new Error(`npm returned HTTP ${res.status}`);
-    const { version } = (await res.json()) as { version: string };
-    return { name, version };
-  } catch (error) {
-    return error instanceof Error ? error : new Error(String(error));
-  }
-}
-
 /** @prose
  * # Branch rules
  *
- * GitHub shows a public repository's branch rules to anyone, so the survey reads them without a
- * login, and `github-rules` compares them with [.github/ruleset.json](../reference/.github/ruleset.json). A
+ * GitHub shows a public repository's branch rules to anyone, so `craftz settings` reads them
+ * without a login, and `github-rules` compares them with [.github/ruleset.json](../reference/.github/ruleset.json). A
  * `GITHUB_TOKEN`, when set, only raises the rate limit.
  */
 export type BranchRule = { type: string; parameters?: Record<string, unknown> };
@@ -130,9 +91,8 @@ export type BranchRule = { type: string; parameters?: Record<string, unknown> };
 /** @prose
  * # GitHub's rate limit
  *
- * Without a login, GitHub answers 60 requests an hour, and each survey makes a few for every
- * repository, so a handful of runs can use them up. That's not drift. The check says it wasn't
- * made, and doesn't fail `pnpm drift`. `pnpm drift` logs in with `gh` when it can.
+ * Without a login, GitHub answers 60 requests an hour, so a handful of runs can use them up.
+ * That's not drift. The check says it wasn't made, and doesn't fail.
  */
 class RateLimit extends Error {
   override name = "RateLimit";
@@ -181,12 +141,10 @@ export type Repo = {
 /** @prose
  * # The checks
  *
- * Each check covers one part of the rules, and says what it expects in a line the page shows
- * beside it. The checks run, and the page lists them, in the order of the rules' parts, so
- * the page reads like the rules.
+ * Each check covers one part of the rules, and they run in the order of the rules' parts, so
+ * what a check prints reads like the rules.
  *
- * A check returns what
- * the repository has, like the version it pins, and what has drifted, which is empty when
+ * A check returns what the repository has, like the version it pins, and what has drifted, which is empty when
  * nothing has. It returns `undefined` when it doesn't apply, like the Cloudflare check for a
  * package with no site, or the typescript check for a repository without typescript. A check
  * that couldn't be made says why in `unchecked`, with no drift.
@@ -205,7 +163,7 @@ export type Finding = {
  *
  * Some drift can't be fixed yet, because a tool the repository depends on doesn't support the
  * standard. Each hold names the repository and the check, says why, and says when to look
- * again. A held check shows amber on the page with its reason, and doesn't fail `pnpm drift`.
+ * again. A held check is printed with its reason, and doesn't fail `craftz check`.
  *
  * A hold is for what a tool can't do, never for a choice. When the reason goes away, so does
  * the hold. A held check that has nothing left to hold reports that as drift, so a hold can't
@@ -231,11 +189,8 @@ function hold(repo: string, check: Check, finding: Finding | undefined): Finding
 
 export type Check = {
   name: string;
-  // The part of the rules it's in, which a page groups it under.
+  // The part of the rules it's in, which orders the checks.
   group: string;
-  rule: string;
-  // Where the rules state it, for a rule with an id.
-  see?: string;
   run: (repo: Repo) => Finding | undefined;
 };
 
@@ -243,8 +198,7 @@ export type Check = {
  * # Rules with an id
  *
  * A rule with an id is stated in the rules and checked in [rules.ts](rules.ts). Its check here
- * is named by its id, and the line the page shows beside it is the rule's first sentence, as the
- * rules have it, so there's no second wording to keep in step.
+ * is named by its id, and grouped under the part the rules state it in.
  */
 const statements = new Map(stated().map((s) => [s.id, s]));
 
@@ -253,10 +207,6 @@ function fromRule(rule: Rule): Check {
   return {
     name: rule.id,
     group: statement?.part ?? "",
-    rule: [rule.wants, /^(.+?\.)(\s|$)/.exec(statement?.text ?? "")?.[1]]
-      .filter(Boolean)
-      .join(": "),
-    see: statement?.see,
     run: (repo) => {
       const finding = rule.check(repo);
       return finding && { ...finding, rule: rule.id };
@@ -270,62 +220,22 @@ export const CHECKS = RULES.map(fromRule).toSorted(
   (a, b) => order.indexOf(a.group) - order.indexOf(b.group),
 );
 
-export type Result = {
-  repo: string;
-  // Set when the repository couldn't be read, and then nothing else is.
-  error?: string;
-  // One entry per check, in the order of `CHECKS`.
-  findings: (Finding | undefined)[];
-  scripts: Record<string, string>;
-  worker?: Worker;
-  // Set for a package.
-  release?: Release;
-};
-
 function repoOf(files: Files): Repo {
   const pkg = JSON.parse(files["package.json"] ?? "{}") as Pkg;
   const deps = { ...pkg.dependencies, ...pkg.devDependencies };
   return { pkg, files, deps, vitePlus: deps["vite-plus"], worker: worker(files) };
 }
 
-async function check(repo: string): Promise<Result> {
-  const rules = branchRules(repo);
-  let files: Files;
-  try {
-    files = await fromGitHub(repo);
-  } catch (error) {
-    return { repo, error: `couldn't be read: ${String(error)}`, findings: [], scripts: {} };
-  }
-  if (!files["package.json"]) return { repo, error: "no package.json", findings: [], scripts: {} };
-  const it = repoOf(files);
-  const published = it.pkg.private || !it.pkg.name ? undefined : release(it.pkg.name);
-  it.rules = await rules;
-  if (!it.pkg.private) it.labels = await repoLabels(repo);
-  return {
-    repo,
-    findings: CHECKS.map((c) => hold(repo, c, c.run(it))),
-    scripts: it.pkg.scripts ?? {},
-    worker: it.worker,
-    release: await published,
-  };
-}
-
-export async function survey(): Promise<Result[]> {
-  return Promise.all((await repos()).map((repo) => check(repo)));
-}
-
 /** @prose
  * # A folder
  *
- * Checks a folder from disk: a checkout of a listed repository, to see a fix before it's pushed,
- * or one that isn't listed, like one `pnpm new` just wrote or a private one.
+ * Checks a folder from disk, which is how `craftz check` reads a repository, in its own CI or on
+ * a laptop. Branch rules and labels aren't read, since they're settings, which `craftz settings`
+ * reads and writes.
  *
- * A listed
- * repository's holds apply, found by the repository its `origin` names, so a worktree or a
- * checkout under another name gets them too. A folder with no `origin` on GitHub, like one
- * `pnpm new` just wrote, goes by its own name. Branch rules and labels aren't read,
- * since `pnpm align` writes them and `pnpm drift` reads them from GitHub. Its Worker comes back
- * too, so `pnpm drift <folder>` can check its settings and look up its Access.
+ * A listed repository's holds apply, found by the repository its `origin` names, so a worktree or
+ * a checkout under another name gets them too. A folder with no `origin` on GitHub, like one
+ * `pnpm new` just wrote, goes by its own name.
  */
 /** The repository the folder's `origin` names, when it's the owner's on GitHub. */
 export function origin(dir: string): string | undefined {

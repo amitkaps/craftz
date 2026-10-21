@@ -27,7 +27,7 @@ A package removes both. A repository checks itself against the version it instal
 
 ## One rule, one check, one fix
 
-Each rule has one implementation. [The rules](rules.md) word it once, as a list item that opens with its id. [src/rules.ts](../src/rules.ts) holds its check and, where it can be automated, its fix, under the same id. A test fails if either has an id the other doesn't. `craftz check` and `craftz fix` run the rules in a repository, and the sweeps across repositories call the same code, with no second copy of any rule. A fix that edits a repository's own code, like `vite.config.ts` or CI, does it through [src/edit.ts](../src/edit.ts), which reads the file by its lines. That's the property to protect as craftz grows.
+Each rule has one implementation. [The rules](rules.md) word it once, as a list item that opens with its id. [src/rules.ts](../src/rules.ts) holds its check and, where it can be automated, its fix, under the same id. A test fails if either has an id the other doesn't. `craftz check` and `craftz fix` run the rules in a repository, and align calls the same code in each clone, with no second copy of any rule. A fix that edits a repository's own code, like `vite.config.ts` or CI, does it through [src/edit.ts](../src/edit.ts), which reads the file by its lines. That's the property to protect as craftz grows.
 
 The files a rule compares with are in [reference/](../reference/README.md), laid out as a repository has them. A version, a strict option or a workflow is read from there, not written out twice, so the rules can't disagree with the example.
 
@@ -133,21 +133,16 @@ Each craftz release carries the versions of the tools it was tested with, like V
 
 ## Every repository at once
 
-`craftz check` runs only when a repository opens a pull request. A repository nobody is working on can fall behind, and CI can't read GitHub's or Cloudflare's settings without a login. So two sweeps run on the laptop, never in the cloud. They're scripts in this repository, not commands of the package, since they serve whoever keeps the repositories, and a repository needs neither to follow the rules.
+Each repository checks its own files in CI, with `craftz check` against the craftz it installs, so nothing needs to check them from outside. What's left is moving every repository to a new craftz, and its settings, which CI can't read or write without a login. So two scripts run on the laptop, never in the cloud. They're in this repository, not commands of the package, since they serve whoever keeps the repositories, and a repository needs neither to follow the rules.
 
-- `pnpm drift` reports each repository's craftz version and runs `craftz settings --check`.
-- `pnpm align` runs `craftz upgrade` in each repository and opens a pull request.
+- `pnpm align` runs `craftz upgrade` in each repository, opens a pull request and writes the settings.
 - `pnpm bump` moves the reference to the newest versions, in craftz's own pull request, before a release.
 
-align works in a fresh clone of each `main`, never a checkout. Each repository has one branch named `align`, which a later run updates, so running it again never opens a second pull request. It opens a pull request only when `verify` passes, and one that fails leaves its clone and log. It ends with a report, with each repository opened, updated, already in line or failed. `--local` stops before the push, so a run can be read before anything leaves the laptop.
+align works in a fresh clone of each `main`, never a checkout. Each repository has one branch named `align`, which a later run updates, so running it again never opens a second pull request. It opens a pull request only when `verify` passes, and one that fails leaves its clone and log. It ends with a report, with each repository opened, updated, already in line or failed. `--local` stops before the push and only reads the settings, so a run can be read before anything leaves the laptop.
 
 In each clone it takes `craftz upgrade`'s steps, so the new version's `craftz fix` runs, and the rules that apply are the ones the repository moves to. It only moves a repository to a released craftz, so a change in this repository reaches nobody until it's released.
 
-The sweeps hold no rules of their own. They find the repositories by the GitHub topic `craftz`, which writing a repository's settings adds. So a new repository joins when its settings are written and leaves when it's archived, and no list in craftz needs a pull request. The list reads only public repositories, so craftz never names a private one.
-
-## The dashboard
-
-A dashboard shows every repository without running anything. It only observes, and holds no policy of its own. It shows one row each, with its type, its craftz version and whether that's behind, its CI on `main`, its site and its npm release. Green CI means the repository passes `craftz check` at the version it installs. Settings stay out, since reading them needs a login a site's build doesn't have.
+align holds no rules of its own. It finds the repositories by the GitHub topic `craftz`, which writing a repository's settings adds. So a new repository joins when its settings are written and leaves when it's archived, and no list in craftz needs a pull request. The list reads only public repositories, so craftz never names a private one.
 
 ## No cycle
 
