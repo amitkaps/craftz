@@ -11,6 +11,7 @@
  * see the same thing. To check a fix before it's pushed, `pnpm drift` takes the folder instead
  * ([A folder](#a-folder)).
  */
+import { execFileSync } from "node:child_process";
 import { basename, join } from "node:path";
 import { type Rule, RULES } from "./rules.ts";
 import { parts, stated } from "./stated.ts";
@@ -320,14 +321,29 @@ export async function survey(): Promise<Result[]> {
  * or one that isn't listed, like one `pnpm new` just wrote or a private one.
  *
  * A listed
- * repository's holds apply, found by the folder's name. Branch rules and labels aren't read,
+ * repository's holds apply, found by the repository its `origin` names, so a worktree or a
+ * checkout under another name gets them too. A folder with no `origin` on GitHub, like one
+ * `pnpm new` just wrote, goes by its own name. Branch rules and labels aren't read,
  * since `pnpm align` writes them and `pnpm drift` reads them from GitHub. Its Worker comes back
  * too, so `pnpm drift <folder>` can check its settings and look up its Access.
  */
-/** A folder's files, read as the checks read a repository, for `pnpm align`'s fixes. */
+/** The repository the folder's `origin` names, when it's the owner's on GitHub. */
+export function origin(dir: string): string | undefined {
+  let url = "";
+  try {
+    url = execFileSync("git", ["-C", dir, "remote", "get-url", "origin"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {}
+  return new RegExp(`github\\.com[:/]${OWNER}/([^/]+?)(?:\\.git)?$`).exec(url)?.[1];
+}
+
+/** The repository a folder holds: the one its `origin` names, or else the folder's name. */
+export const repoIn = (dir: string): string => origin(dir) ?? basename(dir);
 
 export async function checkFolder(dir: string): Promise<{ findings: Finding[]; worker?: Worker }> {
-  const repo = basename(dir);
+  const repo = repoIn(dir);
   const it = repoOf(fromDisk(dir));
   const findings = CHECKS.flatMap((c) => hold(repo, c, c.run(it)) ?? []);
   return { findings, worker: it.worker };

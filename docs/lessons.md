@@ -170,3 +170,5 @@ Most were learned before craftz, when one repository kept the rules and copied t
 **A squash merge hides what it took.** `pnpm pr` counted a branch's commits ahead of `main` to tell if anything was new. A squash merge writes new commits on `main`, so the branch's own stay ahead, and a second run pushed a pull request with nothing in it. Whether a branch adds anything is a question about trees, not commits: merge it onto `main`, and see if `main` changes.
 
 **A plan tracks its own repository.** craftz's plan ticked each repository as it moved to a release, which the rules say a plan doesn't do. The moves are each repository's own pull requests, in its own plan, and what a release asks of them is in its notes. craftz's plan says what craftz does next.
+
+**A folder's name isn't its repository.** Holds were found by the folder's name, so `craftz check` in a worktree of a held repository missed its holds and failed, while `craftz settings` in the same folder found the repository from `origin`. Two ways to name one thing will disagree somewhere. A folder is the repository its `origin` names, and only a folder with no `origin` goes by its own name.

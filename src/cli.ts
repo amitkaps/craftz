@@ -38,9 +38,9 @@
  * deletes the branches that merged, as [gone.ts](gone.ts) says. A repository runs them as
  * `pnpm pr` and `pnpm gone`.
  */
-import { execFileSync, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { basename, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { type Target, checkSettings, writeSettings } from "./apply.ts";
 import { gone } from "./gone.ts";
@@ -50,7 +50,7 @@ import { OWNER, type Pkg, here } from "./reference.ts";
 import { fixFiles } from "./rules.ts";
 import { cloudflareLogin, githubLogin, hasClassic } from "./settings.ts";
 import { RULES_DOC, stated } from "./stated.ts";
-import { type Finding, HELD, checkFolder } from "./survey.ts";
+import { type Finding, HELD, checkFolder, origin, repoIn } from "./survey.ts";
 import { workerIn } from "./worker.ts";
 
 const HELP = `Usage: craftz <command>
@@ -91,14 +91,7 @@ async function check(dir: string): Promise<boolean> {
 
 // The repository the folder's origin names, which has to be the owner's.
 function target(dir: string): Target {
-  let origin = "";
-  try {
-    origin = execFileSync("git", ["-C", dir, "remote", "get-url", "origin"], {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-    }).trim();
-  } catch {}
-  const repo = new RegExp(`github\\.com[:/]${OWNER}/([^/]+?)(?:\\.git)?$`).exec(origin)?.[1];
+  const repo = origin(dir);
   if (!repo) {
     console.error(`craftz: ${dir} has no origin on GitHub under ${OWNER}.`);
     process.exit(1);
@@ -192,7 +185,7 @@ if (command === "rules" && !rest.length) {
   process.exitCode = (await check(resolve(arg ?? "."))) ? 1 : 0;
 } else if (command === "fix" && !rest.length) {
   const dir = resolve(arg ?? ".");
-  const changed = fixFiles(dir, here, HELD[basename(dir)]);
+  const changed = fixFiles(dir, here, HELD[repoIn(dir)]);
   if (!changed.length) console.log("Changed nothing.\n");
   else {
     console.log("Changed:");
