@@ -4,7 +4,7 @@ craftz 0.3.0 is on npm, and its docs are live at [craftz.amitkaps.com](https://c
 
 ## Next, in order
 
-1. **base moves to 0.3.0.** The others moved with `pnpm align`, and base failed since its `prepare` didn't run in align's clone. With that fixed, `pnpm align base` moves it.
+Every repository is on 0.3.0. Nothing is next until a Later item's reason goes, or a review finds more.
 
 ## Where it is
 
