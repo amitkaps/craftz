@@ -25,7 +25,7 @@
  *
  * `--push` also creates the repository on GitHub, pushes the first commit and writes its GitHub
  * settings, as `craftz settings` does. That first push is the only one to `main` the rules allow, since
- * the branch rules aren't on yet. Its settings include the topic `craftz`, so the sweeps find it.
+ * the branch rules aren't on yet. Its settings include the topic `craftz`, so align finds it.
  * What's left is printed at the end: the Worker, Access or npm's setup, which have no API to do them from here.
  */
 import { execFileSync } from "node:child_process";

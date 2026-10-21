@@ -110,12 +110,12 @@ It needs `gh` logged in as the owner, and `cf` for a site's Worker. Classic bran
 ## What's live
 
 ```sh
-pnpm craftz status          # CI, pull requests, npm, the release, and the site's build and addresses
+pnpm craftz status          # CI, pull requests, npm, the release, and the site's build, addresses and audience
 pnpm craftz status --notes  # and the latest release's notes
 pnpm craftz status --log    # and the latest build's log
 ```
 
-`craftz status` reads what the repository has out in the world, where `check` reads its files and `settings` its setup. It lists the latest run on `main` of each workflow, the open pull requests, and for a package the version npm serves next to the one in `package.json`, and its latest release on GitHub. The summary that opens the release's notes prints after the lines. For a site, it lists the Worker's latest build, with its outcome, commit and deploy command, and whether the domain answers and `workers.dev` doesn't. Each line is marked `✓` or `✗`, and it exits 1 when any is `✗`. A run or build still going isn't a failure, and neither is a version waiting to be released.
+`craftz status` reads what the repository has out in the world, where `check` reads its files and `settings` its setup. It lists the latest run on `main` of each workflow, the open pull requests, and for a package the version npm serves next to the one in `package.json`, and its latest release on GitHub. The summary that opens the release's notes prints after the lines. For a site, it lists the Worker's latest build, with its outcome, commit and deploy command, whether the domain answers and `workers.dev` doesn't, and whether the site is public or internal, behind Access. Each line is marked `✓` or `✗`, and it exits 1 when any is `✗`. A run or build still going isn't a failure, and neither is a version waiting to be released.
 
 Use it after a merge or a release, to see that CI, the deploy and npm went through. `--notes` prints the release's notes in full. `--log` prints the build's log, which is where a failed deploy says why. It needs `gh` logged in, and cf logged in for a site. A site with no cf of its own, like an app on wrangler, has its builds read by the reference's cf, which pnpm fetches.
 
@@ -136,30 +136,19 @@ The commands use the logins `gh` and `cf` already have, so there's no token to k
 
 ## Keeping every repository
 
-These are scripts in a checkout of craftz, not commands of the package, after `pnpm install`. They're for whoever keeps the repositories, and a repository needs none of them to follow the rules. drift runs without a login and reads less. align and bump need `gh`, and align writes the Worker settings only with `cf`.
-
-### Checking every repository
-
-```sh
-pnpm drift            # every repository
-pnpm drift ../markz   # a folder from disk, to check a fix before it's pushed
-```
-
-Each repository gets a line, ✓ or ✗, with what has drifted below it, and each finding names its rule. Held checks are listed with their reason and don't count. A missing login prints one `not checked:` line at the top, and the rest still runs. It exits 1 when anything has drifted.
-
-drift only reads, so it's safe to run any time.
+These are scripts in a checkout of craftz, not commands of the package, after `pnpm install`. They're for whoever keeps the repositories, and a repository needs none of them to follow the rules. align and bump need `gh`, and align writes the Worker settings only with `cf`.
 
 ### Aligning every repository
 
 ```sh
 pnpm align                 # every repository, to the latest craftz
 pnpm align markz           # one repository, to the latest craftz
-pnpm align markz --local   # the same, but nothing leaves the laptop
+pnpm align markz --local   # the same, but nothing leaves the laptop, and settings are only read
 ```
 
 align clones each repository's `main` into a temporary folder and installs it, runs `craftz upgrade`'s steps, then runs `verify`. It opens a pull request with auto-merge on, writes the GitHub and Worker settings, and waits for the merges. A repository already in line gets no pull request, and a failed one keeps its clone and log for a look. Run it after each release.
 
-`--local` stops before the push, so a clone can be read or compared with another run. It writes no settings either.
+`--local` stops before the push, so a clone can be read or compared with another run. It reads each repository's settings and lists what has drifted, without writing them.
 
 ### Moving the reference
 

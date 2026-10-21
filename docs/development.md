@@ -10,13 +10,13 @@ pnpm dev
 pnpm verify    # what CI runs
 ```
 
-`pnpm craftz rules` runs the command from `src/`, with no build, and so does `pnpm new`. `pnpm drift`, `pnpm align` and `pnpm bump` are this repository's own scripts, and run from `src/` too. pnpm runs a script before a command of the same name, so inside this repository `pnpm craftz` is always the source, never an installed copy.
+`pnpm craftz rules` runs the command from `src/`, with no build, and so does `pnpm new`. `pnpm align` and `pnpm bump` are this repository's own scripts, and run from `src/` too. pnpm runs a script before a command of the same name, so inside this repository `pnpm craftz` is always the source, never an installed copy.
 
 ## Changing the rules
 
 A change to how things are done starts here, in [the rules](rules.md) and in [the reference](../reference/README.md). When it can be checked, it's also a rule. That's a list item in the rules that opens with its id as a span, like ``- [`scripts-verify`]{#scripts-verify}: …``, and a check under the same id in [src/rules.ts](../src/rules.ts), with a fix when one can be automated. [rules.test.ts](../tests/rules.test.ts) fails if either has an id the other doesn't.
 
-`pnpm drift` then lists the repositories to bring in line. What the change taught goes in [the lessons](lessons.md), in the same pull request.
+`pnpm craftz check ../markz` runs the rules from source on another checkout, to see what a change asks of it before it's released. What the change taught goes in [the lessons](lessons.md), in the same pull request.
 
 ## The reference
 
@@ -32,6 +32,6 @@ Two values come from dev dependencies, the browsers from browser-compat-data and
 
 ## Beta packages
 
-The packages still on a beta are the ones [`versions-beta`](rules.md#versions-beta) names, and `package.json` has their builds. Sweeps leave them alone, since their tags don't say which build goes with which. One is listed once npm's latest for it is a release at the beta's major or later.
+The packages still on a beta are the ones [`versions-beta`](rules.md#versions-beta) names, and `package.json` has their builds. align leaves them alone, since their tags don't say which build goes with which. One is listed once npm's latest for it is a release at the beta's major or later.
 
 To move one, pin the release in `package.json` and take it out of `versions-beta`. Then run `pnpm run verify` and a deploy from the Git-connected Worker before you rely on it.

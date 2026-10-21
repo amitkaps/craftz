@@ -11,8 +11,7 @@
  * other.
  *
  * `craftz check` runs every rule on a folder's files, the current one unless another is named.
- * It prints what has drifted and exits 1, like `pnpm drift ../markz` does for one folder, with
- * no settings read. `craftz fix` writes every fix in the files, the same ones `pnpm align` runs,
+ * It prints what has drifted and exits 1, with no settings read, so it runs in CI with no login. `craftz fix` writes every fix in the files, the same ones `pnpm align` runs,
  * then lists the files it changed, checks again and prints what's left to do by hand. A fix can
  * move versions, so `pnpm install` comes next, then `pnpm run fix` for the format.
  *

@@ -39,7 +39,6 @@
     "pr": "node src/cli.ts pr",
     "gone": "node src/cli.ts gone",
     "prepack": "pnpm run build",
-    "drift": "node src/drift.ts",
     "craftz": "node src/cli.ts",
     "align": "node src/align.ts",
     "bump": "node src/align.ts craftz",

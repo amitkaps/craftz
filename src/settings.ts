@@ -3,8 +3,8 @@
  *
  * What the rules set outside the repositories, where no file in one can hold it: each
  * repository's merge settings, branch rules and labels on GitHub, and each Worker's build settings
- * on Cloudflare. [drift.ts](drift.ts) reads them, and [apply.ts](apply.ts) writes them for
- * `craftz settings`, `align` and `new --push`. Both go through the logins `gh` and `cf` already
+ * on Cloudflare. [apply.ts](apply.ts) reads and writes them for `craftz settings`, `align` and
+ * `new --push`. Both go through the logins `gh` and `cf` already
  * have, so there's no token to keep.
  *
  * A login that isn't there isn't drift. Each side says what it couldn't do, once, and the rest

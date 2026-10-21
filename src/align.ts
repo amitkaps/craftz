@@ -2,8 +2,8 @@
  * # Align
  *
  * Brings repositories in line with the released craftz: `pnpm align` does every one
- * [listed](survey.ts) by its topic, and `pnpm align markz` does one. It's what writes, where
- * [drift.ts](drift.ts) only reads, and it needs `gh` logged in as the owner.
+ * [listed](survey.ts) by its topic, and `pnpm align markz` does one. It needs `gh` logged in as
+ * the owner, since it writes the settings each repository's CI can't read without a login.
  *
  * `pnpm bump` runs it on craftz alone, which moves the reference to the newest versions. That
  * comes before a release, and `pnpm align` after it, so a release carries the newest versions
@@ -20,14 +20,14 @@
  *
  * `--local` stops each repository before anything leaves the laptop: no push, no pull request and
  * no settings written. Its clone keeps the changes, with `verify` run, so they can be read or
- * compared with another run.
+ * compared with another run, and its settings are read and listed where they've drifted.
  */
 import { execFile } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import { writeSettings } from "./apply.ts";
+import { checkSettings, writeSettings } from "./apply.ts";
 import { fixFiles } from "./rules.ts";
 import { CRAFTZ, OWNER, TOOLS } from "./reference.ts";
 import { repos } from "./survey.ts";
@@ -296,25 +296,22 @@ async function files(repo: string): Promise<Outcome> {
  *
  * Whether a repository is a package, and the name of its Worker, are read from the clone, after
  * its pull request, so they're what `main` is about to hold. Classic branch protection is removed
- * without asking,
- * since these repositories are ones the rules already own.
+ * without asking, since these repositories are ones the rules already own. With `--local`, the
+ * settings are only read.
  */
 async function settings(repo: string): Promise<string[]> {
   const dir = join(work, repo);
   const pkg = existsSync(join(dir, "package.json")) ? readJson<Pkg>(join(dir, "package.json")) : {};
   // align says once, at the start, why the Workers aren't written.
   const site = noCloudflare ? undefined : workerIn(dir);
-  return writeSettings({ repo, pkg, site }, true);
+  return local ? checkSettings({ repo, pkg, site }) : writeSettings({ repo, pkg, site }, true);
 }
 
 const outcomes = await Promise.all(targets.map((repo) => files(repo)));
 
 let failed = false;
 for (const outcome of outcomes) {
-  const lines = [
-    ...outcome.lines,
-    ...(local || outcome.failed ? [] : await settings(outcome.repo)),
-  ];
+  const lines = [...outcome.lines, ...(outcome.failed ? [] : await settings(outcome.repo))];
   failed ||= Boolean(outcome.failed);
   console.log(outcome.failed ? `✗ ${outcome.repo}` : `✓ ${outcome.repo}`);
   for (const line of lines) console.log(`    ${line}`);

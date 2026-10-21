@@ -4,26 +4,27 @@ craftz 0.3.0 is on npm, and its docs are live at [craftz.amitkaps.com](https://c
 
 ## Next, in order
 
-Every repository is on 0.3.0. craftz started as a repository that checked the others from a laptop, and these finish thinking of it as a package. Each is its own pull request, and 0.4.0 carries them once there's enough to release.
+Every repository is on 0.3.0. craftz started as a repository that checked the others from a laptop, and it now works as a package.
 
-1. **drift goes.** Each repository's CI checks its files against the craftz it installs, and what needs a login stays on the laptop. `status` says whether a site is public, `pnpm align --local` reads the settings and changes nothing, and the docs follow. The dashboard leaves the design, since it was drift as a page.
+Nothing is queued. 0.4.0 waits for enough feedback to release.
 
 ## Where it is
 
+- **Each repository checks itself.** Its CI runs `craftz check` against the craftz it installs, so nothing checks it from outside. What needs a login stays on the laptop: `craftz settings --check`, `craftz status`, and `pnpm align --local` for every repository at once.
 - **Exact versions.** Every shared tool and craftz are pinned exactly, in one list, the reference's `package.json`, so a repository runs what it names.
 - **`craftz upgrade`.** One command moves a repository to the latest craftz and runs that version's fix, and align runs its steps in a clone of each repository.
 - **The rules, checked and fixed.** [The rules](rules.md) are worded once, and their checks and fixes are in [src/](../src/), against the files in [reference/](../reference/README.md). `craftz rules`, `check` and `fix` run them from the installed version, and a second `fix` changes nothing. Every `verify` runs `pnpm craftz check`, so each pull request is checked against the craftz it installs. craftz checks itself from source, since the version it installs can't hold the rules it's changing. Its tests install the package `pnpm pack` writes, as a repository would, so a file the package leaves out fails a test here. A hold is found by the repository the folder's `origin` names, so a worktree gets its checkout's holds.
 - **GitHub's settings.** `craftz settings` writes only what has drifted and reads it back, with `--check` to only read. A package's ruleset requires `label` next to `ci`.
 - **One toolchain.** `craftz()` sets every repository's `fmt` and `lint`, and fails a config that sets either differently. Its values are stated once, and `toolchain-craftz`'s fix reads them to take each out of a config. A static site names its own folder as Vite's `publicDir`, and `craftz()` never guesses one. `craftz deploy` runs cf, or wrangler for an app cf can't build yet.
 - **Pull requests.** `pnpm pr` and `pnpm gone` run craftz's commands, in place of the scripts every repository copied. `pr` starts where the title says, and stops when the branch has nothing new for `main`. A package's label is checked by `label.yml`, so a pull request runs `verify` once. `gone` removes a merged branch's worktree.
-- **What's live.** `craftz status` reads CI on `main`, the open pull requests, npm's version against `package.json` on `main`, the latest release, and a site's build and addresses, on cf or wrangler.
-- **Releases.** The release workflow stages a version on npm and tags it once approved, and each release's notes say what to change when a repository moves. `pnpm bump` moves the reference's versions before a release. After it, `pnpm align` runs `craftz upgrade` in a clone of each repository, so a change reaches the others only once it's released. `craftz new` starts a repository that passes the rules, from any folder with `pnpm dlx`. `craftz release` opens a package's release from its own folder. align, bump and drift are this repository's own scripts, for whoever keeps the repositories, and the package doesn't ship them.
-- **The repositories.** The public ones carry the topic `craftz`, which is how align and drift find them.
+- **What's live.** `craftz status` reads CI on `main`, the open pull requests, npm's version against `package.json` on `main`, the latest release, and a site's build, addresses and audience, on cf or wrangler.
+- **Releases.** The release workflow stages a version on npm and tags it once approved, and each release's notes say what to change when a repository moves. `pnpm bump` moves the reference's versions before a release. After it, `pnpm align` runs `craftz upgrade` in a clone of each repository, so a change reaches the others only once it's released. `craftz new` starts a repository that passes the rules, from any folder with `pnpm dlx`. `craftz release` opens a package's release from its own folder. align and bump are this repository's own scripts, for whoever keeps the repositories, and the package doesn't ship them.
+- **The repositories.** The public ones carry the topic `craftz`, which is how align finds them.
 
 ## Later
 
 - The old repository retires. The one that kept the rules before craftz is archived with its history, and its site redirects to craftz's, for the links outside these repositories. Nothing in these repositories links to it, and every `AGENTS.md` links to craftz.
-- The beta packages that [`versions-beta`](rules.md#versions-beta) names move to their releases when they graduate, which the sweeps report.
+- The beta packages that [`versions-beta`](rules.md#versions-beta) names move to their releases when they graduate, which align reports.
 - The app moves to cf when SvelteKit's adapter writes cf's Build Output, and wrangler leaves the reference with it.
 - The app moves to TypeScript 7 when svelte-check's peer range takes it.
 - A site's `vp check` loads Cloudflare's plugin, though only `vp build` uses it. Vite+ loads the whole config for `fmt` and `lint` too, and the plugin takes a second to import, most of it compiling its 4 MB bundle and miniflare's 6 MB one. So a site checks in about 7 seconds where a package takes under 3, and three sites are most of craftz's test time. A config can't load it only to build, since `vp check` passes it `command: "build"`, as `vp build` does. It waits for Vite+ to tell a check from a build, or for the plugin to load less until it's used.
