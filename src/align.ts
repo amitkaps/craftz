@@ -27,7 +27,8 @@ import { promisify } from "node:util";
 import { writeSettings } from "./apply.ts";
 import { fixFiles } from "./rules.ts";
 import { OWNER, TOOLS, catalog, here } from "./reference.ts";
-import { HELD, repos, worker } from "./survey.ts";
+import { HELD, repos } from "./survey.ts";
+import { workerIn } from "./worker.ts";
 import { cloudflareLogin, githubLogin } from "./settings.ts";
 
 const SELF = "craftz";
@@ -37,8 +38,8 @@ if (!githubLogin()) {
   console.error("pnpm align needs gh logged in as the owner.");
   process.exit(1);
 }
-const cloudflare = cloudflareLogin();
-if (cloudflare) console.log(`not written: the Workers' build settings, since ${cloudflare}`);
+const noCloudflare = cloudflareLogin();
+if (noCloudflare) console.log(`not written: the Workers' build settings, since ${noCloudflare}`);
 
 const args = process.argv.slice(2);
 const local = args.includes("--local");
@@ -318,14 +319,8 @@ async function files(repo: string, std: string): Promise<Outcome> {
 async function settings(repo: string): Promise<string[]> {
   const dir = join(work, repo);
   const pkg = existsSync(join(dir, "package.json")) ? readJson<Pkg>(join(dir, "package.json")) : {};
-  const files = Object.fromEntries(
-    ["cloudflare.config.ts", "wrangler.jsonc", "wrangler.toml"].map((f) => [
-      f,
-      existsSync(join(dir, f)) ? readFileSync(join(dir, f), "utf8") : "",
-    ]),
-  );
   // align says once, at the start, why the Workers aren't written.
-  const site = cloudflare ? undefined : worker(files);
+  const site = noCloudflare ? undefined : workerIn(dir);
   return writeSettings({ repo, pkg, site }, true);
 }
 

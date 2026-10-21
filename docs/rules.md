@@ -2,9 +2,9 @@
 
 How every repository builds, checks, deploys and releases. There's one way to do each thing. `drift` checks every repository against these rules and lists where each has drifted, and `align` brings them back in line. [Usage](usage.md) says how to run them.
 
-The repositories are the owner's public ones with the GitHub topic `craftz`, listed in [src/survey.ts](../src/survey.ts). Where this page gives a version, the real value is in [the reference](../reference/README.md), and `drift` reads it from there.
+The repositories are the owner's public ones with the GitHub topic `craftz`, which [src/survey.ts](../src/survey.ts) finds. Where this page gives a version, the real value is in [the reference](../reference/README.md), and `drift` reads it from there.
 
-A rule `drift` checks is a list item that opens with its id as a span, like ``[`scripts-verify`]{#scripts-verify}``. An id is lowercase kebab case, its part and then its name, since an id can't hold a dot. Its first sentence is the rule, and the rest says why. `drift` prints the id on each line a repository drifted on, and `craftz rules <id>` prints the rule. The check, and the fix where one can be automated, are in [src/rules.ts](../src/rules.ts), under the same id. Some checks don't have an id yet, and they move over part by part.
+A rule `drift` checks is a list item that opens with its id as a span, like ``[`scripts-verify`]{#scripts-verify}``. An id is lowercase kebab case, its part and then its name, since an id can't hold a dot. Its first sentence is the rule, and the rest says why. `drift` prints the id on each line a repository drifted on, and `craftz rules <id>` prints the rule. The check, and the fix where one can be automated, are in [src/rules.ts](../src/rules.ts), under the same id.
 
 ## Axes
 

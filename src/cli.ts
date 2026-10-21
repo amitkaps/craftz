@@ -107,7 +107,7 @@ function target(dir: string): Target {
     existsSync(join(dir, name)) ? readFileSync(join(dir, name), "utf8") : "";
   const pkg = JSON.parse(file("package.json") || "{}") as Pkg;
   const site = workerIn(dir);
-  return { repo, pkg, site, cloudflare: site && cloudflareLogin() };
+  return { repo, pkg, site, noCloudflare: site && cloudflareLogin() };
 }
 
 // Deploys the folder's site with the tool its deploy axis names, and returns the exit code.

@@ -28,13 +28,13 @@ import { accessDrift, cloudflareLogin, githubLogin, mergeDrift, workerDrift } fr
 const folders = process.argv.slice(2);
 
 const github = githubLogin();
-const cloudflare = cloudflareLogin();
+const noCloudflare = cloudflareLogin();
 if (!github) console.log("not checked: GitHub's merge settings, since gh isn't logged in");
-if (cloudflare) console.log(`not checked: the Workers' build settings, since ${cloudflare}`);
+if (noCloudflare) console.log(`not checked: the Workers' build settings, since ${noCloudflare}`);
 
 // Every site's audience is looked up in Access. A public one is noted, not counted as drift.
 function audience(site: Worker | undefined, notes: string[]): string[] {
-  if (!site || cloudflare) return [];
+  if (!site || noCloudflare) return [];
   const access = accessDrift(site);
   if (access.public) notes.push(`public: no Access application covers ${site.domain}`);
   return access.drift;
@@ -43,7 +43,7 @@ function audience(site: Worker | undefined, notes: string[]): string[] {
 function settings(repo: string, worker: Worker | undefined, notes: string[]): string[] {
   return [
     ...(github ? mergeDrift(repo) : []),
-    ...(worker && !cloudflare ? workerDrift(worker.name) : []),
+    ...(worker && !noCloudflare ? workerDrift(worker.name) : []),
     ...audience(worker, notes),
   ];
 }
@@ -80,7 +80,7 @@ for (const folder of folders) {
   } catch {
     findings.push({ drift: [], unchecked: `the merge settings, since ${repo} isn't on GitHub` });
   }
-  if (site && !cloudflare) drift.push(...workerDrift(site.name));
+  if (site && !noCloudflare) drift.push(...workerDrift(site.name));
   drift.push(...audience(site, notes));
   drifted = print(folder, drift, findings, notes) || drifted;
 }
