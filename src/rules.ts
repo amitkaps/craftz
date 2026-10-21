@@ -29,9 +29,22 @@ import {
   standard,
   versionsIn,
 } from "./reference.ts";
+import {
+  CI,
+  DATE,
+  EXCLUDE,
+  PLUGIN,
+  concurrency,
+  servingProse,
+  withAddressesOff,
+  withCooldown,
+  withCraftz,
+  withDate,
+  withOverride,
+  withoutLabel,
+} from "./edit.ts";
 import { rulesetFor, writeLabels, writeRuleset } from "./settings.ts";
 import { BROWSERS, COMPATIBILITY_DATE } from "./pinned.ts";
-import { type Config, RULED, written } from "./ruled.ts";
 import { stated } from "./stated.ts";
 import type { BranchRule, Finding, Repo } from "./survey.ts";
 import { type Worker, workerIn } from "./worker.ts";
@@ -92,9 +105,6 @@ function rulesDrift(found: BranchRule[], pkg: Pkg): string[] {
 
 const drifted = (drift: string[]): Finding => ({ drift });
 
-// A config with `craftz()` in its plugins has what the plugin sets, or fails when it conflicts.
-const PLUGIN = /\bplugins:\s*\[[^\]]*\bcraftz\(\)/;
-
 // Whether `craftz()` fills in `build.target`, as it does for a static site. Its src/index.ts
 // says why.
 const filled = (vite: string, site?: Worker): boolean =>
@@ -131,54 +141,7 @@ function pin(dir: string, std: string, name: string): void {
   writePkg(dir, pkg);
 }
 
-/** @prose
- * # Using craftz
- *
- * `toolchain-craftz`'s fix adds craftz to the dev dependencies, and `craftz()` to the front of
- * the config's plugins. Then the config holds only what's the repository's own.
- *
- * craftz goes in at the version the rules ask for, and the plugin is imported from the package.
- * `craftz()` goes on a line of its own when the plugins do, so `vp check` passes what it wrote.
- * Each key in `fmt` and `lint` that the plugin sets to the same value goes, so the blocks keep
- * only the repository's own keys, like `ignorePatterns`. A block left empty goes with the
- * comments above it. The keys and values are the plugin's own, from [ruled.ts](ruled.ts), so the
- * fix can't take out what the plugin doesn't set. A key that differs stays, and the plugin then
- * fails the config, naming it to settle by hand. craftz's own config imports the plugin from source, so it's left alone.
- */
-const IMPORT = /^import \{ defineConfig \} from "vite-plus";\n/m;
-// Each key craftz() sets in `fmt` and `lint`, at its value, as a pattern.
-const RULED_KEYS = Object.values(RULED).flatMap((block) =>
-  Object.entries(block as Config).map(([key, value]) =>
-    `${key}: ${written(value)}`.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
-  ),
-);
-const EMPTY_BLOCK = /(?:^[ \t]*\/\/.*\n)*^[ \t]*(?:fmt|lint): \{\s*\},?\n(?:[ \t]*\n)?/gm;
-
-// Takes out each key craftz() sets, on a line of its own or inline, then any block left empty.
-function trimRuled(text: string): string {
-  const trimmed = RULED_KEYS.reduce(
-    (t, key) =>
-      t
-        .replace(new RegExp(String.raw`^[ \t]*${key},?[ \t]*\n`, "m"), "")
-        .replace(new RegExp(String.raw`(?<=\{\s*)${key}\s*(?=\})`), "")
-        .replace(new RegExp(String.raw`${key},\s*`), "")
-        .replace(new RegExp(String.raw`,\s*${key}(?=\s*\})`), ""),
-    text,
-  );
-  return trimmed.replace(EMPTY_BLOCK, "");
-}
-
-// Puts craftz() first in Vite's plugins, on a line of its own when they're one to a line.
-// Oxlint's plugins are names in quotes, so they're passed over.
-const plugIn = (text: string): string =>
-  text.replace(/\bplugins:\s*\[(?!\s*")(\s*\])?(\n[ \t]*)?/, (_, empty?: string, line?: string) =>
-    empty
-      ? "plugins: [craftz()]"
-      : line
-        ? `plugins: [${line}craftz(),${line}`
-        : "plugins: [craftz(), ",
-  );
-
+// craftz in the dev dependencies, and `craftz()` in the Vite config, as edit.ts says.
 function useCraftz(dir: string, std: string): void {
   const pkg = readPkg(dir);
   if (ownCraftz(pkg)) return;
@@ -190,16 +153,7 @@ function useCraftz(dir: string, std: string): void {
     );
     writePkg(dir, pkg);
   }
-  const file = join(dir, "vite.config.ts");
-  const text = read(file);
-  if (!text || PLUGIN.test(text) || !IMPORT.test(text)) return;
-  const used = plugIn(
-    text.replace(IMPORT, (line) => `${line}import { craftz } from "${CRAFTZ}";\n`),
-  );
-  const plugged = PLUGIN.test(used)
-    ? used
-    : used.replace(/defineConfig\(\{\n/, "defineConfig({\n  plugins: [craftz()],\n\n");
-  writeFileSync(file, trimRuled(plugged));
+  editFile(join(dir, "vite.config.ts"), withCraftz);
 }
 
 /** @prose
@@ -235,7 +189,6 @@ const PRERELEASE = /^[\^~<>=]*\d+\.\d+\.\d+-/;
 
 const node = standard.devEngines?.runtime;
 const vitePlus = VERSIONS["vite-plus"];
-const OVERRIDE = /vite-plus-core@[\w.-]+/;
 
 /** @prose
  * # The toolchain
@@ -277,31 +230,15 @@ const targetsIn = (vite: string): string[] =>
     .map((m) => m[1] ?? "")
     .filter((target) => !target.startsWith("node"));
 
-// A Worker's config, read and edited by its lines.
-const DATE = /^\s*compatibilityDate:\s*"([^"]*)"/m;
-const NODE_FLAG = /compatibilityFlags:[^\]]*"nodejs_/;
-const DOMAINS = /^(\s*)domains:.*$/m;
-
-function editWorker(dir: string, edit: (config: string) => string): void {
-  const file = join(dir, "cloudflare.config.ts");
+// Writes a file's edit, where the file exists and the edit changes it.
+function editFile(file: string, edit: (text: string) => string): void {
   if (!existsSync(file)) return;
-  const config = readFileSync(file, "utf8");
-  const edited = edit(config);
-  if (edited !== config) writeFileSync(file, edited);
+  const text = readFileSync(file, "utf8");
+  const edited = edit(text);
+  if (edited !== text) writeFileSync(file, edited);
 }
 
-// Each address is turned off after `domains`, or flipped where the config turns it on.
-function addresses(config: string): string {
-  let out = config;
-  for (const key of ["previewUrls", "workersDev"]) {
-    const on = new RegExp(`(${key}:\\s*)true`);
-    if (on.test(out)) out = out.replace(on, "$1false");
-    else if (!new RegExp(`${key}:`).test(out)) {
-      out = out.replace(DOMAINS, (line, indent: string) => `${line}\n${indent}${key}: false,`);
-    }
-  }
-  return out;
-}
+const NODE_FLAG = /compatibilityFlags:[^\]]*"nodejs_/;
 
 type Json = Record<string, unknown>;
 const readJson = (file: string): Json => JSON.parse(readFileSync(file, "utf8")) as Json;
@@ -315,9 +252,6 @@ const recommended = (json: Json): string[] =>
  * pnpm's one-day wait is its default, so a repository keeps it by not setting
  * `minimumReleaseAge`. The fix removes that line and writes this repository's exclusions.
  */
-const EXCLUDE = /^minimumReleaseAgeExclude:\n(?:[ \t]+-.*\n?)*/m;
-// The block with the comment above it, for a repository that has neither.
-const COMMENTED = /^(?:#.*\n)*minimumReleaseAgeExclude:\n(?:[ \t]+-.*\n?)*/m;
 
 /** @prose
  * # The actions
@@ -515,34 +449,17 @@ const nav = (text: string): string[] =>
  *
  * CI had the label check as a step, and ran again when a label changed, so a pull request opened
  * with its label ran `verify` twice. The fix copies the files and takes the step, its triggers
- * and the old `concurrency` out of CI. One laid out otherwise is left to do by hand, and the
- * check still says so. A CI whose only `@prose` comment was the step's gets the reference's
- * opening comment, so `prose check` still finds one.
+ * and the old `concurrency` out of CI, as [edit.ts](edit.ts) says. One laid out otherwise is
+ * left to do by hand, and the check still says so.
  */
 const RELEASE_FILES = [
   ".github/workflows/release.yml",
   ".github/workflows/label.yml",
   ".github/release.yml",
 ];
-const CI = ".github/workflows/ci.yml";
-const LABEL_STEP = /(?:^ {6}#.*\n)*^ {6}- name: Label\n[\s\S]*?\n {10}'\n\n?/m;
-const LABEL_TRIGGER = /^ {2}# .*label.*\n(?= {2}pull_request:)|^ {4}types: \[.*\blabeled\b.*\]\n/gm;
-const CONCURRENCY = /^(?:# .*\n)*concurrency:\n(?: {2}.*\n)+/m;
-const referenceCi = read(join(here, CI));
-const concurrency = CONCURRENCY.exec(referenceCi)?.[0] ?? "";
 const labelNames = (
   JSON.parse(read(join(here, ".github", "labels.json"))) as { name: string }[]
 ).map((label) => label.name);
-
-// The reference CI's opening comment, for a CI whose only `@prose` was the label step's.
-const CI_HEADER = /^(?:#.*\n)+/.exec(referenceCi)?.[0] ?? "";
-
-// CI without the label step and its triggers, which the label workflow has now.
-function withoutLabel(ci: string): string {
-  let text = ci.replace(LABEL_STEP, "").replace(LABEL_TRIGGER, "");
-  if (!text.includes(concurrency)) text = text.replace(CONCURRENCY, () => concurrency);
-  return text.includes("@prose") ? text : CI_HEADER + text;
-}
 
 // Sets a script to the rules', in a repository the rule applies to.
 function setScript(dir: string, std: string, name: string, applies: (pkg: Pkg) => boolean): void {
@@ -686,11 +603,7 @@ export const RULES: Rule[] = [
       apply: (dir, std) => {
         pin(dir, std, "vite-plus");
         const want = versionsIn(std)["vite-plus"];
-        const workspace = join(dir, "pnpm-workspace.yaml");
-        const text = read(workspace);
-        if (want && OVERRIDE.test(text)) {
-          writeFileSync(workspace, text.replace(OVERRIDE, `vite-plus-core@${want}`));
-        }
+        if (want) editFile(join(dir, "pnpm-workspace.yaml"), (text) => withOverride(text, want));
       },
     },
   },
@@ -733,17 +646,8 @@ export const RULES: Rule[] = [
     fix: {
       in: "files",
       apply: (dir, std) => {
-        const file = join(dir, "pnpm-workspace.yaml");
         const ours = read(join(std, "pnpm-workspace.yaml"));
-        const want = EXCLUDE.exec(ours)?.[0];
-        const commented = COMMENTED.exec(ours)?.[0] ?? want;
-        let text = read(file).replace(/^minimumReleaseAge:.*\n?/m, "");
-        if (want && commented) {
-          text = EXCLUDE.test(text)
-            ? text.replace(EXCLUDE, want)
-            : `${text.trimEnd()}\n\n${commented.trimEnd()}\n`;
-        }
-        writeFileSync(file, text);
+        editFile(join(dir, "pnpm-workspace.yaml"), (text) => withCooldown(text, ours));
       },
     },
   },
@@ -1035,15 +939,7 @@ export const RULES: Rule[] = [
     fix: {
       in: "files",
       apply: (dir) => {
-        const file = join(dir, "vite.config.ts");
-        const text = read(file);
-        if (text && !/\bpublicDir:/.test(text)) {
-          const named = text.replace(
-            /^( {2}plugins: \[.*\bcloudflare\(.*\],\n)/m,
-            '$1\n  // The site is the folder `prose build` writes.\n  publicDir: ".prose",\n',
-          );
-          if (named !== text) writeFileSync(file, named);
-        }
+        editFile(join(dir, "vite.config.ts"), servingProse);
         const ignore = join(dir, ".gitignore");
         const ignored = read(ignore) ?? "";
         const missing = [".cloudflare", ".wrangler"].filter(
@@ -1074,7 +970,10 @@ export const RULES: Rule[] = [
       if (site.previewUrls) drift.push(`${site.file} doesn't turn off preview URLs`);
       return { value: "domain only", drift };
     },
-    fix: { in: "files", apply: (dir) => editWorker(dir, addresses) },
+    fix: {
+      in: "files",
+      apply: (dir) => editFile(join(dir, "cloudflare.config.ts"), withAddressesOff),
+    },
   },
   {
     id: "cloudflare-date",
@@ -1093,8 +992,8 @@ export const RULES: Rule[] = [
     fix: {
       in: "files",
       apply: (dir) =>
-        editWorker(dir, (config) =>
-          config.replace(DATE, (line, date: string) => line.replace(date, COMPATIBILITY_DATE)),
+        editFile(join(dir, "cloudflare.config.ts"), (config) =>
+          withDate(config, COMPATIBILITY_DATE),
         ),
     },
   },
@@ -1243,8 +1142,7 @@ export const RULES: Rule[] = [
           mkdirSync(dirname(join(dir, file)), { recursive: true });
           writeFileSync(join(dir, file), readFileSync(join(std, "package", file)));
         }
-        const ci = read(join(dir, CI));
-        if (ci) writeFileSync(join(dir, CI), withoutLabel(ci));
+        editFile(join(dir, CI), withoutLabel);
       },
     },
   },
