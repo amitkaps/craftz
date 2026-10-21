@@ -2,7 +2,7 @@
 
 craftz is used through its commands and its plugin.
 
-Any repository has `craftz rules`, `craftz check`, `craftz fix`, `craftz settings`, `craftz status`, `craftz deploy`, `craftz pr`, `craftz gone` and the `craftz()` plugin, and `craftz new` starts one. The last part, [Keeping every repository](#keeping-every-repository), is for whoever keeps them all, from a checkout of craftz.
+Any repository has `craftz rules`, `craftz check`, `craftz fix`, `craftz upgrade`, `craftz settings`, `craftz status`, `craftz deploy`, `craftz pr`, `craftz gone` and the `craftz()` plugin, and `craftz new` starts one. The last part, [Keeping every repository](#keeping-every-repository), is for whoever keeps them all, from a checkout of craftz.
 
 ## Install
 
@@ -65,13 +65,10 @@ export default defineConfig({
 ## Moving to a new craftz
 
 ```sh
-pnpm add -D @amitkaps/craftz@latest
-pnpm craftz fix
-pnpm install
-pnpm run fix
+pnpm craftz upgrade
 ```
 
-A new craftz brings its rules, and the versions of the tools it was tested with. `craftz fix` writes what changed, then checks again and prints what's left by hand. Each release's [notes](https://github.com/amitkaps/craftz/releases) say what a repository has to change when it moves. Open the result as its own pull request, which runs `verify` with the new version.
+A new craftz brings its rules, and the versions of the tools it was tested with. `craftz upgrade` adds the latest craftz on npm, exactly, and runs that version's `craftz fix`, which writes what changed. Then it installs, writes the format, and checks again, printing what's left by hand. It exits 1 when anything is. Each release's [notes](https://github.com/amitkaps/craftz/releases) say what a repository has to change when it moves. Open the result as its own pull request, which runs `verify` with the new version.
 
 ## Deploying a site
 
@@ -152,7 +149,7 @@ pnpm align markz           # one repository, to the latest craftz
 pnpm align markz --local   # the same, but nothing leaves the laptop
 ```
 
-align clones each repository's `main` into a temporary folder and installs it, adds the latest craftz on npm and runs that version's `craftz fix`, then runs `verify`. It opens a pull request with auto-merge on, writes the GitHub and Worker settings, and waits for the merges. A repository already in line gets no pull request, and a failed one keeps its clone and log for a look. Run it after each release.
+align clones each repository's `main` into a temporary folder and installs it, runs `craftz upgrade`'s steps, then runs `verify`. It opens a pull request with auto-merge on, writes the GitHub and Worker settings, and waits for the merges. A repository already in line gets no pull request, and a failed one keeps its clone and log for a look. Run it after each release.
 
 `--local` stops before the push, so a clone can be read or compared with another run. It writes no settings either.
 
