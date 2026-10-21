@@ -4,9 +4,7 @@ craftz 0.2.0 is on npm, and its docs are live at [craftz.amitkaps.com](https://c
 
 ## Next, in order
 
-1. **The old repository retires.** The one that kept the rules before craftz is archived with its history, and its site redirects to craftz's, for the links outside these repositories. Every `AGENTS.md` links to craftz now.
-
-Once these are done, one release takes them to the repositories.
+1. **One release.** craftz's next release, then align moves every repository to it. `pnpm dlx @amitkaps/craftz new` runs once from the release, since it hasn't run end to end from npm.
 
 ## Where it is
 
@@ -20,6 +18,7 @@ Once these are done, one release takes them to the repositories.
 
 ## Later
 
+- The old repository retires. The one that kept the rules before craftz is archived with its history, and its site redirects to craftz's, for the links outside these repositories. Nothing in these repositories links to it, and every `AGENTS.md` links to craftz.
 - The beta packages that [`versions-beta`](rules.md#versions-beta) names move to their releases when they graduate, which the sweeps report.
 - The app moves to cf when SvelteKit's adapter writes cf's Build Output, and wrangler leaves the catalog with it.
 - The app moves to TypeScript 7 when svelte-check's peer range takes it.
