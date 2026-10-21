@@ -27,7 +27,7 @@ A package removes both. A repository checks itself against the version it instal
 
 ## One rule, one check, one fix
 
-Each rule has one implementation. [The rules](rules.md) word it once, as a list item that opens with its id. [src/rules.ts](../src/rules.ts) holds its check and, where it can be automated, its fix, under the same id. A test fails if either has an id the other doesn't. `craftz check` and `craftz fix` run the rules in a repository, and the commands across repositories call the same code, with no second copy of any rule. That's the property to protect as craftz grows.
+Each rule has one implementation. [The rules](rules.md) word it once, as a list item that opens with its id. [src/rules.ts](../src/rules.ts) holds its check and, where it can be automated, its fix, under the same id. A test fails if either has an id the other doesn't. `craftz check` and `craftz fix` run the rules in a repository, and the sweeps across repositories call the same code, with no second copy of any rule. A fix that edits a repository's own code, like `vite.config.ts` or CI, does it through [src/edit.ts](../src/edit.ts), which reads the file by its lines. That's the property to protect as craftz grows.
 
 The files a rule compares with are in [reference/](../reference/README.md), laid out as a repository has them. A version, a strict option or a workflow is read from there, not written out twice, so the rules can't disagree with the example.
 
@@ -71,6 +71,10 @@ When cf can deploy SvelteKit, only `craftz deploy` changes, and the app needs no
 
 ## A thin plugin
 
+`vite.config.ts` is code, so a value in it can only be read and edited by its lines, which break when a file is laid out otherwise. So the values every config shares, `fmt` and `lint`, aren't in the file. `craftz()` sets them, from the installed version, and the check only looks for `craftz()`. Vite+ holds a config to them each time it loads it, in the editor as well as in `verify`, and a new craftz changes them with no edit to the file. `tsconfig.json` is JSON, which reads cleanly, so its options are checked where they are.
+
+A fix edits a config only where the plugin can't do the job: adding a plugin, like `craftz()` itself, naming a site's folder, or changing a file Vite doesn't read.
+
 `craftz()` fills in only what the repository leaves unset, or fails and names the conflict, and a test holds it to that. It has to, since a plugin's `config` hook wins over the repository's own `vite.config.ts` without a word. With `proseWrap: "preserve"` in the config and `"never"` from a plugin, oxfmt used the plugin's.
 
 ## Files that stay in the repository
@@ -97,7 +101,7 @@ It writes remote state, so it's held to more than a file fix.
 
 ## Releases
 
-Each repository pins craftz exactly, so an install never moves it, and moving it is a pull request. A release's label says what that pull request asks of a repository.
+Each repository takes craftz as a caret range, and its lockfile holds the version, so an install never moves it, and moving it is a pull request. A release's label says what that pull request asks of a repository.
 
 - **Patch:** nothing changes for a repository. The rules' wording changes, or a check gets a fix, and a repository that passed still passes.
 - **Minor:** `craftz fix` makes the change on its own, like a new line in a managed file or a new rule with a fix.
@@ -132,7 +136,7 @@ Each craftz release carries the versions of the tools it was tested with, like V
 - `pnpm drift` reports each repository's craftz version and runs `craftz settings --check`.
 - `pnpm align` bumps craftz in each repository that's behind, runs `craftz fix` and opens a pull request.
 
-align works in a fresh clone of each `main`, never a checkout. Each repository has one branch named `align`, which a later run updates, so running it again never opens a second pull request. It opens a pull request only when `verify` passes, and one that fails leaves its clone and log. It ends with a report, with each repository opened, updated, already in line or failed. Bumping, fixing and opening the pull request are separate steps, each one runnable alone.
+align works in a fresh clone of each `main`, never a checkout. Each repository has one branch named `align`, which a later run updates, so running it again never opens a second pull request. It opens a pull request only when `verify` passes, and one that fails leaves its clone and log. It ends with a report, with each repository opened, updated, already in line or failed. `--local` stops before the push, so a run can be read before anything leaves the laptop.
 
 In each clone it bumps craftz first, then runs the new version's `craftz fix`, so the rules that apply are the ones the repository moves to. It only moves a repository to a released craftz, so a change in this repository reaches nobody until it's released.
 
