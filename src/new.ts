@@ -14,24 +14,24 @@
  *
  * It writes only what's the new repository's own: its name and description, its source, the
  * Vite config for what it publishes and deploys, and CI. Then it runs every fix in [rules.ts](rules.ts), the same ones
- * `pnpm align` runs. They write the rest: the versions and engines, the shared scripts, the
+ * `craftz fix` runs. They write the rest: the versions and engines, the shared scripts, the
  * editor settings, the cooldown, the shared sections of `AGENTS.md`, a package's release files,
- * and a first version of each doc. So it can't follow the rules any less than `align` does,
+ * and a first version of each doc. So it can't follow the rules any less than `craftz fix` does,
  * and a rule's fix reaches the next repository with no second copy here. What it does write is
  * built from [the reference](../reference/README.md) where it can be, like the strict options
- * from `tsconfig.json`. What the reference doesn't hold comes from craftz's own files. The
+ * from `tsconfig.json`, and `.gitignore`, which the reference holds as `gitignore`. The licence is craftz's own. The
  * format and lint the rules ask for, and a site's build target, aren't written at all: the
  * config uses `craftz()`, which sets them from the version the repository installs. `pnpm test` checks the result against the survey.
  *
  * `--push` also creates the repository on GitHub, pushes the first commit and writes its GitHub
- * settings, as `pnpm align` does. That first push is the only one to `main` the rules allow, since
+ * settings, as `craftz settings` does. That first push is the only one to `main` the rules allow, since
  * the branch rules aren't on yet. Its settings include the topic `craftz`, so the sweeps find it.
  * What's left is printed at the end: the Worker, Access or npm's setup, which have no API to do them from here.
  */
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { COMPATIBILITY_DATE } from "./runtime.ts";
+import { COMPATIBILITY_DATE } from "./pinned.ts";
 import { type Shape, fixFiles, listed, shipping } from "./rules.ts";
 import { CRAFTZ, OWNER, VERSIONS, here, root } from "./reference.ts";
 import { writeSettings } from "./apply.ts";
@@ -353,7 +353,8 @@ export async function write(
     ".github/workflows/ci.yml": ci(start),
     "AGENTS.md": agents(name, description),
     "README.md": readme(name, start, description),
-    ".gitignore": own(".gitignore"),
+    // npm leaves a `.gitignore` out of a package, so the reference holds it without the dot.
+    ".gitignore": read("gitignore"),
     // A private repository isn't shared, so it has no licence to share it under.
     ...(start.private ? {} : { LICENSE: own("LICENSE") }),
     "src/index.ts": entry(name, description),
@@ -382,8 +383,9 @@ export async function write(
   }
 }
 
-if (import.meta.main) {
-  const args = process.argv.slice(2);
+/** Starts a repository from `craftz new`'s arguments, in a folder of the current one. */
+export async function start(argv: string[]): Promise<void> {
+  const args = [...argv];
   const flag = (name: string): boolean => {
     const at = args.indexOf(name);
     if (at !== -1) args.splice(at, 1);
@@ -415,7 +417,7 @@ if (import.meta.main) {
   if (!name || !description || !/^[a-z][a-z0-9-]*$/.test(name) || args.length > 1 || problem) {
     console.error(
       [
-        'Usage: pnpm new <name> [--package] [--site static] [--private] [--internal] --description "What it is, in a sentence." [--push]',
+        'Usage: craftz new <name> [--package] [--site static] [--private] [--internal] --description "What it is, in a sentence." [--push]',
         "With neither --package nor --site, it's scripts run on a laptop.",
         ...(problem ? [problem] : []),
       ].join("\n"),
@@ -452,13 +454,17 @@ if (import.meta.main) {
   }
 
   const left = [
-    ...(push ? [] : [`Create ${OWNER}/${name} on GitHub, push main, then run pnpm align ${name}.`]),
+    ...(push
+      ? []
+      : [`Create ${OWNER}/${name} on GitHub, push main, then run craftz settings in it.`]),
     ...(start.private
-      ? [`It's private, so craftz doesn't list it. Check it with pnpm drift ../${name} in craftz.`]
+      ? [
+          `It's private, so craftz doesn't list it. Check it with craftz check and craftz settings --check in it.`,
+        ]
       : []),
     ...(start.site
       ? [
-          `Connect the Worker "${name}" to the repository, then run pnpm align ${name} to write its build settings.`,
+          `Connect the Worker "${name}" to the repository, then run craftz settings in it to write its build settings.`,
         ]
       : []),
     ...(start.internal

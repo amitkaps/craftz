@@ -11,6 +11,7 @@ A package, `@amitkaps/craftz` on npm, that each repository depends on, the way a
 - **The reference.** [reference/](../reference/README.md) holds the files a repository is compared with, like the workflows, the editor settings and the pinned versions. A fix copies from there.
 - **The settings.** `craftz settings` checks and writes what lives outside the files, like the `main` ruleset, the labels and each Worker's build settings.
 - **The plugin and the deploy.** `craftz()` sets the Vite+ config the rules ask for, and `craftz deploy` deploys a site the way its Worker config says.
+- **The start.** `craftz new` writes a repository that passes the rules from its first commit, from any folder, as `pnpm dlx @amitkaps/craftz new`.
 
 It's opinionated, and built for one setup: Vite+, pnpm, Node 26, GitHub and Cloudflare Workers. It doesn't try to fit another, since every choice it makes rests on that setup.
 
@@ -22,7 +23,7 @@ Each repository used to make the same choices on its own, and they drifted. Ther
 
 Then the choices were kept in one repository and copied into the rest. Every repository held copies, like `pr.ts`, `gone.ts`, the release workflow, CI's Label step, the `fmt` and `lint` config and the editor settings, and that one repository checked and moved them. Each new repository added more copies to keep in line. An agent read the rules by fetching a page, which hands it a summary, not the text.
 
-A package removes both. A repository checks itself against the version it installs, and `craftz rules` prints the rules from that version, with no fetch. A new choice reaches every repository as a version bump, which `craftz align` opens as a pull request in each. A repository that's behind still checks clean against its own version, so nothing breaks before it moves.
+A package removes both. A repository checks itself against the version it installs, and `craftz rules` prints the rules from that version, with no fetch. A new choice reaches every repository as a version bump, which each takes in a pull request of its own. A repository that's behind still checks clean against its own version, so nothing breaks before it moves.
 
 ## One rule, one check, one fix
 
@@ -43,11 +44,10 @@ craftz owns a repository's conventions and its lifecycle commands. Vite+ and eac
 | `craftz status` | reads what's live: CI, pull requests, npm, and a site's build and addresses |
 | `craftz pr`, `craftz gone` | open a pull request that merges itself, and delete merged branches |
 | `craftz deploy` | deploys the way the repository's deploy axis says, run by the `ship` script |
-| `craftz release` | opens the pull request that releases a package |
 | `craftz new` | starts a repository that already follows the rules |
-| `craftz drift` | reports every repository's craftz version, checks and settings |
-| `craftz align` | moves each repository that's behind to the latest craftz, in a pull request |
 | `craftz()` | a Vite plugin that sets `fmt`, `lint` and a site's config for what it deploys |
+
+Each command acts on one repository, the one it's installed in, except `new`, which starts one. What acts on every repository at once isn't in the package, as [Every repository at once](#every-repository-at-once) says.
 
 `ship` stays the deploy verb, as the `ship` script, so the command and the script don't share a name. pnpm runs a script before a command of the same name, so a command called `ship` would run the deploy.
 
@@ -107,7 +107,19 @@ While craftz is below 1.0, a minor release plays the breaking release's part, as
 
 Every change to the rules is a release, with its 2FA approval. craftz's site shows the latest, and the installed version is what binds a repository. Small changes wait and go out together.
 
-A repository is checked against the version it installs, never craftz's latest. Checking against the latest would fail a pull request that passed `verify` on a laptop. `craftz check` notes a newer release without failing, and moving to it is the repository's own pull request.
+A repository is checked against the version it installs, never craftz's latest. Checking against the latest would fail a pull request that passed `verify` on a laptop. `craftz check` notes a newer release, as a note that never fails, and moving to it is the repository's own pull request.
+
+## Errors, warnings and notes
+
+A finding is one of three, and craftz sets which for each rule.
+
+- **An error** fails `craftz check`, so it fails `verify` and the pull request. Most rules are errors.
+- **A warning** prints on every run and doesn't fail. A held rule is a warning.
+- **A note** says something worth knowing with nothing drifted, like a newer craftz or a beta that's graduated.
+
+A repository can't turn a rule off, and can't make a rule an error or a note. It can hold a rule, which makes that rule's error a warning, and only a rule craftz marks as one a tool can block, like a tool's version or the deploy. The hold lives in the repository it holds, with its reason and when to look again, so adding or dropping one is that repository's own pull request. A hold whose rule stops drifting is an error until it's taken out, so none outlives its reason.
+
+Where a rule has two right answers, like an app deploying with wrangler while cf can't build it, the rule says so and its check takes either. That's not a hold, since neither answer is drift.
 
 ## Versions come with craftz
 
@@ -115,14 +127,14 @@ Each craftz release carries the versions of the tools it was tested with, like V
 
 ## Every repository at once
 
-`craftz check` runs only when a repository opens a pull request. A repository nobody is working on can fall behind, and CI can't read GitHub's or Cloudflare's settings without a login. So two sweeps run on the laptop, never in the cloud.
+`craftz check` runs only when a repository opens a pull request. A repository nobody is working on can fall behind, and CI can't read GitHub's or Cloudflare's settings without a login. So two sweeps run on the laptop, never in the cloud. They're scripts in this repository, not commands of the package, since they serve whoever keeps the repositories, and a repository needs neither to follow the rules. `pnpm release`, which opens the pull request that releases a package, is one too.
 
-- `craftz drift` reports each repository's craftz version and runs `craftz settings --check`.
-- `craftz align` bumps craftz in each repository that's behind, runs `craftz fix` and opens a pull request.
+- `pnpm drift` reports each repository's craftz version and runs `craftz settings --check`.
+- `pnpm align` bumps craftz in each repository that's behind, runs `craftz fix` and opens a pull request.
 
-`craftz align` works in a fresh clone of each `main`, never a checkout. Each repository has one branch named `align`, which a later run updates, so running it again never opens a second pull request. It opens a pull request only when `verify` passes, and one that fails leaves its clone and log. It ends with a report, with each repository opened, updated, already in line or failed. Bumping, fixing and opening the pull request are separate steps, each one runnable alone.
+align works in a fresh clone of each `main`, never a checkout. Each repository has one branch named `align`, which a later run updates, so running it again never opens a second pull request. It opens a pull request only when `verify` passes, and one that fails leaves its clone and log. It ends with a report, with each repository opened, updated, already in line or failed. Bumping, fixing and opening the pull request are separate steps, each one runnable alone.
 
-It runs from anywhere, like `pnpm dlx @amitkaps/craftz align` in any folder. In each clone it bumps craftz first, then runs the new version's `craftz fix`, so the rules that apply are the ones the repository moves to. It only moves a repository to a released craftz, so a change in this repository reaches nobody until it's released.
+In each clone it bumps craftz first, then runs the new version's `craftz fix`, so the rules that apply are the ones the repository moves to. It only moves a repository to a released craftz, so a change in this repository reaches nobody until it's released.
 
 The sweeps hold no rules of their own. They find the repositories by the GitHub topic `craftz`, which writing a repository's settings adds. So a new repository joins when its settings are written and leaves when it's archived, and no list in craftz needs a pull request. The list reads only public repositories, so craftz never names a private one.
 
@@ -132,7 +144,7 @@ A dashboard shows every repository without running anything. It only observes, a
 
 ## No cycle
 
-prose depends on craftz, and craftz's site depends on prose. Both are devDependencies, like markz and prose. craftz's package depends on neither, and takes Cloudflare's plugin and Vite+ as peers. A fresh checkout builds from released versions, which a clean clone and install must prove. craftz's first version is published by hand, as every package's is.
+prose depends on craftz, and craftz's site depends on prose. Both are devDependencies, like markz and prose. craftz's package depends on neither. It takes Vite+ as a peer, since `new` formats with it, and a repository has it already. Cloudflare's plugin is the repository's own, which its config imports. A fresh checkout builds from released versions, which a clean clone and install must prove. craftz's first version is published by hand, as every package's is.
 
 ## What it isn't
 

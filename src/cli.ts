@@ -37,6 +37,9 @@
  * `craftz pr` opens a pull request that merges itself, as [pr.ts](pr.ts) says, and `craftz gone`
  * deletes the branches that merged, as [gone.ts](gone.ts) says. A repository runs them as
  * `pnpm pr` and `pnpm gone`.
+ *
+ * `craftz new` starts a repository that already follows the rules, as [new.ts](new.ts) says. It's
+ * the one command that works outside a repository, as `pnpm dlx @amitkaps/craftz new`.
  */
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
@@ -65,7 +68,9 @@ const HELP = `Usage: craftz <command>
   deploy       deploys the site the current folder built, as its ship script
   pr "<title>" [--label <label>] [--body <text>] [--wait]
                opens a pull request that merges itself once CI passes
-  gone         deletes the local branches that merged`;
+  gone         deletes the local branches that merged
+  new <name> [--package] [--site static] [--private] [--internal] --description "<text>" [--push]
+               starts a repository that follows the rules, in a folder of the current one`;
 
 const [command, arg, ...rest] = process.argv.slice(2);
 
@@ -225,6 +230,10 @@ if (command === "rules" && !rest.length) {
   await pr([arg, ...rest].filter((it) => it !== undefined));
 } else if (command === "gone" && !arg) {
   gone();
+} else if (command === "new") {
+  // Loaded only here, since it brings the formatter.
+  const { start } = await import("./new.ts");
+  await start([arg, ...rest].filter((it) => it !== undefined));
 } else if (command === "-h" || command === "--help") {
   console.log(HELP);
 } else {
