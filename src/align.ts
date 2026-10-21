@@ -1,10 +1,13 @@
 /** @prose
  * # Align
  *
- * Brings repositories in line with the rules: `pnpm align` does craftz and every one
- * [listed](survey.ts) by its topic,
- * and `pnpm align markz` does one. It's what writes, where [drift.ts](drift.ts) only reads, and it
- * needs `gh` logged in as the owner.
+ * Brings repositories in line with the released craftz: `pnpm align` does every one
+ * [listed](survey.ts) by its topic, and `pnpm align markz` does one. It's what writes, where
+ * [drift.ts](drift.ts) only reads, and it needs `gh` logged in as the owner.
+ *
+ * `pnpm bump` runs it on craftz alone, which moves the reference to the newest versions. That
+ * comes before a release, and `pnpm align` after it, so a release carries the newest versions
+ * and the others take them as soon as it's out.
  *
  * Each repository gets two things. Its settings outside the files, on GitHub and on its Worker,
  * are written directly and read back by [apply.ts](apply.ts), since there's no file to review. Its files
@@ -44,7 +47,7 @@ if (noCloudflare) console.log(`not written: the Workers' build settings, since $
 const args = process.argv.slice(2);
 const local = args.includes("--local");
 const named = args.filter((arg) => arg !== "--local");
-const targets = named.length ? named : [SELF, ...(await repos())];
+const targets = named.length ? named : await repos();
 const work = mkdtempSync(join(tmpdir(), "align-"));
 
 type Pkg = {
@@ -124,7 +127,7 @@ async function update(dir: string, log: string[], skip: string[]): Promise<strin
  * # craftz itself
  *
  * The rules' versions are the reference's, in [reference/](../reference/README.md), so
- * `pnpm align` moves them in craftz's own pull request, and craftz is fixed from source against
+ * `pnpm bump` moves them in craftz's own pull request, and craftz is fixed from source against
  * its new reference. The others take those versions only once craftz is released.
  *
  * The reference is installed where it stands, as a project of its own, and moves its libraries and
@@ -184,9 +187,10 @@ async function moveReference(dir: string, log: string[]): Promise<string[]> {
 /** @prose
  * # Another repository
  *
- * Each clone moves to the latest craftz on npm, then runs that version's `craftz fix`. So the
- * rules it's fixed to are the ones it moves to, and a change in craftz reaches nobody until it's
- * released.
+ * Each clone installs first, as any fresh clone does, which runs its `prepare`, like base's
+ * generated types. `pnpm add` doesn't run it. Then it moves to the latest craftz on npm and runs
+ * that version's `craftz fix`. So the rules it's fixed to are the ones it moves to, and a change in
+ * craftz reaches nobody until it's released.
  *
  * The fix brings that version's holds, like base's TypeScript, and changes nothing that's in line
  * already. What it leaves to do by hand fails `verify`, which runs `craftz check`.
@@ -199,6 +203,7 @@ async function alignTo(dir: string, repo: string, log: string[]): Promise<string
     await sh(dir, log, "pnpm", "install");
     return [...majors, ...(await update(dir, log, [...TOOLS, "vite-plus"]))];
   }
+  await sh(dir, log, "pnpm", "install");
   await sh(dir, log, "pnpm", "add", "--save-dev", `${CRAFTZ}@latest`);
   // fix exits 1 when something's left to do by hand, which verify reports.
   await sh(dir, log, "pnpm", "exec", "craftz", "fix").catch(() => undefined);

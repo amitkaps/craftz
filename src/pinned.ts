@@ -9,7 +9,7 @@
  * dependency. So `vp pack` works them out once and writes them in as `__PINNED__`, and the
  * published command uses the values it was built with.
  *
- * That's what the rules want anyway. Both move only when `pnpm align` moves their packages, so a
+ * That's what the rules want anyway. Both move only when `pnpm bump` moves their packages, so a
  * version of craftz always means one list and one date.
  */
 declare const __PINNED__: { browsers: string[]; date: string } | undefined;

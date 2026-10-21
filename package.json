@@ -42,6 +42,7 @@
     "drift": "node src/drift.ts",
     "craftz": "node src/cli.ts",
     "align": "node src/align.ts",
+    "bump": "node src/align.ts craftz",
     "new": "node src/cli.ts new",
     "release": "node src/release.ts"
   },

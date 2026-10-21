@@ -10,7 +10,7 @@ pnpm dev
 pnpm verify    # what CI runs
 ```
 
-`pnpm craftz rules` runs the command from `src/`, with no build, and so does `pnpm new`. `pnpm drift`, `pnpm align` and `pnpm release` are this repository's own scripts, and run from `src/` too. pnpm runs a script before a command of the same name, so inside this repository `pnpm craftz` is always the source, never an installed copy.
+`pnpm craftz rules` runs the command from `src/`, with no build, and so does `pnpm new`. `pnpm drift`, `pnpm align`, `pnpm bump` and `pnpm release` are this repository's own scripts, and run from `src/` too. pnpm runs a script before a command of the same name, so inside this repository `pnpm craftz` is always the source, never an installed copy.
 
 ## Changing the rules
 
@@ -22,7 +22,7 @@ A change to how things are done starts here, in [the rules](rules.md) and in [th
 
 [reference/](../reference/README.md) holds the files a rule compares with, laid out as a repository has them, like the workflows, the editor settings and the catalog. A rule reads its value from there, so it's never written out twice. These files are checked by `prose check` like any other, so their links have to work where they stand.
 
-`pnpm align` moves the reference's versions, not craftz's own. It installs the reference in a clone as a project of its own, updates it, and then aligns craftz with it like any other repository. `craftz new` builds a repository from the reference and from craftz's own `LICENSE`. The reference holds `.gitignore` as `gitignore`, since npm leaves a dotted one out of a package, and a test keeps it the same as craftz's own.
+`pnpm bump` moves the reference's versions, not craftz's own, before a release. It installs the reference in a clone as a project of its own, updates it, then runs craftz's fixes from source against it and opens craftz's pull request. The others take the new versions once they're released, from `pnpm align`. `craftz new` builds a repository from the reference and from craftz's own `LICENSE`. The reference holds `.gitignore` as `gitignore`, since npm leaves a dotted one out of a package, and a test keeps it the same as craftz's own.
 
 ## The command
 

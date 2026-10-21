@@ -131,7 +131,7 @@ The commands use the logins `gh` and `cf` already have, so there's no token to k
 
 ## Keeping every repository
 
-These are scripts in a checkout of craftz, not commands of the package, after `pnpm install`. They're for whoever keeps the repositories, and a repository needs none of them to follow the rules. drift runs without a login and reads less. align and release need `gh`, and align writes the Worker settings only with `cf`.
+These are scripts in a checkout of craftz, not commands of the package, after `pnpm install`. They're for whoever keeps the repositories, and a repository needs none of them to follow the rules. drift runs without a login and reads less. align, bump and release need `gh`, and align writes the Worker settings only with `cf`.
 
 ### Checking every repository
 
@@ -147,14 +147,22 @@ drift only reads, so it's safe to run any time.
 ### Aligning every repository
 
 ```sh
-pnpm align                 # craftz first, then every repository
+pnpm align                 # every repository, to the latest craftz
 pnpm align markz           # one repository, to the latest craftz
 pnpm align markz --local   # the same, but nothing leaves the laptop
 ```
 
-align clones each repository's `main` into a temporary folder, adds the latest craftz on npm and runs that version's `craftz fix`, then installs and runs `verify`. It opens a pull request with auto-merge on, writes the GitHub and Worker settings, and waits for the merges. When craftz is in the run, it goes first and moves [the reference](../reference/README.md) to the newest versions, so the others take them in the same run. A repository already in line gets no pull request, and a failed one keeps its clone and log for a look.
+align clones each repository's `main` into a temporary folder and installs it, adds the latest craftz on npm and runs that version's `craftz fix`, then runs `verify`. It opens a pull request with auto-merge on, writes the GitHub and Worker settings, and waits for the merges. A repository already in line gets no pull request, and a failed one keeps its clone and log for a look. Run it after each release.
 
 `--local` stops before the push, so a clone can be read or compared with another run. It writes no settings either.
+
+### Moving the reference
+
+```sh
+pnpm bump
+```
+
+The reference pins the versions every repository uses, like Vite+, TypeScript and wrangler, so they move only when craftz's reference does. bump moves it to the newest versions pnpm's one-day wait allows, runs craftz's fixes from source against them, and opens craftz's pull request. Run it before a release, so the release carries them, then `pnpm align` takes them to the others.
 
 ### Releasing a package
 
