@@ -10,7 +10,7 @@ pnpm dev
 pnpm verify    # what CI runs
 ```
 
-`pnpm craftz rules` runs the command from `src/`, with no build, and so does `pnpm new`. `pnpm drift`, `pnpm align`, `pnpm bump` and `pnpm release` are this repository's own scripts, and run from `src/` too. pnpm runs a script before a command of the same name, so inside this repository `pnpm craftz` is always the source, never an installed copy.
+`pnpm craftz rules` runs the command from `src/`, with no build, and so does `pnpm new`. `pnpm drift`, `pnpm align` and `pnpm bump` are this repository's own scripts, and run from `src/` too. pnpm runs a script before a command of the same name, so inside this repository `pnpm craftz` is always the source, never an installed copy.
 
 ## Changing the rules
 

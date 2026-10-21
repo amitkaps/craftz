@@ -39,7 +39,8 @@
  *
  * `craftz pr` opens a pull request that merges itself, as [pr.ts](pr.ts) says, and `craftz gone`
  * deletes the branches that merged, as [gone.ts](gone.ts) says. A repository runs them as
- * `pnpm pr` and `pnpm gone`.
+ * `pnpm pr` and `pnpm gone`. `craftz release` opens the pull request that releases a package, as
+ * [release.ts](release.ts) says.
  *
  * `craftz new` starts a repository that already follows the rules, as [new.ts](new.ts) says. It's
  * the one command that works outside a repository, as `pnpm dlx @amitkaps/craftz new`.
@@ -51,6 +52,7 @@ import { createInterface } from "node:readline/promises";
 import { type Target, checkSettings, writeSettings } from "./apply.ts";
 import { gone } from "./gone.ts";
 import { pr } from "./pr.ts";
+import { release } from "./release.ts";
 import { buildLog, status } from "./status.ts";
 import { CRAFTZ, OWNER, type Pkg, here } from "./reference.ts";
 import { fixFiles } from "./rules.ts";
@@ -74,6 +76,8 @@ const HELP = `Usage: craftz <command>
   pr "<title>" [--label <label>] [--body <text>] [--wait]
                opens a pull request that merges itself once CI passes
   gone         deletes the local branches that merged
+  release <X.Y.Z> [--notes "<text>"]
+               opens the pull request that releases the current folder's package
   new <name> [--package] [--site static] [--private] [--internal] --description "<text>" [--push]
                starts a repository that follows the rules, in a folder of the current one`;
 
@@ -263,6 +267,11 @@ if (command === "rules" && !rest.length) {
   process.exitCode = deploy(process.cwd());
 } else if (command === "pr") {
   await pr([arg, ...rest].filter((it) => it !== undefined));
+} else if (command === "release") {
+  release(
+    process.cwd(),
+    [arg, ...rest].filter((it) => it !== undefined),
+  );
 } else if (command === "gone" && !arg) {
   gone();
 } else if (command === "new") {

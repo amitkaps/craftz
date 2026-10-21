@@ -43,8 +43,7 @@
     "craftz": "node src/cli.ts",
     "align": "node src/align.ts",
     "bump": "node src/align.ts craftz",
-    "new": "node src/cli.ts new",
-    "release": "node src/release.ts"
+    "new": "node src/cli.ts new"
   },
   "devDependencies": {
     "@amitkaps/prose": "0.8.0",
