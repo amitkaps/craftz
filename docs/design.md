@@ -40,6 +40,7 @@ craftz owns a repository's conventions and its lifecycle commands. Vite+ and eac
 | `craftz rules [id]` | prints the rules, or one rule, from the installed version |
 | `craftz check` | runs every rule in the repository, in its own `verify` |
 | `craftz fix` | writes every fix that can be automated |
+| `craftz upgrade` | moves the repository to the latest craftz, and runs its fix |
 | `craftz settings` | writes the GitHub and Cloudflare settings, with your login |
 | `craftz status` | reads what's live: CI, pull requests, npm, and a site's build and addresses |
 | `craftz pr`, `craftz gone` | open a pull request that merges itself, and delete merged branches |
@@ -127,19 +128,19 @@ Where a rule has two right answers, like an app deploying with wrangler while cf
 
 ## Versions come with craftz
 
-Each craftz release carries the versions of the tools it was tested with, like Vite+, TypeScript, prose and markz, in [the reference](../reference/package.json). `craftz fix` writes them into the repository, so bumping craftz is the one change that moves the rest. A tool's new major is a breaking craftz release.
+Each craftz release carries the versions of the tools it was tested with, like Vite+, TypeScript, prose and markz, in [the reference](../reference/package.json). `craftz upgrade` adds the latest craftz and runs its `craftz fix`, which writes them into the repository, so moving craftz is the one change that moves the rest. A tool's new major is a breaking craftz release.
 
 ## Every repository at once
 
 `craftz check` runs only when a repository opens a pull request. A repository nobody is working on can fall behind, and CI can't read GitHub's or Cloudflare's settings without a login. So two sweeps run on the laptop, never in the cloud. They're scripts in this repository, not commands of the package, since they serve whoever keeps the repositories, and a repository needs neither to follow the rules. `pnpm release`, which opens the pull request that releases a package, is one too.
 
 - `pnpm drift` reports each repository's craftz version and runs `craftz settings --check`.
-- `pnpm align` bumps craftz in each repository that's behind, runs `craftz fix` and opens a pull request.
+- `pnpm align` runs `craftz upgrade` in each repository and opens a pull request.
 - `pnpm bump` moves the reference to the newest versions, in craftz's own pull request, before a release.
 
 align works in a fresh clone of each `main`, never a checkout. Each repository has one branch named `align`, which a later run updates, so running it again never opens a second pull request. It opens a pull request only when `verify` passes, and one that fails leaves its clone and log. It ends with a report, with each repository opened, updated, already in line or failed. `--local` stops before the push, so a run can be read before anything leaves the laptop.
 
-In each clone it bumps craftz first, then runs the new version's `craftz fix`, so the rules that apply are the ones the repository moves to. It only moves a repository to a released craftz, so a change in this repository reaches nobody until it's released.
+In each clone it takes `craftz upgrade`'s steps, so the new version's `craftz fix` runs, and the rules that apply are the ones the repository moves to. It only moves a repository to a released craftz, so a change in this repository reaches nobody until it's released.
 
 The sweeps hold no rules of their own. They find the repositories by the GitHub topic `craftz`, which writing a repository's settings adds. So a new repository joins when its settings are written and leaves when it's archived, and no list in craftz needs a pull request. The list reads only public repositories, so craftz never names a private one.
 

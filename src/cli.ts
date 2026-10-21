@@ -16,6 +16,9 @@
  * then lists the files it changed, checks again and prints what's left to do by hand. A fix can
  * move versions, so `pnpm install` comes next, then `pnpm run fix` for the format.
  *
+ * `craftz upgrade` moves a repository to the latest craftz and runs its fix, as
+ * [upgrade.ts](upgrade.ts) says, and runs those next steps itself.
+ *
  * `craftz settings` writes what the rules set outside the files, on GitHub and on a site's
  * Worker, for the repository the folder's `origin` names, then reads it back. `--check` only
  * reads. Classic branch protection on `main` isn't craftz's, so removing it asks first, or takes
@@ -49,9 +52,10 @@ import { type Target, checkSettings, writeSettings } from "./apply.ts";
 import { gone } from "./gone.ts";
 import { pr } from "./pr.ts";
 import { buildLog, status } from "./status.ts";
-import { OWNER, type Pkg, here } from "./reference.ts";
+import { CRAFTZ, OWNER, type Pkg, here } from "./reference.ts";
 import { fixFiles } from "./rules.ts";
 import { cloudflareLogin, githubLogin, hasClassic } from "./settings.ts";
+import { upgrade } from "./upgrade.ts";
 import { RULES_DOC, stated } from "./stated.ts";
 import { type Finding, HELD, checkFolder, origin, repoIn } from "./survey.ts";
 import { workerIn } from "./worker.ts";
@@ -61,6 +65,7 @@ const HELP = `Usage: craftz <command>
   rules [id]   prints every rule, or one
   check [dir]  runs every rule on a folder, the current one by default
   fix [dir]    writes every fix, then checks what's left
+  upgrade      moves the current folder to the latest craftz, and runs its fix
   settings [dir] [--check] [--yes]
                writes the settings on GitHub and Cloudflare, then reads them back
   status [dir] [--log] [--notes]
@@ -142,6 +147,34 @@ async function live(dir: string, log: boolean, notes: boolean): Promise<boolean>
   return failed;
 }
 
+// Moves the folder to the latest craftz, says from which version, and returns the check's exit code.
+async function moveOn(dir: string): Promise<number> {
+  const versionOf = (): string | undefined => {
+    const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as Pkg;
+    return pkg.devDependencies?.[CRAFTZ] ?? pkg.dependencies?.[CRAFTZ];
+  };
+  if (!existsSync(join(dir, "package.json"))) {
+    console.error(`craftz upgrade: ${dir} has no package.json.`);
+    return 1;
+  }
+  if ((JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as Pkg).name === CRAFTZ) {
+    console.error(
+      "craftz upgrade: craftz checks itself from source, and pnpm bump moves its reference.",
+    );
+    return 1;
+  }
+  const from = versionOf();
+  await upgrade(async (command, ...args) => {
+    const { status } = spawnSync(command, args, { cwd: dir, stdio: "inherit" });
+    if (status !== 0) throw new Error(`${command} ${args.join(" ")} exited ${status}`);
+  });
+  const to = versionOf();
+  console.log(
+    from === to ? `\nAlready on craftz ${to}.` : `\ncraftz ${to}, from ${from ?? "nothing"}.`,
+  );
+  return spawnSync("pnpm", ["exec", "craftz", "check"], { cwd: dir, stdio: "inherit" }).status ?? 1;
+}
+
 async function ask(question: string): Promise<boolean> {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   const answer = await rl.question(`${question} [y/N] `);
@@ -198,6 +231,8 @@ if (command === "rules" && !rest.length) {
     console.log("Run pnpm install, then pnpm run fix.\n");
   }
   process.exitCode = (await check(dir)) ? 1 : 0;
+} else if (command === "upgrade" && !arg) {
+  process.exitCode = await moveOn(process.cwd());
 } else if (command === "settings") {
   const flags = [arg, ...rest].filter((it) => it?.startsWith("--"));
   const dirs = [arg, ...rest].filter((it) => it !== undefined && !it.startsWith("--"));

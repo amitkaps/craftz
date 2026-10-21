@@ -78,3 +78,10 @@ test("a folder is the repository its origin names", () => {
   git("remote", "add", "origin", "git@github.com:amitkaps/base.git");
   expect(repoIn(dir)).toBe("base");
 });
+
+test("upgrade leaves craftz itself to pnpm bump", () => {
+  const root = join(import.meta.dirname, "..");
+  const upgraded = spawnSync("node", ["src/cli.ts", "upgrade"], { cwd: root, encoding: "utf8" });
+  expect(upgraded.status).toBe(1);
+  expect(upgraded.stderr).toContain("pnpm bump");
+});

@@ -31,6 +31,7 @@ import { writeSettings } from "./apply.ts";
 import { fixFiles } from "./rules.ts";
 import { CRAFTZ, OWNER, TOOLS } from "./reference.ts";
 import { repos } from "./survey.ts";
+import { upgrade } from "./upgrade.ts";
 import { workerIn } from "./worker.ts";
 import { cloudflareLogin, githubLogin } from "./settings.ts";
 
@@ -159,9 +160,12 @@ async function moveReference(dir: string, log: string[]): Promise<string[]> {
  * # Another repository
  *
  * Each clone installs first, as any fresh clone does, which runs its `prepare`, like base's
- * generated types. `pnpm add` doesn't run it. Then it moves to the latest craftz on npm and runs
- * that version's `craftz fix`. So the rules it's fixed to are the ones it moves to, and a change in
- * craftz reaches nobody until it's released.
+ * generated types. `pnpm add` doesn't run it.
+ *
+ * Then it takes the steps of
+ * [`craftz upgrade`](upgrade.ts), from this checkout, since a repository on an older craftz has no
+ * such command. The fix still runs from the version just added. So the rules it's fixed to are the
+ * ones it moves to, and a change in craftz reaches nobody until it's released.
  *
  * The fix brings that version's holds, like base's TypeScript, and changes nothing that's in line
  * already. What it leaves to do by hand fails `verify`, which runs `craftz check`.
@@ -175,10 +179,7 @@ async function alignTo(dir: string, repo: string, log: string[]): Promise<string
     return [...majors, ...(await update(dir, log, [...TOOLS, "vite-plus"]))];
   }
   await sh(dir, log, "pnpm", "install");
-  await sh(dir, log, "pnpm", "add", "--save-dev", "--save-exact", `${CRAFTZ}@latest`);
-  // fix exits 1 when something's left to do by hand, which verify reports.
-  await sh(dir, log, "pnpm", "exec", "craftz", "fix").catch(() => undefined);
-  await sh(dir, log, "pnpm", "install");
+  await upgrade((command, ...args) => sh(dir, log, command, ...args));
   return update(dir, log, [...TOOLS, "vite-plus", CRAFTZ]);
 }
 
