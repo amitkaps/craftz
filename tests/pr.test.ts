@@ -9,7 +9,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "vite-plus/test";
 import { goneIn } from "../src/gone.ts";
-import { branchOf, labelsIn, startOn } from "../src/pr.ts";
+import { branchOf, joined, labelsIn, startOn } from "../src/pr.ts";
 import { here } from "../src/reference.ts";
 import { RULES } from "../src/rules.ts";
 
@@ -62,4 +62,14 @@ test("a branch's pull request decides where a change goes", () => {
   });
   expect(startOn("plan", "Fix", pr("MERGED"))).toEqual({ from: "origin" });
   expect(startOn("plan", "Fix", pr("CLOSED"))).toHaveProperty("stop");
+});
+
+test("a body or label is read as given, even one that opens with a dash", () => {
+  expect(joined(["t", "--body", "- a list", "--label", "fixed", "--wait"])).toEqual([
+    "t",
+    "--body=- a list",
+    "--label=fixed",
+    "--wait",
+  ]);
+  expect(joined(["t", "--body=-x", "--body"])).toEqual(["t", "--body=-x", "--body"]);
 });

@@ -72,10 +72,24 @@ export function startOn(branch: string, title: string, pr?: BranchPr): Start {
   return { stop: `${it}, still open. Give its title to add to it, or switch to main.` };
 }
 
+/** The arguments with each value joined to its option, as `--body=<text>`, so a body can open with a dash. */
+export function joined(args: string[]): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i] ?? "";
+    const value = args[i + 1];
+    if (/^--(?:label|body)$/.test(arg) && value !== undefined) {
+      out.push(`${arg}=${value}`);
+      i++;
+    } else out.push(arg);
+  }
+  return out;
+}
+
 /** Opens the pull request for what's in the working tree, and waits for it with `--wait`. */
 export async function pr(args: string[]): Promise<void> {
   const { values, positionals } = parseArgs({
-    args,
+    args: joined(args),
     allowPositionals: true,
     options: {
       label: { type: "string" },
