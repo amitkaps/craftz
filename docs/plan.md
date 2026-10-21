@@ -4,9 +4,8 @@ craftz 0.2.0 is on npm, and its docs are live at [craftz.amitkaps.com](https://c
 
 ## Next, in order
 
-1. **What `craftz()` sets is stated once.** The plugin's values are in [index.ts](../src/index.ts), and `toolchain-craftz`'s fix keeps its own copy as regular expressions. The fix should build them from the plugin's.
-2. **rules.ts splits in two.** The rules stay, and the code that edits a Vite or Worker config moves out. A fix should edit a repository's config only where the plugin can't do the job, since most fixes that missed real configs edited them.
-3. **The old repository retires.** The one that kept the rules before craftz is archived with its history, and its site redirects to craftz's, for the links outside these repositories. Every `AGENTS.md` links to craftz now.
+1. **rules.ts splits in two.** The rules stay, and the code that edits a Vite or Worker config moves out. A fix should edit a repository's config only where the plugin can't do the job, since most fixes that missed real configs edited them.
+2. **The old repository retires.** The one that kept the rules before craftz is archived with its history, and its site redirects to craftz's, for the links outside these repositories. Every `AGENTS.md` links to craftz now.
 
 Once these are done, one release takes them to the repositories.
 
@@ -14,7 +13,7 @@ Once these are done, one release takes them to the repositories.
 
 - **The rules, checked and fixed.** [The rules](rules.md) are worded once, and their checks and fixes are in [src/](../src/), against the files in [reference/](../reference/README.md). `craftz rules`, `check` and `fix` run them from the installed version, and a second `fix` changes nothing. Every `verify` runs `pnpm craftz check`, so each pull request is checked against the craftz it installs. craftz checks itself from source, since the version it installs can't hold the rules it's changing. Its tests install the package `pnpm pack` writes, as a repository would, so a file the package leaves out fails a test here. A hold is found by the repository the folder's `origin` names, so a worktree gets its checkout's holds.
 - **GitHub's settings.** `craftz settings` writes only what has drifted and reads it back, with `--check` to only read. A package's ruleset requires `label` next to `ci`.
-- **One toolchain.** `craftz()` sets every repository's `fmt` and `lint`, and fails a config that sets either differently. A static site names its own folder as Vite's `publicDir`, and `craftz()` never guesses one. `craftz deploy` runs cf, or wrangler for an app cf can't build yet.
+- **One toolchain.** `craftz()` sets every repository's `fmt` and `lint`, and fails a config that sets either differently. Its values are stated once, and `toolchain-craftz`'s fix reads them to take each out of a config. A static site names its own folder as Vite's `publicDir`, and `craftz()` never guesses one. `craftz deploy` runs cf, or wrangler for an app cf can't build yet.
 - **Pull requests.** `pnpm pr` and `pnpm gone` run craftz's commands, in place of the scripts every repository copied. `pr` starts where the title says, and stops when the branch has nothing new for `main`. A package's label is checked by `label.yml`, so a pull request runs `verify` once. `gone` removes a merged branch's worktree.
 - **What's live.** `craftz status` reads CI on `main`, the open pull requests, npm's version against `package.json` on `main`, the latest release, and a site's build and addresses, on cf or wrangler.
 - **Releases.** The release workflow stages a version on npm and tags it once approved, and each release's notes say what to change when a repository moves. align moves each repository to the latest craftz on npm and runs that version's `craftz fix`, so a change reaches the others only once it's released. `craftz new` starts a repository that passes the rules, from any folder with `pnpm dlx`. align, drift and release are this repository's own scripts, for whoever keeps the repositories, and the package doesn't ship them.

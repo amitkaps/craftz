@@ -31,6 +31,7 @@ import {
 } from "./reference.ts";
 import { rulesetFor, writeLabels, writeRuleset } from "./settings.ts";
 import { BROWSERS, COMPATIBILITY_DATE } from "./pinned.ts";
+import { type Config, RULED, written } from "./ruled.ts";
 import { stated } from "./stated.ts";
 import type { BranchRule, Finding, Repo } from "./survey.ts";
 import { type Worker, workerIn } from "./worker.ts";
@@ -140,17 +141,17 @@ function pin(dir: string, std: string, name: string): void {
  * `craftz()` goes on a line of its own when the plugins do, so `vp check` passes what it wrote.
  * Each key in `fmt` and `lint` that the plugin sets to the same value goes, so the blocks keep
  * only the repository's own keys, like `ignorePatterns`. A block left empty goes with the
- * comments above it. A key that differs stays, and the plugin then fails the config, naming it
- * to settle by hand. craftz's own config imports the plugin from source, so it's left alone.
+ * comments above it. The keys and values are the plugin's own, from [ruled.ts](ruled.ts), so the
+ * fix can't take out what the plugin doesn't set. A key that differs stays, and the plugin then
+ * fails the config, naming it to settle by hand. craftz's own config imports the plugin from source, so it's left alone.
  */
 const IMPORT = /^import \{ defineConfig \} from "vite-plus";\n/m;
-// The keys craftz() sets in `fmt` and `lint`, at the values it sets.
-const RULED_KEYS = [
-  String.raw`proseWrap: "never"`,
-  String.raw`plugins: \["typescript", "unicorn", "import"\]`,
-  String.raw`categories: \{ correctness: "error" \}`,
-  String.raw`options: \{ typeAware: true, typeCheck: true \}`,
-];
+// Each key craftz() sets in `fmt` and `lint`, at its value, as a pattern.
+const RULED_KEYS = Object.values(RULED).flatMap((block) =>
+  Object.entries(block as Config).map(([key, value]) =>
+    `${key}: ${written(value)}`.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+  ),
+);
 const EMPTY_BLOCK = /(?:^[ \t]*\/\/.*\n)*^[ \t]*(?:fmt|lint): \{\s*\},?\n(?:[ \t]*\n)?/gm;
 
 // Takes out each key craftz() sets, on a line of its own or inline, then any block left empty.
@@ -782,30 +783,7 @@ export const RULES: Rule[] = [
         /proseWrap:\s*"never"/.test(vite) ? [] : ['fmt doesn\'t set proseWrap: "never"'],
       );
     },
-    fix: {
-      in: "files",
-      apply: (dir) => {
-        const file = join(dir, "vite.config.ts");
-        if (!existsSync(file)) return;
-        const text = read(file);
-        // A config with no fmt block is left alone, and its check still drifts.
-        if (PLUGIN.test(text) || /proseWrap:\s*"never"/.test(text) || !/\bfmt:\s*\{/.test(text))
-          return;
-        const wrapped = text
-          // The comment above the block says oxfmt's defaults, which it no longer is.
-          .replace(
-            /((?:^[ \t]*\/\/.*\n)*)(^[ \t]*fmt:)/m,
-            (_, comment: string, fmt: string) =>
-              comment.replace(
-                /(o)xfmt's defaults/i,
-                "$1xfmt's defaults, with each paragraph on one line",
-              ) + fmt,
-          )
-          .replace(/\bfmt:\s*\{\s*\}/, 'fmt: { proseWrap: "never" }')
-          .replace(/\bfmt:\s*\{(?!\s*proseWrap)/, 'fmt: { proseWrap: "never",');
-        writeFileSync(file, wrapped);
-      },
-    },
+    // A config without craftz() gets it from toolchain-craftz's fix, which sets this.
   },
   {
     id: "toolchain-craftz",

@@ -2,8 +2,8 @@
  * # craftz
  *
  * The package's entry is `craftz()`, the Vite plugin a repository puts in its `vite.config.ts`.
- * It sets what [the rules](../docs/rules.md#toolchain-wrap) ask of every Vite+ config, so a
- * repository's config holds only what's its own.
+ * It sets what [the rules](../docs/rules.md#toolchain-wrap) ask of every Vite+ config, as
+ * [ruled.ts](ruled.ts) states it, so a repository's config holds only what's its own.
  *
  * ## A thin plugin
  *
@@ -32,19 +32,8 @@
  */
 import { resolve } from "node:path";
 import { BROWSERS } from "./pinned.ts";
+import { type Config, RULED } from "./ruled.ts";
 import { workerIn } from "./worker.ts";
-
-type Config = { [key: string]: unknown };
-
-// What the rules set, from `toolchain-wrap` and `toolchain-lint`.
-const RULED: Config = {
-  fmt: { proseWrap: "never" },
-  lint: {
-    plugins: ["typescript", "unicorn", "import"],
-    categories: { correctness: "error" },
-    options: { typeAware: true, typeCheck: true },
-  },
-};
 
 // What a static site adds to the rules: the browsers, for whatever Vite bundles.
 function site(root: string): Config {
