@@ -129,11 +129,11 @@ test("a site ships through craftz deploy", () => {
   expect(drift("x", "cf deploy --prebuilt", false)).toBeUndefined();
 });
 
-test("craftz's version is its own, as a caret range", () => {
+test("craftz's version is its own, exactly", () => {
   const own = JSON.parse(readFileSync(join(here, "..", "package.json"), "utf8")) as {
     version: string;
   };
-  expect(VERSIONS[CRAFTZ]).toBe(`^${own.version}`);
+  expect(VERSIONS[CRAFTZ]).toBe(own.version);
 });
 
 test("the fix adds craftz, and takes out the blocks the plugin sets", () => {

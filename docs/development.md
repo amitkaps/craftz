@@ -20,7 +20,7 @@ A change to how things are done starts here, in [the rules](rules.md) and in [th
 
 ## The reference
 
-[reference/](../reference/README.md) holds the files a rule compares with, laid out as a repository has them, like the workflows, the editor settings and the catalog. A rule reads its value from there, so it's never written out twice. These files are checked by `prose check` like any other, so their links have to work where they stand.
+[reference/](../reference/README.md) holds the files a rule compares with, laid out as a repository has them, like the workflows, the editor settings and the versions. A rule reads its value from there, so it's never written out twice. These files are checked by `prose check` like any other, so their links have to work where they stand.
 
 `pnpm bump` moves the reference's versions, not craftz's own, before a release. It installs the reference in a clone as a project of its own, updates it, then runs craftz's fixes from source against it and opens craftz's pull request. The others take the new versions once they're released, from `pnpm align`. `craftz new` builds a repository from the reference and from craftz's own `LICENSE`. The reference holds `.gitignore` as `gitignore`, since npm leaves a dotted one out of a package, and a test keeps it the same as craftz's own.
 

@@ -47,12 +47,12 @@
     "release": "node src/release.ts"
   },
   "devDependencies": {
-    "@amitkaps/prose": "^0.8.0",
+    "@amitkaps/prose": "0.8.0",
     "@cloudflare/vite-plugin": "2.0.0-beta.v.1",
     "@mdn/browser-compat-data": "^8.1.6",
-    "@types/node": "^26.6.5",
+    "@types/node": "26.6.5",
     "cf": "1.0.0-beta.18",
-    "publint": "^0.3.25",
+    "publint": "0.3.25",
     "vite-plus": "1.3.0"
   },
   "peerDependencies": {
