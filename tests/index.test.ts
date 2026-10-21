@@ -8,6 +8,9 @@
  *
  * Each config has its own folder as its root, since a site's config follows from the files
  * there: a Worker config, and an `index.html` or none.
+ *
+ * `toolchain-craftz`'s fix finds the plugin's values in a config as `written` spells them, so
+ * that has to be how oxfmt formats them.
  */
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -15,6 +18,8 @@ import { join } from "node:path";
 import { mergeConfig } from "vite-plus";
 import { expect, test } from "vite-plus/test";
 import { craftz } from "../src/index.ts";
+import { RULED, written } from "../src/ruled.ts";
+import { type FormatConfig, format } from "vite-plus/fmt";
 import { BROWSERS } from "../src/pinned.ts";
 
 type Config = Record<string, unknown>;
@@ -116,4 +121,15 @@ test("a site's build target set differently fails", () => {
   expect(() => craftz().config({ build: { target: ["chrome100"] }, root })).toThrow(
     '  build.target is ["chrome100"]',
   );
+});
+
+test("the plugin's values are spelled as oxfmt formats them", async () => {
+  const lines = Object.entries(RULED).flatMap(([block, keys]) => [
+    `  ${block}: {`,
+    ...Object.entries(keys as Config).map(([key, value]) => `    ${key}: ${written(value)},`),
+    "  },",
+  ]);
+  const config = `export default {\n${lines.join("\n")}\n};\n`;
+  const { fmt } = craftz().config({}) as { fmt: FormatConfig };
+  expect((await format("vite.config.ts", config, fmt)).code).toBe(config);
 });
