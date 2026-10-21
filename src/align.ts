@@ -26,8 +26,8 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import { writeSettings } from "./apply.ts";
 import { fixFiles } from "./rules.ts";
-import { OWNER, TOOLS, catalog, here } from "./reference.ts";
-import { HELD, repos } from "./survey.ts";
+import { CRAFTZ, OWNER, TOOLS, catalog } from "./reference.ts";
+import { repos } from "./survey.ts";
 import { workerIn } from "./worker.ts";
 import { cloudflareLogin, githubLogin } from "./settings.ts";
 
@@ -121,12 +121,11 @@ async function update(dir: string, log: string[], skip: string[]): Promise<strin
 }
 
 /** @prose
- * # craftz first
+ * # craftz itself
  *
  * The rules' versions are the reference's, in [reference/](../reference/README.md), so
- * `pnpm align` moves them first, in a clone of craftz. Then craftz is aligned with its new
- * reference like any other repository, and the others with what the clone holds, so one run moves
- * everything together.
+ * `pnpm align` moves them in craftz's own pull request, and craftz is fixed from source against
+ * its new reference. The others take those versions only once craftz is released.
  *
  * The reference is installed where it stands, as a project of its own, and moves its libraries and
  * tools as above, and the Vite+ override with `vite-plus`. What the install writes there is
@@ -185,16 +184,26 @@ async function moveReference(dir: string, log: string[]): Promise<string[]> {
 /** @prose
  * # Another repository
  *
- * Every rule with a fix in the files, from [rules.ts](rules.ts), fixes the clone, like
- * `versions-typescript`, except where a hold says it can't move yet, like base's TypeScript. A
- * fix reads the reference from `std`, the clone's when `pnpm align` just moved it, so the others
- * take its new versions. A fix changes nothing that's in line already.
+ * Each clone moves to the latest craftz on npm, then runs that version's `craftz fix`. So the
+ * rules it's fixed to are the ones it moves to, and a change in craftz reaches nobody until it's
+ * released.
+ *
+ * The fix brings that version's holds, like base's TypeScript, and changes nothing that's in line
+ * already. What it leaves to do by hand fails `verify`, which runs `craftz check`.
  */
-async function alignTo(dir: string, std: string, repo: string, log: string[]): Promise<string[]> {
-  fixFiles(dir, std, HELD[repo]);
-
+async function alignTo(dir: string, repo: string, log: string[]): Promise<string[]> {
+  if (repo === SELF) {
+    const std = join(dir, "reference");
+    const majors = await updateReference(std, log);
+    fixFiles(dir, std);
+    await sh(dir, log, "pnpm", "install");
+    return [...majors, ...(await update(dir, log, [...TOOLS, "vite-plus"]))];
+  }
+  await sh(dir, log, "pnpm", "add", "--save-dev", `${CRAFTZ}@latest`);
+  // fix exits 1 when something's left to do by hand, which verify reports.
+  await sh(dir, log, "pnpm", "exec", "craftz", "fix").catch(() => undefined);
   await sh(dir, log, "pnpm", "install");
-  return update(dir, log, [...TOOLS, "vite-plus"]);
+  return update(dir, log, [...TOOLS, "vite-plus", CRAFTZ]);
 }
 
 /** @prose
@@ -219,7 +228,7 @@ function oneAtATime<T>(task: () => Promise<T>): Promise<T> {
   return run;
 }
 
-async function files(repo: string, std: string): Promise<Outcome> {
+async function files(repo: string): Promise<Outcome> {
   const dir = join(work, repo);
   const log: string[] = [];
   const lines: string[] = [];
@@ -227,10 +236,7 @@ async function files(repo: string, std: string): Promise<Outcome> {
   try {
     await sh(work, log, "gh", "repo", "clone", `${OWNER}/${repo}`, dir, "--", "--quiet");
     const before = depsOf(readJson<Pkg>(join(dir, "package.json")));
-    const majors =
-      repo === SELF
-        ? [...(await updateReference(std, log)), ...(await alignTo(dir, std, repo, log))]
-        : await alignTo(dir, std, repo, log);
+    const majors = await alignTo(dir, repo, log);
     await sh(dir, log, "pnpm", "install", "--frozen-lockfile");
     await sh(dir, log, "pnpm", "run", "fix");
 
@@ -324,19 +330,7 @@ async function settings(repo: string): Promise<string[]> {
   return writeSettings({ repo, pkg, site }, true);
 }
 
-// craftz goes first when it's named, so the others align with its new reference.
-const std = targets.includes(SELF) ? join(work, SELF, "reference") : here;
-const outcomes: Outcome[] = [];
-if (targets.includes(SELF)) outcomes.push(await files(SELF, std));
-const selfFailed = outcomes[0]?.failed;
-if (selfFailed) {
-  console.log(`✗ ${SELF}: ${selfFailed}`);
-  console.log("The others weren't aligned, since their reference is what this run couldn't make.");
-  process.exit(1);
-}
-outcomes.push(
-  ...(await Promise.all(targets.filter((r) => r !== SELF).map((repo) => files(repo, std)))),
-);
+const outcomes = await Promise.all(targets.map((repo) => files(repo)));
 
 let failed = false;
 for (const outcome of outcomes) {

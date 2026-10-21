@@ -515,7 +515,8 @@ const nav = (text: string): string[] =>
  * CI had the label check as a step, and ran again when a label changed, so a pull request opened
  * with its label ran `verify` twice. The fix copies the files and takes the step, its triggers
  * and the old `concurrency` out of CI. One laid out otherwise is left to do by hand, and the
- * check still says so.
+ * check still says so. A CI whose only `@prose` comment was the step's gets the reference's
+ * opening comment, so `prose check` still finds one.
  */
 const RELEASE_FILES = [
   ".github/workflows/release.yml",
@@ -532,10 +533,14 @@ const labelNames = (
   JSON.parse(read(join(here, ".github", "labels.json"))) as { name: string }[]
 ).map((label) => label.name);
 
+// The reference CI's opening comment, for a CI whose only `@prose` was the label step's.
+const CI_HEADER = /^(?:#.*\n)+/.exec(referenceCi)?.[0] ?? "";
+
 // CI without the label step and its triggers, which the label workflow has now.
 function withoutLabel(ci: string): string {
-  const text = ci.replace(LABEL_STEP, "").replace(LABEL_TRIGGER, "");
-  return text.includes(concurrency) ? text : text.replace(CONCURRENCY, () => concurrency);
+  let text = ci.replace(LABEL_STEP, "").replace(LABEL_TRIGGER, "");
+  if (!text.includes(concurrency)) text = text.replace(CONCURRENCY, () => concurrency);
+  return text.includes("@prose") ? text : CI_HEADER + text;
 }
 
 // Sets a script to the rules', in a repository the rule applies to.
