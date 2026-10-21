@@ -5,12 +5,11 @@ craftz 0.2.0 is on npm, and its docs are live at [craftz.amitkaps.com](https://c
 ## Next, in order
 
 1. **Every repository's `verify` runs `pnpm craftz check`.** A repository is checked against the rules only when align or drift runs. With `craftz check` in `verify`, each pull request checks against the craftz it installs, which is what moving to a release means. [`scripts-verify`](rules.md#scripts-verify) and `new` add it, and each repository picks it up with `craftz fix`.
-2. **A site loads Cloudflare's plugin only to build.** Its `vite.config.ts` imports `@cloudflare/vite-plugin`, which takes a second, and every `vp` command loads the config, `vp fmt` and `vp lint` too. So a site's `vp check` takes about 7 seconds where a package's takes under 3, and most of craftz's test time is three sites checking. Loading it only for `vp build` brings a site's check to about 2 seconds. It's a change to every site's config, so it goes in the reference and `toolchain-craftz`'s fix.
-3. **align moves a repository only to a released craftz.** align fixes the others against the reference in craftz's `main`, just updated. Their `verify` then runs the craftz they install, whose versions are older, so each moved version should fail. The design says align moves only to a release. Either align reads the latest release's reference, or the run releases craftz first.
-4. **The design says what ships.** It lists `craftz align`, `drift`, `new` and `release`, but the package ships none of them. They run only as scripts in this repository. Either the command gains them, or the design calls them this repository's own. The same goes for noting a newer release in `check`, and for the peer dependencies.
-5. **What `craftz()` sets is stated once.** The plugin's values are in [index.ts](../src/index.ts), and `toolchain-craftz`'s fix keeps its own copy as regular expressions. The fix should build them from the plugin's.
-6. **rules.ts splits in two.** The rules stay, and the code that edits a Vite or Worker config moves out. A fix should edit a repository's config only where the plugin can't do the job, since most fixes that missed real configs edited them.
-7. **The old repository retires.** The one that kept the rules before craftz is archived with its history, and its site redirects to craftz's, for the links outside these repositories. Every `AGENTS.md` links to craftz now.
+2. **align moves a repository only to a released craftz.** align fixes the others against the reference in craftz's `main`, just updated. Their `verify` then runs the craftz they install, whose versions are older, so each moved version should fail. The design says align moves only to a release. Either align reads the latest release's reference, or the run releases craftz first.
+3. **The design says what ships.** It lists `craftz align`, `drift`, `new` and `release`, but the package ships none of them. They run only as scripts in this repository. Either the command gains them, or the design calls them this repository's own. The same goes for noting a newer release in `check`, and for the peer dependencies.
+4. **What `craftz()` sets is stated once.** The plugin's values are in [index.ts](../src/index.ts), and `toolchain-craftz`'s fix keeps its own copy as regular expressions. The fix should build them from the plugin's.
+5. **rules.ts splits in two.** The rules stay, and the code that edits a Vite or Worker config moves out. A fix should edit a repository's config only where the plugin can't do the job, since most fixes that missed real configs edited them.
+6. **The old repository retires.** The one that kept the rules before craftz is archived with its history, and its site redirects to craftz's, for the links outside these repositories. Every `AGENTS.md` links to craftz now.
 
 Once these are done, one release takes them to the repositories.
 
@@ -29,6 +28,7 @@ Once these are done, one release takes them to the repositories.
 - The beta packages that [`versions-beta`](rules.md#versions-beta) names move to their releases when they graduate, which the sweeps report.
 - The app moves to cf when SvelteKit's adapter writes cf's Build Output, and wrangler leaves the catalog with it.
 - The app moves to TypeScript 7 when svelte-check's peer range takes it.
+- A site's `vp check` loads Cloudflare's plugin, though only `vp build` uses it. Vite+ loads the whole config for `fmt` and `lint` too, and the plugin takes a second to import, most of it compiling its 4 MB bundle and miniflare's 6 MB one. So a site checks in about 7 seconds where a package takes under 3, and three sites are most of craftz's test time. A config can't load it only to build, since `vp check` passes it `command: "build"`, as `vp build` does. It waits for Vite+ to tell a check from a build, or for the plugin to load less until it's used.
 - A size budget for packages a browser loads, measured as markz's `pnpm size` does: bundled, minified and gzipped. It waits for a second package that needs one, since a Node tool like craftz pays for its install, not its bundle. Speed stays each package's own, since what it times differs.
 
 ## Open questions
