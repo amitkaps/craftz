@@ -74,10 +74,13 @@ async function packageJson(name: string, shape: Shape, description: string): Pro
     const built = shape.site
       ? {
           ...scripts("dev", "build", "preview", "check", "test"),
-          verify: "pnpm check && pnpm prose check && pnpm test && pnpm build",
+          verify: "pnpm check && pnpm prose check && pnpm craftz check && pnpm test && pnpm build",
           ...scripts("ship"),
         }
-      : { ...scripts("check", "test"), verify: "pnpm check && pnpm prose check && pnpm test" };
+      : {
+          ...scripts("check", "test"),
+          verify: "pnpm check && pnpm prose check && pnpm craftz check && pnpm test",
+        };
     return JSON.stringify(
       { name, private: true, description, type: "module", scripts: built, devDependencies },
       null,
@@ -103,7 +106,7 @@ async function packageJson(name: string, shape: Shape, description: string): Pro
         build: "vp pack",
         ...scripts("check"),
         test: "vp test --run",
-        verify: `pnpm check && pnpm prose check && pnpm test && pnpm build${shape.site ? " && vp build" : ""}`,
+        verify: `pnpm check && pnpm prose check && pnpm craftz check && pnpm test && pnpm build${shape.site ? " && vp build" : ""}`,
         ...(shape.site ? scripts("ship") : {}),
       },
       devDependencies,

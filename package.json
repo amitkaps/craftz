@@ -32,7 +32,7 @@
     "build": "vp pack",
     "check": "vp check",
     "test": "vp test --run",
-    "verify": "pnpm check && pnpm prose check && pnpm test && pnpm build && pnpm prose build && vp build",
+    "verify": "pnpm check && pnpm prose check && pnpm craftz check && pnpm test && pnpm build && pnpm prose build && vp build",
     "ship": "node src/cli.ts deploy",
     "fix": "vp check --fix",
     "prose": "prose",
