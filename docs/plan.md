@@ -4,7 +4,12 @@ craftz 0.2.0 is on npm, and its docs are live at [craftz.amitkaps.com](https://c
 
 ## Next, in order
 
-1. **The old repository retires.** The one that kept the rules before craftz is archived with its history, and its site redirects to craftz's, for the links outside these repositories. Every `AGENTS.md` links to craftz now.
+1. **Holds follow the repository, not the folder.** A hold is found by the folder's name, so `craftz check` in a worktree of base misses base's holds and fails. It should use the repository that `origin` names, as `craftz settings` already does.
+2. **align moves a repository only to a released craftz.** align fixes the others against the reference in craftz's `main`, just updated. Their `verify` then runs the craftz they install, whose versions are older, so each moved version should fail. The design says align moves only to a release. Either align reads the latest release's reference, or the run releases craftz first.
+3. **The design says what ships.** It lists `craftz align`, `drift`, `new` and `release`, but the package ships none of them. They run only as scripts in this repository. Either the command gains them, or the design calls them this repository's own. The same goes for noting a newer release in `check`, and for the peer dependencies.
+4. **What `craftz()` sets is stated once.** The plugin's values are in [index.ts](../src/index.ts), and `toolchain-craftz`'s fix keeps its own copy as regular expressions. The fix should build them from the plugin's.
+5. **rules.ts splits in two.** The rules stay, and the code that edits a Vite or Worker config moves out. A fix should edit a repository's config only where the plugin can't do the job, since most fixes that missed real configs edited them.
+6. **The old repository retires.** The one that kept the rules before craftz is archived with its history, and its site redirects to craftz's, for the links outside these repositories. Every `AGENTS.md` links to craftz now.
 
 ## Where it is
 
@@ -32,3 +37,7 @@ craftz 0.2.0 is on npm, and its docs are live at [craftz.amitkaps.com](https://c
   prose's `built` plugin runs oxfmt, which only formats. Lowering syntax is in reach: `vite-plus` exports `transformWithOxc` for JS, and Lightning CSS's `transform({ targets })` does CSS, as a devDependency. But at today's floors there's little to lower, and Oxc's lowering can add `require` of its runtime helpers, which a page script can't load. An API past a floor, like `::highlight()`, can't be lowered at all, so the lint is the part that matters.
 
 - **Keeping the docs fresh.** The docs are checked for their files, not their sections, and that stays. What goes stale is what they say, like `development.md` describing a setting the rules have moved past, and a check can't tell. One cheap signal: the dashboard could show when each doc last changed beside when the code did, so a doc untouched through many changes stands out, without failing anything.
+
+- **Where a hold lives.** Holds are in craftz, and name the repositories they hold. So adding or dropping one takes a craftz release, though each repository otherwise checks itself against its own version. A hold could live in the repository it holds, if craftz can still tell a tool's limit from a choice.
+
+- **Editing code by regular expression.** The fixes read and edit `vite.config.ts`, `cloudflare.config.ts`, CI and `pnpm-workspace.yaml` with regular expressions, which depend on how each file is laid out. Most of the lessons about fixes come from there. A small parser for the flat YAML, or fewer edits, would remove that kind of fault.
