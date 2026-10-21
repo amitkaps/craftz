@@ -188,3 +188,7 @@ Most were learned before craftz, when one repository kept the rules and copied t
 **Keep what edits code apart from the rules.** The fixes that edit a repository's own code were spread through the rules, each reading and writing its file. Now they're in one file, as functions from text to text, so the edits that depend on a file's layout can be read together and tested without a folder. An edit belongs there only where `craftz()` can't do the job, like adding a plugin or naming a folder.
 
 **An option's value can open with a dash.** `pnpm pr --body "- a list"` failed before it started, since Node's `parseArgs` takes a value that opens with a dash for an option and stops. `--body=- a list` always worked, so `pr` now joins each value to its option before parsing. A pull request's body often opens with a list.
+
+**Moving the reference and moving the repositories are two steps.** `pnpm align` moved craftz's reference and moved the others to the released craftz in one run. But the others install the reference from npm, so what the run moved in craftz reached nobody until the next release, and the docs said the opposite. `pnpm bump` now moves the reference before a release, and `pnpm align` takes the release to the others after it.
+
+**`pnpm add` doesn't run a repository's `prepare`.** align began a fresh clone with `pnpm add` of the latest craftz, and a later `pnpm install` found nothing to do. So base's `prepare` never generated its Worker's types, and its `fix` failed on the missing file. The clone now installs first, as any fresh clone does.

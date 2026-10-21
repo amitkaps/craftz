@@ -1,10 +1,10 @@
 # Plan
 
-craftz 0.2.0 is on npm, and its docs are live at [craftz.amitkaps.com](https://craftz.amitkaps.com). What each release changed is in its [notes on GitHub](https://github.com/amitkaps/craftz/releases). This plan says what's next, in order, and what works now. [The design](design.md) is the whole of what craftz becomes. Each repository moves to a release in its own pull request, which its own plan tracks.
+craftz 0.3.0 is on npm, and its docs are live at [craftz.amitkaps.com](https://craftz.amitkaps.com). What each release changed is in its [notes on GitHub](https://github.com/amitkaps/craftz/releases). This plan says what's next, in order, and what works now. [The design](design.md) is the whole of what craftz becomes. Each repository moves to a release in its own pull request, which its own plan tracks.
 
 ## Next, in order
 
-1. **One release.** craftz's next release, then align moves every repository to it. `pnpm dlx @amitkaps/craftz new` runs once from the release, since it hasn't run end to end from npm.
+1. **base moves to 0.3.0.** The others moved with `pnpm align`, and base failed since its `prepare` didn't run in align's clone. With that fixed, `pnpm align base` moves it.
 
 ## Where it is
 
@@ -13,7 +13,7 @@ craftz 0.2.0 is on npm, and its docs are live at [craftz.amitkaps.com](https://c
 - **One toolchain.** `craftz()` sets every repository's `fmt` and `lint`, and fails a config that sets either differently. Its values are stated once, and `toolchain-craftz`'s fix reads them to take each out of a config. A static site names its own folder as Vite's `publicDir`, and `craftz()` never guesses one. `craftz deploy` runs cf, or wrangler for an app cf can't build yet.
 - **Pull requests.** `pnpm pr` and `pnpm gone` run craftz's commands, in place of the scripts every repository copied. `pr` starts where the title says, and stops when the branch has nothing new for `main`. A package's label is checked by `label.yml`, so a pull request runs `verify` once. `gone` removes a merged branch's worktree.
 - **What's live.** `craftz status` reads CI on `main`, the open pull requests, npm's version against `package.json` on `main`, the latest release, and a site's build and addresses, on cf or wrangler.
-- **Releases.** The release workflow stages a version on npm and tags it once approved, and each release's notes say what to change when a repository moves. align moves each repository to the latest craftz on npm and runs that version's `craftz fix`, so a change reaches the others only once it's released. `craftz new` starts a repository that passes the rules, from any folder with `pnpm dlx`. align, drift and release are this repository's own scripts, for whoever keeps the repositories, and the package doesn't ship them.
+- **Releases.** The release workflow stages a version on npm and tags it once approved, and each release's notes say what to change when a repository moves. `pnpm bump` moves the reference's versions before a release. After it, `pnpm align` moves each repository to the latest craftz on npm and runs that version's `craftz fix`, so a change reaches the others only once it's released. `craftz new` starts a repository that passes the rules, from any folder with `pnpm dlx`. align, bump, drift and release are this repository's own scripts, for whoever keeps the repositories, and the package doesn't ship them.
 - **The repositories.** The public ones carry the topic `craftz`, which is how align and drift find them.
 
 ## Later

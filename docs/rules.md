@@ -327,7 +327,7 @@ Every public repository that follows these rules has the GitHub topic `craftz`, 
 - **drift** checks every repository's files, from GitHub's `main`, or from a folder named on the command line, to see a fix before it's pushed. With `gh` logged in it checks the merge settings too, and with `cf` the Workers' build settings, and without a login it says what it couldn't check.
 - **align** brings each repository in line with the reference, from a fresh clone of each `main`. Every shared tool, the override and the editor settings come from the reference, and each repository's own libraries move within their majors. A pull request opens where `verify` passes, with auto-merge on, and lists any new major left for review. GitHub's settings and the Worker's are written directly, since there's no file to review.
 
-A change to the rules, like a new check, is a pull request to craftz, and the next `align` carries it.
+A change to the rules, like a new check, is a pull request to craftz. It reaches the others in craftz's next release, which `align` moves them to.
 
 ### Following it unlisted
 

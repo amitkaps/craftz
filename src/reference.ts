@@ -52,7 +52,7 @@ export const nodeMajor = /\d+/.exec(standard.engines?.node ?? "")?.[0];
  *
  * Most come from this repository's own `package.json`. The ones it doesn't use, like wrangler,
  * are named in the `catalog` of its `pnpm-workspace.yaml`, which nothing here installs. npm isn't
- * read. A new release is drift only once this repository moves to it, which `pnpm align` does.
+ * read. A new release is drift only once this repository moves to it, which `pnpm bump` does.
  */
 export const TOOLS = [
   "@types/node",

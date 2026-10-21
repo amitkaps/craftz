@@ -3,7 +3,7 @@
  *
  * The browsers the rules' [floors](../docs/rules.md#browsers) name, worked out from MDN's
  * browser-compat-data. The date is the data's own, not today's, so the list moves only when
- * `pnpm align` moves the package, and two runs on one version agree.
+ * `pnpm bump` moves the package, and two runs on one version agree.
  *
  * A release counts once it's out, so a beta or a planned one doesn't. Samsung Internet names
  * the Chromium it runs on as its engine version.

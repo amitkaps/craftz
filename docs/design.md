@@ -135,6 +135,7 @@ Each craftz release carries the versions of the tools it was tested with, like V
 
 - `pnpm drift` reports each repository's craftz version and runs `craftz settings --check`.
 - `pnpm align` bumps craftz in each repository that's behind, runs `craftz fix` and opens a pull request.
+- `pnpm bump` moves the reference to the newest versions, in craftz's own pull request, before a release.
 
 align works in a fresh clone of each `main`, never a checkout. Each repository has one branch named `align`, which a later run updates, so running it again never opens a second pull request. It opens a pull request only when `verify` passes, and one that fails leaves its clone and log. It ends with a report, with each repository opened, updated, already in line or failed. `--local` stops before the push, so a run can be read before anything leaves the laptop.
 

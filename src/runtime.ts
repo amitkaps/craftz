@@ -4,7 +4,7 @@
  * The compatibility date every Worker on cf runs at: the build date of the workerd that cf
  * installs, through miniflare. workerd's version carries it, as in `1.20261012.1`. It's the newest
  * date the local runtime knows, so dev and tests run what production does, and it moves only
- * when `pnpm align` moves cf.
+ * when `pnpm bump` moves cf.
  *
  * From 2026-08-04, the date turns on Node.js compatibility, so no Worker sets a flag for it.
  */
