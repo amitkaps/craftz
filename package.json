@@ -53,7 +53,7 @@
   "devDependencies": {
     "@amitkaps/prose": "0.8.0",
     "@cloudflare/vite-plugin": "2.0.0-beta.v.3",
-    "@mdn/browser-compat-data": "^8.1.6",
+    "@mdn/browser-compat-data": "^8.1.7",
     "@types/node": "26.6.5",
     "cf": "1.0.0-beta.20",
     "publint": "0.3.25",
