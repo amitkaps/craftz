@@ -339,6 +339,45 @@ test("the prose site's fix adds the folders .gitignore leaves out, once", () => 
   );
 });
 
+test("Cloudflare's plugin loads in lazyPlugins(), and the fix moves it there, once", () => {
+  const dir = mkdtempSync(join(tmpdir(), "craftz-lazy-"));
+  const file = join(dir, "vite.config.ts");
+  writeFileSync(
+    file,
+    `import { cloudflare } from "@cloudflare/vite-plugin";
+import { defineConfig } from "vite-plus";
+import { craftz } from "@amitkaps/craftz";
+
+export default defineConfig({
+  plugins: [craftz(), built, cloudflare({ assetsOnly: true })],
+});
+`,
+  );
+  const rule = RULES.find((r) => r.id === "cloudflare-plugin");
+  const drift = () =>
+    rule?.check({ files: { "vite.config.ts": readFileSync(file, "utf8") } } as unknown as Repo)
+      ?.drift;
+  expect(drift()).toEqual([
+    "vite.config.ts imports Cloudflare's plugin at the top, not in lazyPlugins()",
+  ]);
+  for (let i = 0; i < 2; i++) if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
+  expect(readFileSync(file, "utf8")).toBe(`import { defineConfig, lazyPlugins } from "vite-plus";
+import { craftz } from "@amitkaps/craftz";
+
+export default defineConfig({
+  plugins: [
+    craftz(),
+    built,
+    lazyPlugins(async () => {
+      const { cloudflare } = await import("@cloudflare/vite-plugin");
+      return [cloudflare({ assetsOnly: true })];
+    }),
+  ],
+});
+`);
+  expect(drift()).toEqual([]);
+});
+
 test("a Worker takes its date and addresses from worker()", () => {
   const config = (body: string) => `import { defineConfig } from "cf/config";
 import { worker } from "${CRAFTZ}/cloudflare";

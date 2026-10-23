@@ -29,7 +29,7 @@ import {
   standard,
   versionsIn,
 } from "./reference.ts";
-import { PLUGIN, withCraftz } from "./edit.ts";
+import { PLUGIN, withCraftz, withLazyCloudflare } from "./edit.ts";
 import { rulesetFor, writeLabels, writeRuleset } from "./settings.ts";
 import { BROWSERS } from "./pinned.ts";
 import { stated } from "./stated.ts";
@@ -926,6 +926,25 @@ export const RULES: Rule[] = [
         site.file === "cloudflare.config.ts" ? [] : [`still on wrangler (${site.file})`];
       return { value: site.file, drift };
     },
+  },
+  /** @prose
+   * # Cloudflare's plugin
+   *
+   * A config that names Cloudflare's plugin imports it inside `lazyPlugins()`, so the check is
+   * for a top-level import. The fix is edit.ts's.
+   */
+  {
+    id: "cloudflare-plugin",
+    check: ({ files }) => {
+      const vite = files["vite.config.ts"] ?? "";
+      if (!vite.includes('"@cloudflare/vite-plugin"')) return undefined;
+      return drifted(
+        /^import .* from "@cloudflare\/vite-plugin";$/m.test(vite)
+          ? ["vite.config.ts imports Cloudflare's plugin at the top, not in lazyPlugins()"]
+          : [],
+      );
+    },
+    fix: { in: "files", apply: (dir) => editFile(join(dir, "vite.config.ts"), withLazyCloudflare) },
   },
   /** @prose
    * # A prose site on cf

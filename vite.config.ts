@@ -10,16 +10,22 @@
  * `craftz()` sets the format and lint the rules ask for, from source, as a repository sets them
  * from the package. craftz's site is its docs, which `prose build` writes, so `craftz()` serves
  * them as `publicDir`, and `vp build` hands them to Cloudflare's plugin, assets only, for
- * `craftz deploy`.
+ * `craftz deploy`. The plugin loads only when Vite runs, as `cloudflare-plugin` asks, so the
+ * checks don't wait for it.
  */
-import { defineConfig } from "vite-plus";
+import { defineConfig, lazyPlugins } from "vite-plus";
 import { BROWSERS } from "./src/browsers.ts";
 import { COMPATIBILITY_DATE } from "./src/runtime.ts";
-import { cloudflare } from "@cloudflare/vite-plugin";
 import { craftz } from "./src/index.ts";
 
 export default defineConfig({
-  plugins: [craftz(), cloudflare({ assetsOnly: true })],
+  plugins: [
+    craftz(),
+    lazyPlugins(async () => {
+      const { cloudflare } = await import("@cloudflare/vite-plugin");
+      return [cloudflare({ assetsOnly: true })];
+    }),
+  ],
 
   // The site is the folder `prose build` writes.
   publicDir: ".prose",

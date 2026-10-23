@@ -188,8 +188,13 @@ async function alignTo(dir: string, repo: string, log: string[]): Promise<string
 /** @prose
  * # The pull request
  *
- * After the changes, the clone installs, checks its lockfile the way CI does, writes the format
- * and lint fixes, and runs `verify`. A clean tree means the repository was already in line.
+ * After the changes, the clone writes its lockfile afresh, checks it the way CI does, writes the
+ * format and lint fixes, and runs `verify`. A clean tree means the repository was already in line.
+ *
+ * pnpm keeps what a lockfile holds, so an optional peer that nothing installs any more, like
+ * esbuild once Vite+ moved to Rolldown, stayed with its binaries, and `pnpm dedupe` kept it too.
+ * So the lockfile and `node_modules` are removed and installed again, on every run, and every
+ * nested package moves within pnpm's one-day wait, as the tools do.
  *
  * The pull request lists every version that moved, read from `package.json` before and after, and the
  * majors left for review. It's opened from a branch named `align`, which a later run updates
@@ -216,6 +221,9 @@ async function files(repo: string): Promise<Outcome> {
     await sh(work, log, "gh", "repo", "clone", `${OWNER}/${repo}`, dir, "--", "--quiet");
     const before = depsOf(readJson<Pkg>(join(dir, "package.json")));
     const majors = await alignTo(dir, repo, log);
+    rmSync(join(dir, "pnpm-lock.yaml"), { force: true });
+    rmSync(join(dir, "node_modules"), { recursive: true, force: true });
+    await sh(dir, log, "pnpm", "install");
     await sh(dir, log, "pnpm", "install", "--frozen-lockfile");
     await sh(dir, log, "pnpm", "run", "fix");
 

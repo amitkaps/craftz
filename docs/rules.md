@@ -198,9 +198,17 @@ A static site is one folder, however it's built: by Vite from an `index.html`, b
 ```ts
 export default defineConfig({
   publicDir: ".prose",
-  plugins: [craftz(), cloudflare({ assetsOnly: true })],
+  plugins: [
+    craftz(),
+    lazyPlugins(async () => {
+      const { cloudflare } = await import("@cloudflare/vite-plugin");
+      return [cloudflare({ assetsOnly: true })];
+    }),
+  ],
 });
 ```
+
+- [`cloudflare-plugin`]{#cloudflare-plugin}: a site's `vite.config.ts` imports Cloudflare's plugin inside Vite+'s `lazyPlugins()`, not at the top. Vite+ loads the config for the format, lint and type checks too, and there the plugin and the workerd it brings took half of `vp check`. `lazyPlugins()` skips it there, and Vite still loads it to build, serve and test.
 
 A site built in several steps, each writing into the same folder, ends with a build of its own that only deploys: the plugin, and the folder as its `publicDir`. With no `index.html`, the plugin builds an empty entry and deletes it, so only the folder's files are deployed.
 
