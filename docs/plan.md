@@ -4,9 +4,11 @@ craftz 0.3.0 is on npm, and its docs are live at [craftz.amitkaps.com](https://c
 
 ## Next, in order
 
-Every repository is on 0.3.0. craftz started as a repository that checked the others from a laptop, and it now works as a package.
+Every repository is on 0.3.0. craftz started as a repository that checked the others from a laptop, and it now works as a package. The next release moves the shared tools and Node's floor, and 0.4.0 still waits for enough feedback to release.
 
-Nothing is queued. 0.4.0 waits for enough feedback to release.
+1. **Move the shared tools.** `pnpm bump` moves Vite+ to 1.4.0, wrangler to 4.152.0 and pnpm to 12.15.0, once Vite+ 1.4.0 is past pnpm's one-day wait on 2026-10-24. None of them unblocks an item below, but each brings fixes. Vite+ 1.4.0's newer oxlint and oxfmt can flag code that passed before, so read each repository's align pull request for formatting changes.
+2. **Move the betas to a matching pair.** cf goes to `1.0.0-beta.20` and the Vite plugin to `2.0.0-beta.v.3`, since both use `@cloudflare/config` 0.27.0. The plugin's `v.4` uses 0.28.0, which no cf build has yet. Neither beta lets the app move to cf.
+3. **Raise Node's floor to 26.12.1.** 26.12.1 is Node's October 2026 security release, so the floor is a general safety fix, and cf beta.20 needs 26.12.0 anyway. [`versions-node`](rules.md#versions-node) asks for `>=26.12.1` in `engines` and `devEngines`, and `new` says so in a package's README. A higher floor breaks a package's users on an older Node, which 0.4.0 can carry.
 
 ## Where it is
 
