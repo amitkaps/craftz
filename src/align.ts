@@ -30,6 +30,7 @@ import { promisify } from "node:util";
 import { checkSettings, writeSettings } from "./apply.ts";
 import { fixFiles } from "./rules.ts";
 import { CRAFTZ, OWNER, TOOLS } from "./reference.ts";
+import { moveLine, report, row, type Row, type Step } from "./report.ts";
 import { repos } from "./survey.ts";
 import { type Run, upgrade } from "./upgrade.ts";
 import { workerIn } from "./worker.ts";
@@ -52,6 +53,10 @@ const named = args.filter((arg) => !arg.startsWith("--"));
 const targets = named.length ? named : await repos();
 const work = mkdtempSync(join(tmpdir(), "align-"));
 const tarball = candidate ? pack() : undefined;
+const many = targets.length > 1 ? "repositories" : "repository";
+console.log(
+  `align${candidate ? " --candidate" : ""}: ${targets.length} ${many}, to ${candidate ? "this checkout, packed" : "the latest craftz"}`,
+);
 
 type Pkg = {
   private?: boolean;
@@ -210,7 +215,7 @@ async function alignTo(dir: string, repo: string, log: string[], byHand: Run): P
  * The repositories clone and install side by side, but `verify` runs one at a time. markz's
  * timing tests failed when five ran at once, since they measured a busy machine, not the code.
  */
-type Outcome = { repo: string; lines: string[]; failed?: string; pr?: string };
+type State = Row & { dir: string; log: string[]; before: Deps };
 
 const PACKAGE_FILES = ["package.json", "pnpm-lock.yaml", "reference/package.json"];
 
@@ -270,143 +275,158 @@ function pack(): string {
 /** @prose
  * # Progress
  *
- * The repositories run side by side and the report waits for all of them, so each step prints a
- * line as it ends, with the repository's name and how long the step took. They go to stderr, so
- * the report on stdout reads the same whether or not they're shown.
+ * Each step runs for every repository before the next one starts, so it prints as one line, with
+ * a dot as each repository ends it and the step's time at the end. The report that follows is in
+ * [report.ts](report.ts).
+ *
+ * A run takes about a minute longer than one that lets a fast repository verify while a slow one
+ * upgrades, since `verify` runs one at a time either way. The dots go to stderr, so the report on
+ * stdout reads the same whether or not they're shown.
  */
-const width = Math.max(...targets.map((repo) => repo.length));
+const seconds = (since: number): string => `${Math.round((Date.now() - since) / 1000)}s`;
 
-function progress(repo: string): (what: string) => void {
-  let last = Date.now();
-  return (what) => {
-    const seconds = Math.round((Date.now() - last) / 1000);
-    last = Date.now();
-    console.error(`  ${repo.padEnd(width)}  ${what}${seconds ? ` ${seconds}s` : ""}`);
-  };
-}
-
-let turn: Promise<unknown> = Promise.resolve();
-function oneAtATime<T>(task: () => Promise<T>): Promise<T> {
-  const run = turn.then(task);
-  turn = run.catch(() => undefined);
-  return run;
-}
-
-async function files(repo: string): Promise<Outcome> {
-  const dir = join(work, repo);
-  const log: string[] = [];
-  const lines: string[] = [];
-  const logFile = join(work, `${repo}.log`);
-  const left = new Set<string>();
-  const step = progress(repo);
-  const byHand: Run = (command, ...args) =>
-    sh(dir, log, command, ...args).catch((error: unknown) => {
-      for (const finding of findings(error)) left.add(finding);
-    });
-  try {
-    await sh(work, log, "gh", "repo", "clone", `${OWNER}/${repo}`, dir, "--", "--quiet");
-    step("cloned");
-    const before = versionsIn(dir, repo);
-    const majors = await alignTo(dir, repo, log, byHand);
-    step("upgraded");
-    rmSync(join(dir, "pnpm-lock.yaml"), { force: true });
-    rmSync(join(dir, "node_modules"), { recursive: true, force: true });
-    await sh(dir, log, "pnpm", "install");
-    await sh(dir, log, "pnpm", "install", "--frozen-lockfile");
-    await byHand("pnpm", "run", "fix");
-    step("installed afresh and fixed");
-
-    // trimEnd, since each line opens with a status column that may be a space.
-    const changed = (await sh(dir, log, "git", "status", "--porcelain")).trimEnd();
-    if (!changed && !left.size) {
-      step("in line");
-      return { repo, lines: ["in line"] };
-    }
-
-    const after = versionsIn(dir, repo);
-    const moved = [...new Set([...Object.keys(after), ...Object.keys(before)])]
-      .filter((name) => before[name] !== after[name])
-      .map((name) =>
-        after[name]
-          ? `${name} ${after[name]}, from ${before[name] ?? "nothing"}`
-          : `${name} removed`,
-      );
-    const other = changed
-      .split("\n")
-      .filter(Boolean)
-      .filter((line) => !PACKAGE_FILES.includes(line.slice(3)))
-      .map((line) => `${line.slice(3)} ${line.startsWith(" D") ? "deleted" : "from craftz"}`);
-
-    // Staged first, so verify sees what the commit will hold: a check that lists files with git,
-    // like prose's lexer test, would otherwise still find the ones a fix deleted.
-    await sh(dir, log, "git", "add", "-A");
-    await oneAtATime(async () => {
-      step("its turn to verify");
-      await byHand("pnpm", "run", "verify");
-    });
-    step(left.size ? `✗ ${left.size} left by hand` : "verified");
-    if (left.size) {
-      writeFileSync(logFile, log.join("\n"));
-      return {
-        repo,
-        lines: [...moved, ...other],
-        failed: `left by hand:\n${[...left].map((line) => `      ${line}`).join("\n")}\n      log: ${logFile}\n      clone: ${dir}`,
-      };
-    }
-    if (local) {
-      lines.push(
-        ...moved,
-        ...other,
-        ...majors.map((m) => `left for review: ${m}`),
-        `clone: ${dir}`,
-      );
-      return { repo, lines };
-    }
-
-    const pkg = readJson<Pkg>(join(dir, "package.json"));
-    const body = [
-      "Brings this repository in line with craftz's rules, from `pnpm align`.",
-      "",
-      ...[...moved, ...other].map((line) => `- ${line}`),
-      ...(majors.length
-        ? ["", "New majors, left for review:", "", ...majors.map((line) => `- ${line}`)]
-        : []),
-      "",
-      "`verify` passed on this branch before it was pushed.",
-    ].join("\n");
-    await sh(dir, log, "git", "checkout", "-b", "align");
-    await sh(dir, log, "git", "add", "-A");
-    await sh(dir, log, "git", "commit", "-m", "Align with craftz", "--quiet");
-    await sh(dir, log, "git", "push", "--force", "-u", "origin", "align", "--quiet");
-    let url: string;
+// One step for every repository given, side by side unless `serial`. A repository that fails it
+// gets `✗`, and drops out of the steps after it.
+async function phase(
+  label: string,
+  step: Step | undefined,
+  going: State[],
+  task: (state: State) => Promise<void>,
+  serial = false,
+): Promise<void> {
+  if (!going.length) return;
+  const began = Date.now();
+  process.stderr.write(label.padEnd(12));
+  const one = async (state: State) => {
+    const start = Date.now();
+    let threw = false;
     try {
-      const label = pkg.private ? [] : ["--label", "internal"];
-      url = await sh(
-        dir,
-        log,
-        "gh",
-        "pr",
-        "create",
-        "--title",
-        "Align with craftz",
-        "--body",
-        body,
-        ...label,
-      );
-    } catch {
-      url = await sh(dir, log, "gh", "pr", "view", "align", "--json", "url", "-q", ".url");
-      await sh(dir, log, "gh", "pr", "edit", "align", "--body", body);
+      await task(state);
+      if (step && !state.cells[step]) state.cells[step] = seconds(start);
+    } catch (error) {
+      threw = true;
+      writeFileSync(join(work, `${state.repo}.log`), state.log.join("\n"));
+      state.status = "failed";
+      state.failed = error instanceof Error ? error.message.split("\n")[0] : String(error);
+      if (step) state.cells[step] = "✗";
     }
-    await sh(dir, log, "gh", "pr", "merge", "align", "--auto", "--squash");
-    step("pull request opened");
-    lines.push(...moved, ...other, ...majors.map((m) => `left for review: ${m}`), url.trim());
-    return { repo, lines, pr: url.trim() };
-  } catch (error) {
-    writeFileSync(logFile, log.join("\n"));
-    const reason = error instanceof Error ? error.message.split("\n")[0] : String(error);
-    step(`✗ failed: ${reason}`);
-    return { repo, lines, failed: `${reason}\n      log: ${logFile}\n      clone: ${dir}` };
+    process.stderr.write(threw || (step && state.cells[step] === "✗") ? "✗" : ".");
+  };
+  if (serial) for (const state of going) await one(state);
+  else await Promise.all(going.map(one));
+  process.stderr.write(`${" ".repeat(targets.length - going.length)}  ${seconds(began)}\n`);
+}
+
+const states: State[] = targets.map((repo) => ({
+  ...row(repo),
+  dir: join(work, repo),
+  log: [],
+  before: {},
+}));
+const going = () => states.filter((state) => !state.status);
+
+// Runs a step that leaves what it finds by hand in the row, and goes past it.
+const byHand =
+  (state: State): Run =>
+  (command, ...args) =>
+    sh(state.dir, state.log, command, ...args).catch((error: unknown) => {
+      for (const found of findings(error)) {
+        if (!state.byHand.includes(found)) state.byHand.push(found);
+      }
+    });
+
+await phase("cloning", "clone", going(), async ({ dir, log, repo }) => {
+  await sh(work, log, "gh", "repo", "clone", `${OWNER}/${repo}`, dir, "--", "--quiet");
+});
+
+await phase("upgrading", "upgrade", going(), async (state) => {
+  state.before = versionsIn(state.dir, state.repo);
+  state.review = await alignTo(state.dir, state.repo, state.log, byHand(state));
+});
+
+await phase("installing", "install", going(), async (state) => {
+  const { dir, log, repo } = state;
+  rmSync(join(dir, "pnpm-lock.yaml"), { force: true });
+  rmSync(join(dir, "node_modules"), { recursive: true, force: true });
+  await sh(dir, log, "pnpm", "install");
+  await sh(dir, log, "pnpm", "install", "--frozen-lockfile");
+  await byHand(state)("pnpm", "run", "fix");
+
+  // trimEnd, since each line opens with a status column that may be a space.
+  const changed = (await sh(dir, log, "git", "status", "--porcelain")).trimEnd();
+  if (!changed && !state.byHand.length) {
+    state.status = "in line";
+    state.cells.verify = "in line";
+    return;
   }
+  const after = versionsIn(dir, repo);
+  state.moved = [...new Set([...Object.keys(after), ...Object.keys(state.before)])]
+    .filter((name) => state.before[name] !== after[name])
+    .map((name) => ({ name, from: state.before[name], to: after[name] }));
+  state.files = changed
+    .split("\n")
+    .filter(Boolean)
+    .filter((line) => !PACKAGE_FILES.includes(line.slice(3)))
+    .map((line) => `${line.slice(3)} ${line.startsWith(" D") ? "deleted" : "from craftz"}`);
+  // Staged first, so verify sees what the commit will hold: a check that lists files with git,
+  // like prose's lexer test, would otherwise still find the ones a fix deleted.
+  await sh(dir, log, "git", "add", "-A");
+});
+
+await phase(
+  "verifying",
+  "verify",
+  going(),
+  async (state) => {
+    await byHand(state)("pnpm", "run", "verify");
+    if (!state.byHand.length) return;
+    writeFileSync(join(work, `${state.repo}.log`), state.log.join("\n"));
+    state.status = "left by hand";
+    state.cells.verify = "✗";
+  },
+  true,
+);
+
+if (!local) await phase("opening", undefined, going(), open);
+
+async function open(state: State): Promise<void> {
+  const { dir, log } = state;
+  const pkg = readJson<Pkg>(join(dir, "package.json"));
+  const body = [
+    "Brings this repository in line with craftz's rules, from `pnpm align`.",
+    "",
+    ...[...state.moved.map(moveLine), ...state.files].map((line) => `- ${line}`),
+    ...(state.review.length
+      ? ["", "New majors, left for review:", "", ...state.review.map((line) => `- ${line}`)]
+      : []),
+    "",
+    "`verify` passed on this branch before it was pushed.",
+  ].join("\n");
+  await sh(dir, log, "git", "checkout", "-b", "align");
+  await sh(dir, log, "git", "add", "-A");
+  await sh(dir, log, "git", "commit", "-m", "Align with craftz", "--quiet");
+  await sh(dir, log, "git", "push", "--force", "-u", "origin", "align", "--quiet");
+  let url: string;
+  try {
+    const label = pkg.private ? [] : ["--label", "internal"];
+    url = await sh(
+      dir,
+      log,
+      "gh",
+      "pr",
+      "create",
+      "--title",
+      "Align with craftz",
+      "--body",
+      body,
+      ...label,
+    );
+  } catch {
+    url = await sh(dir, log, "gh", "pr", "view", "align", "--json", "url", "-q", ".url");
+    await sh(dir, log, "gh", "pr", "edit", "align", "--body", body);
+  }
+  await sh(dir, log, "gh", "pr", "merge", "align", "--auto", "--squash");
+  state.pr = url.trim();
 }
 
 /** @prose
@@ -428,22 +448,20 @@ async function settings(repo: string): Promise<string[]> {
   return local ? checkSettings({ repo, pkg, site }) : writeSettings({ repo, pkg, site }, true);
 }
 
-const outcomes = await Promise.all(targets.map((repo) => files(repo)));
+const settled = states.filter((state) => !state.status || state.status === "in line");
+await phase("settings", undefined, settled, async (state) => {
+  state.settings = await settings(state.repo);
+});
+for (const state of states) state.status ??= "verified";
 
-let failed = false;
-for (const outcome of outcomes) {
-  const lines = [...outcome.lines, ...(outcome.failed ? [] : await settings(outcome.repo))];
-  failed ||= Boolean(outcome.failed);
-  console.log(outcome.failed ? `✗ ${outcome.repo}` : `✓ ${outcome.repo}`);
-  for (const line of lines) console.log(`    ${line}`);
-  if (outcome.failed) console.log(`    failed: ${outcome.failed}`);
-}
+console.log(["", ...report(states), `clones and logs in ${work}`].join("\n"));
+let failed = states.some((state) => state.status !== "verified" && state.status !== "in line");
 
 /** @prose
  * # Waiting for the merges
  *
- * A run ends when its pull requests have merged, so its report says what `main` now holds. Each
- * one prints as it merges, with those still open.
+ * A run ends when its pull requests have merged, so `main` holds what its report says. Each
+ * prints a dot as it merges, and one that doesn't is listed after.
  *
  * It asks GitHub every ten seconds, as `pnpm pr --wait` does. A check counts by its latest run,
  * since adding a label starts a new run that cancels the old one. One that falls behind `main` has
@@ -486,19 +504,22 @@ async function merge(url: string): Promise<string | undefined> {
   }
 }
 
-const opened = outcomes.flatMap((outcome) => (outcome.pr ? [outcome] : []));
+const opened = states.filter((state) => state.pr);
+await phase("merging", undefined, opened, async ({ pr = "" }) => {
+  const problem = await merge(pr);
+  if (problem) throw new Error(problem);
+});
+const problems = opened
+  .filter((state) => state.status === "failed")
+  .map(({ repo, failed }) => `✗ ${repo}: ${failed}`);
 if (opened.length) {
-  console.log(`Waiting for ${opened.length} pull request${opened.length > 1 ? "s" : ""} to merge.`);
-  // Each prints as it ends, with what's still open.
-  const open = new Set(opened.map(({ repo }) => repo));
-  await Promise.all(
-    opened.map(async ({ repo, pr = "" }) => {
-      const problem = await merge(pr);
-      open.delete(repo);
-      failed ||= Boolean(problem);
-      const rest = open.size ? `, ${open.size} left: ${[...open].join(", ")}` : "";
-      console.log(problem ? `✗ ${repo}: ${problem}${rest}` : `✓ ${repo} merged${rest}`);
-    }),
+  console.log(
+    [
+      "",
+      ...problems,
+      `${problems.length ? "✗" : "✓"} ${opened.length - problems.length} merged`,
+    ].join("\n"),
   );
 }
+failed ||= problems.length > 0;
 process.exitCode = failed ? 1 : 0;
