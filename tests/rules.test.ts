@@ -72,17 +72,26 @@ test("only the rules' betas are on a pre-release, each an exact build", () => {
 test("a build for browsers targets this repository's browsers", () => {
   const rule = RULES.find((r) => r.id === "toolchain-browsers");
   const list = BROWSERS.map((b) => `"${b}"`).join(", ");
-  const drift = (vite: string, site = false) =>
-    rule?.check({ files: { "vite.config.ts": vite }, worker: site || undefined } as unknown as Repo)
-      ?.drift;
+  const drift = (vite: string, site = false, pkg: Pkg = { private: true }) =>
+    rule?.check({
+      pkg,
+      files: { "vite.config.ts": vite },
+      worker: site ? { deploys: "app" } : undefined,
+    } as unknown as Repo)?.drift;
+  const pkg: Pkg = {};
   expect(BROWSERS.length).toBeGreaterThan(0);
-  expect(drift(`pack: { platform: "node" }`)).toBeUndefined();
+  expect(
+    drift(`plugins: [craftz()], pack: { entry: ["src/index.ts"] }`, false, pkg),
+  ).toBeUndefined();
   expect(drift(`publicDir: ".prose"`, true)).toBeUndefined();
-  expect(drift(`pack: { target: [${list}, "node26"] }`)).toEqual([]);
+  expect(drift(`plugins: [craftz({ browser: true })], pack: {}`, false, pkg)).toEqual([]);
+  expect(drift(`pack: { target: [${list}, "node26"] }`, false, pkg)).toEqual([
+    "pack.target is set. A package for browsers says craftz({ browser: true })",
+  ]);
   expect(drift(`build: { target: [${list}] }`, true)).toEqual([]);
   expect(drift(`plugins: [sveltekit()]`, true)).toEqual(["build.target isn't set"]);
-  expect(drift(`pack: { target: ["chrome111"] }`)).toEqual([
-    `pack.target is chrome111, not ${BROWSERS.join(" ")}`,
+  expect(drift(`build: { target: ["chrome111"] }`, true)).toEqual([
+    `build.target is chrome111, not ${BROWSERS.join(" ")}`,
   ]);
 });
 

@@ -31,7 +31,7 @@ import { type Config, RULED, written } from "./ruled.ts";
  */
 
 /** A config with `craftz()` in its plugins, which then has what the plugin sets. */
-export const PLUGIN = /\bplugins:\s*\[[^\]]*\bcraftz\(\)/;
+export const PLUGIN = /\bplugins:\s*\[[^\]]*\bcraftz\(/;
 
 const IMPORT = /^import \{ defineConfig \} from "vite-plus";\n/m;
 // Each key craftz() sets in `fmt` and `lint`, at its value, as a pattern.

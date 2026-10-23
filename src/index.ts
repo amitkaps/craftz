@@ -27,10 +27,19 @@
  * rules' [browsers](../docs/rules.md#toolchain-browsers), for whatever Vite bundles. An app's
  * config is its framework's, so it gets neither.
  *
+ * ## A package's config
+ *
+ * A package is one whose `package.json` isn't private, as [the publish axis](../docs/rules.md#axes)
+ * has it. `craftz()` sets how it's packed: publint, strict, inside `vp pack`, and declarations
+ * from Oxc. A package runs in Node, so it packs for `platform: "node"`. One that runs in browsers
+ * too, like markz, says `craftz({ browser: true })`, and packs for `"neutral"`, targeting the
+ * rules' browsers and the Node its `engines` asks for. The package names its entries and the rest.
+ *
  * The Cloudflare plugin stays in the repository's config. It's the repository's dependency, at
  * the version the rules check, and craftz would otherwise need it as a peer.
  */
-import { resolve } from "node:path";
+import { readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { BROWSERS } from "./pinned.ts";
 import { type Config, RULED } from "./ruled.ts";
 import { workerIn } from "./worker.ts";
@@ -38,6 +47,31 @@ import { workerIn } from "./worker.ts";
 // What a static site adds to the rules: the browsers, for whatever Vite bundles.
 function site(root: string): Config {
   return workerIn(root)?.deploys === "static" ? { build: { target: BROWSERS } } : {};
+}
+
+/** What a repository says about itself, where `craftz()` can't read it. */
+export type Options = {
+  /** A package that runs in browsers as well as in Node. */
+  browser?: boolean;
+};
+
+type Pkg = { private?: boolean; engines?: { node?: string } };
+
+// What a package adds to the rules: how it's packed, for where it runs.
+function pack(root: string, { browser = false }: Options): Config {
+  let pkg: Pkg;
+  try {
+    pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as Pkg;
+  } catch {
+    return {};
+  }
+  if (pkg.private) return {};
+  const floor = /^>=\s*([\d.]+)$/.exec(pkg.engines?.node ?? "")?.[1];
+  const node = floor ? [`node${floor}`] : [];
+  const where = browser
+    ? { platform: "neutral", target: [...BROWSERS, ...node] }
+    : { platform: "node" };
+  return { pack: { publint: { strict: true }, dts: { generator: "oxc" }, ...where } };
 }
 
 const isObject = (value: unknown): value is Config =>
@@ -63,13 +97,21 @@ function fill(want: Config, have: Config, path: string, conflicts: string[]): Co
 }
 
 /** The Vite plugin that sets what the rules ask of a config, and never overrides one. */
-export function craftz(): { name: string; config(config: Config): Config } {
+export function craftz(options: Options = {}): {
+  name: string;
+  config(config: Config): Config;
+} {
   return {
     name: "craftz",
     config(config) {
       const conflicts: string[] = [];
       const root = resolve(typeof config["root"] === "string" ? config["root"] : ".");
-      const added = fill({ ...RULED, ...site(root) }, config, "", conflicts);
+      const added = fill(
+        { ...RULED, ...site(root), ...pack(root, options) },
+        config,
+        "",
+        conflicts,
+      );
       if (conflicts.length) {
         const list = conflicts.map((c) => `  ${c}`).join("\n");
         throw new Error(`craftz() won't override vite.config.ts. Take these out of it:\n${list}`);

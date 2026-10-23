@@ -85,7 +85,7 @@ Markdown is read by its headings, like `AGENTS.md`'s sections, since a heading i
 
 ## A thin plugin
 
-`vite.config.ts` and `cloudflare.config.ts` are code. So the values every config shares aren't in either file, but in a call to craftz, from the installed version. `craftz()` sets `fmt`, `lint`, and a package's publint, declarations and platform. A site names its folder as an option, since `craftz()` never guesses one. `worker()` sets a Worker's compatibility date and turns its other addresses off. Vite+ and cf hold a config to them each time they load it, and a new craftz changes them with no edit to the file.
+`vite.config.ts` and `cloudflare.config.ts` are code. So the values every config shares aren't in either file, but in a call to craftz, from the installed version. `craftz()` sets `fmt`, `lint`, and a package's publint, declarations and platform. A package packs for Node unless it says `craftz({ browser: true })`, its one option. A site's folder stays Vite's own `publicDir`. `worker()` sets a Worker's compatibility date and turns its other addresses off. Vite+ and cf hold a config to them each time they load it, and a new craftz changes them with no edit to the file.
 
 A fix edits a config only to add the call, once, when a repository first moves to craftz.
 
