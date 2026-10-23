@@ -24,6 +24,7 @@ import {
   type Pkg,
   VERSIONS,
   here,
+  origin,
   read,
   standard,
   versionsIn,
@@ -52,10 +53,17 @@ export type Fix =
   | { in: "files"; apply: (dir: string, std: string) => void }
   | { in: "github"; apply: (repo: string, pkg: Pkg) => void };
 
+/** @prose
+ * # A rule
+ *
+ * A rule a tool can keep a repository from, like a tool's version or the deploy, is `holdable`.
+ * A repository can hold only those, as the rules' [Holds](../docs/rules.md#holds) say.
+ */
 export type Rule = {
   id: string;
   check: (repo: Repo) => Finding | undefined;
   fix?: Fix;
+  holdable?: boolean;
 };
 
 const pnpm = standard.packageManager?.replace(/^pnpm@/, "");
@@ -159,8 +167,9 @@ function useCraftz(dir: string, std: string): void {
  *
  * A tool every repository writes as this one does, checked where a repository has it.
  */
-const version = (id: string, name: string): Rule => ({
+const version = (id: string, name: string, holdable = true): Rule => ({
   id,
+  holdable,
   check: ({ deps }) => {
     const value = deps[name];
     if (!value) return undefined;
@@ -524,6 +533,7 @@ const commandScript = (id: string, name: string): Rule => ({
 export const RULES: Rule[] = [
   {
     id: "versions-node",
+    holdable: true,
     check: ({ pkg }) => {
       const runtime = pkg.devEngines?.runtime;
       const drift: string[] = [];
@@ -551,6 +561,7 @@ export const RULES: Rule[] = [
   },
   {
     id: "versions-pnpm",
+    holdable: true,
     check: ({ pkg }) => {
       const drift: string[] = [];
       if (pkg.packageManager !== `pnpm@${pnpm}`) {
@@ -579,6 +590,7 @@ export const RULES: Rule[] = [
   version("versions-types-node", "@types/node"),
   {
     id: "versions-vite-plus",
+    holdable: true,
     check: ({ files, deps, vitePlus: own }) => {
       if (!own) return { drift: ["not on Vite+"] };
       const drift: string[] = [];
@@ -604,7 +616,8 @@ export const RULES: Rule[] = [
   version("versions-typescript", "typescript"),
   version("versions-prose", "@amitkaps/prose"),
   version("versions-markz", "@amitkaps/markz"),
-  version("versions-craftz", CRAFTZ),
+  // No tool keeps a repository from craftz, so its version can't be held.
+  version("versions-craftz", CRAFTZ, false),
   version("versions-cf", "cf"),
   version("versions-cf-vite-plugin", "@cloudflare/vite-plugin"),
   {
@@ -879,6 +892,7 @@ export const RULES: Rule[] = [
   },
   {
     id: "cloudflare-config",
+    holdable: true,
     check: ({ worker: site }) => {
       if (!site) return undefined;
       const drift =
@@ -1226,6 +1240,29 @@ function snapshot(dir: string, top = dir, found = new Map<string, string>()): Ma
 }
 
 /** @prose
+ * # Holds that moved
+ *
+ * Up to 0.3.0, craftz kept each repository's holds, by its name. They're in each repository's
+ * `package.json` now, and the fix writes the ones craftz kept into the repository the folder's
+ * `origin` names. Delete this once every repository is on 0.4.0.
+ */
+const MOVED_HOLDS: Record<string, Record<string, string>> = {
+  base: {
+    "versions-typescript":
+      "svelte-check accepts TypeScript 5 and 6 only. Move when its peer range takes 7.",
+    "cloudflare-config":
+      "cf can't deploy SvelteKit, since the adapter doesn't write cf's Build Output. Move when it does.",
+  },
+};
+
+function moveHolds(dir: string): void {
+  const moved = MOVED_HOLDS[origin(dir) ?? ""];
+  const pkg = readPkg(dir);
+  if (!moved || pkg.craftz?.hold) return;
+  writePkg(dir, { ...pkg, craftz: { ...pkg.craftz, hold: moved } });
+}
+
+/** @prose
  * # Fixing the files
  *
  * Every fix in the files is applied, but the held ones, for `craftz fix`, `pnpm align` and `pnpm
@@ -1234,8 +1271,10 @@ function snapshot(dir: string, top = dir, found = new Map<string, string>()): Ma
  * It answers the files it changed, added or removed, sorted, from the folder as it was before and
  * after. That's what changed, whichever fix did it, and it's empty when nothing did.
  */
-export function fixFiles(dir: string, std: string, held: Record<string, string> = {}): string[] {
+export function fixFiles(dir: string, std: string): string[] {
   const before = snapshot(dir);
+  moveHolds(dir);
+  const held = readPkg(dir).craftz?.hold ?? {};
   for (const rule of RULES)
     if (rule.fix?.in === "files" && !held[rule.id]) rule.fix.apply(dir, std);
   const after = snapshot(dir);

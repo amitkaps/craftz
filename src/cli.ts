@@ -11,7 +11,9 @@
  * other.
  *
  * `craftz check` runs every rule on a folder's files, the current one unless another is named.
- * It prints what has drifted and exits 1, with no settings read, so it runs in CI with no login. `craftz fix` writes every fix in the files, the same ones `pnpm align` runs,
+ * It prints its errors, its warnings and its notes, as [the design](../docs/design.md#errors-warnings-and-notes)
+ * has them, and exits 1 only on an error. It reads no settings, so it runs in CI with no login.
+ * `craftz fix` writes every fix in the files, the same ones `pnpm align` runs,
  * then lists the files it changed, checks again and prints what's left to do by hand. A fix can
  * move versions, so `pnpm install` comes next, then `pnpm run fix` for the format.
  *
@@ -53,12 +55,13 @@ import { gone } from "./gone.ts";
 import { pr } from "./pr.ts";
 import { release } from "./release.ts";
 import { buildLog, status } from "./status.ts";
-import { CRAFTZ, OWNER, type Pkg, here } from "./reference.ts";
+import { CRAFTZ, OWNER, type Pkg, here, read } from "./reference.ts";
 import { fixFiles } from "./rules.ts";
 import { cloudflareLogin, githubLogin, hasClassic } from "./settings.ts";
 import { upgrade } from "./upgrade.ts";
 import { RULES_DOC, stated } from "./stated.ts";
-import { type Finding, HELD, checkFolder, origin, repoIn } from "./survey.ts";
+import { notes } from "./notes.ts";
+import { type Finding, checkFolder, origin } from "./survey.ts";
 import { workerIn } from "./worker.ts";
 
 const HELP = `Usage: craftz <command>
@@ -84,9 +87,10 @@ const [command, arg, ...rest] = process.argv.slice(2);
 
 const lines = (f: Finding): string[] => f.drift.map((d) => (f.rule ? `${f.rule}: ${d}` : d));
 
-// Prints a folder's findings, and returns whether anything has drifted.
+// Prints a folder's errors, warnings and notes, and returns whether there's an error.
 async function check(dir: string): Promise<boolean> {
   const { findings } = await checkFolder(dir);
+  const pkg = JSON.parse(read(join(dir, "package.json")) || "{}") as Pkg;
   const sees = new Map(stated().map((s) => [s.id, s.see]));
   const drift = findings.filter((f) => !f.held && f.drift.length);
   console.log(drift.length ? `✗ ${dir}` : `✓ ${dir}`);
@@ -95,8 +99,9 @@ async function check(dir: string): Promise<boolean> {
     if (see) console.log(`    see: ${see}`);
   }
   for (const f of findings.filter((f) => f.held)) {
-    console.log(`    held: ${lines(f).join("; ")}\n      ${f.held}`);
+    console.log(`    warning: ${lines(f).join("; ")}\n      held: ${f.held}`);
   }
+  for (const note of await notes(pkg)) console.log(`    note: ${note}`);
   for (const f of findings.filter((f) => f.unchecked))
     console.log(`    not checked: ${f.unchecked}`);
   return drift.length > 0;
@@ -226,7 +231,7 @@ if (command === "rules" && !rest.length) {
   process.exitCode = (await check(resolve(arg ?? "."))) ? 1 : 0;
 } else if (command === "fix" && !rest.length) {
   const dir = resolve(arg ?? ".");
-  const changed = fixFiles(dir, here, HELD[repoIn(dir)]);
+  const changed = fixFiles(dir, here);
   if (!changed.length) console.log("Changed nothing.\n");
   else {
     console.log("Changed:");

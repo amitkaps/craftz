@@ -6,6 +6,7 @@
  * the versions, engines and scripts. `root` is craftz itself, for the tools it runs. It imports nothing of
  * theirs, so any of them can import it.
  */
+import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -23,6 +24,18 @@ export const here = join(root, "reference");
 
 export const read = (file: string): string => (existsSync(file) ? readFileSync(file, "utf8") : "");
 
+/** The repository the folder's `origin` names, when it's the owner's on GitHub. */
+export function origin(dir: string): string | undefined {
+  let url = "";
+  try {
+    url = execFileSync("git", ["-C", dir, "remote", "get-url", "origin"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {}
+  return new RegExp(`github\\.com[:/]${OWNER}/([^/]+?)(?:\\.git)?$`).exec(url)?.[1];
+}
+
 export type Pkg = {
   name?: string;
   description?: string;
@@ -38,6 +51,8 @@ export type Pkg = {
   devDependencies?: Record<string, string>;
   scripts?: Record<string, string>;
   engines?: { node?: string };
+  // The rules this repository holds, each with its reason, as the rules' Holds say.
+  craftz?: { hold?: Record<string, string> };
 };
 
 export const standard = JSON.parse(read(join(here, "package.json"))) as Pkg;
