@@ -115,7 +115,7 @@ A repository's own libraries, like svelte or micromark, are its own to choose. `
 
 - [`versions-workspace`]{#versions-workspace}: `pnpm-workspace.yaml` is [the reference's](../reference/pnpm-workspace.yaml), word for word, with the override at the repository's own `vite-plus`. The fix writes it whole. A setting a repository wants for itself is a change to these rules.
 
-- **The cooldown.** pnpm's one-day wait on a new version is kept, with only `@amitkaps/*` excluded. A bad release can be caught before it's installed, and our own skip the wait, since each reaches npm only after the owner approves it.
+- **The cooldown.** pnpm's one-day wait on a new version is kept, with only `@amitkaps/*` excluded. A hijacked release can be pulled before it's installed, and our own skip the wait, since each reaches npm only after the owner approves it. The wait guards the libraries and nested packages, hundreds in each lockfile, that `align` moves without review. The shared tools are few, and `pnpm bump` moves them when they're wanted, so a day costs them little. A shorter wait, and leaving the shared tools out of it, are ruled out. Any number of hours is as arbitrary as pnpm's, and the shared tools do the most when they run.
 
 ## Holds
 
