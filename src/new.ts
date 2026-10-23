@@ -18,8 +18,8 @@
  * editor settings, the cooldown, the shared sections of `AGENTS.md`, a package's release files,
  * and a first version of each doc. So it can't follow the rules any less than `craftz fix` does,
  * and a rule's fix reaches the next repository with no second copy here. What it does write is
- * built from [the reference](../reference/README.md) where it can be, like the strict options
- * from `tsconfig.json`, and `.gitignore`, which the reference holds as `gitignore`. The licence is craftz's own. The
+ * built from [the reference](../reference/README.md) where it can be, like `tsconfig.json`,
+ * which extends craftz's, and `.gitignore`, which the reference holds as `gitignore`. The licence is craftz's own. The
  * format and lint the rules ask for, and a site's build target, aren't written at all: the
  * config uses `craftz()`, which sets them from the version the repository installs. `pnpm test` checks the result against the survey.
  *
@@ -136,15 +136,17 @@ function workspace(shape: Shape): string {
 }
 
 function tsconfig(shape: Shape): string {
-  const compilerOptions = (JSON.parse(read("tsconfig.json")) as { compilerOptions: object })
-    .compilerOptions;
+  const { extends: shared, compilerOptions } = JSON.parse(read("tsconfig.json")) as {
+    extends: string;
+    compilerOptions: object;
+  };
   const include = [
     "src",
     "tests",
     "vite.config.ts",
     ...(shape.site ? ["cloudflare.config.ts"] : []),
   ];
-  return JSON.stringify({ compilerOptions, include }, null, 2);
+  return JSON.stringify({ extends: shared, compilerOptions, include }, null, 2);
 }
 
 // Text as the lines of an `@prose` comment, each within 100 characters.
