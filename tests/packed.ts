@@ -25,12 +25,15 @@ export default function setup({ provide }: { provide: (key: "tarball", value: st
   provide("tarball", join(dir, readdirSync(dir)[0] ?? ""));
 }
 
-/** Points a repository's craftz at the tarball, in its pnpm settings, leaving `package.json` as it is. */
-export function usePacked(dir: string, tarball: string): void {
+/**
+ * Points a repository's craftz at the tarball, in its pnpm settings, leaving `package.json` as it
+ * is. It gives back a function that puts the settings back, for after the install, since they're
+ * craftz's and `craftz check` reads them word for word.
+ */
+export function usePacked(dir: string, tarball: string): () => void {
   const settings = join(dir, "pnpm-workspace.yaml");
+  const text = readFileSync(settings, "utf8");
   const override = `  "@amitkaps/craftz": "file:${tarball}"`;
-  writeFileSync(
-    settings,
-    readFileSync(settings, "utf8").replace(/^overrides:\n/m, `$&${override}\n`),
-  );
+  writeFileSync(settings, text.replace(/^overrides:\n/m, `$&${override}\n`));
+  return () => writeFileSync(settings, text);
 }

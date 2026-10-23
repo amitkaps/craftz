@@ -29,18 +29,7 @@ import {
   standard,
   versionsIn,
 } from "./reference.ts";
-import {
-  CI,
-  EXCLUDE,
-  PLUGIN,
-  concurrency,
-  servingProse,
-  withCooldown,
-  withCraftz,
-  withWorker,
-  withOverride,
-  withoutLabel,
-} from "./edit.ts";
+import { PLUGIN, servingProse, withCraftz, withWorker } from "./edit.ts";
 import { rulesetFor, writeLabels, writeRuleset } from "./settings.ts";
 import { BROWSERS } from "./pinned.ts";
 import { stated } from "./stated.ts";
@@ -203,10 +192,6 @@ const vitePlus = VERSIONS["vite-plus"];
  * repository's own options and comments go.
  *
  * The lint block is found by a regular expression, since `vite.config.ts` is code, and has no fix.
- *
- * The editor settings are compared one key at a time, and only this repository's keys, since a
- * repository can add its own, like base's for Svelte. Its fix merges this repository's over the
- * repository's own, so an added setting stays.
  */
 const TSCONFIG = `${CRAFTZ}/tsconfig.json`;
 
@@ -259,34 +244,94 @@ function editFile(file: string, edit: (text: string) => string): void {
 
 type Json = Record<string, unknown>;
 const readJson = (file: string): Json => JSON.parse(readFileSync(file, "utf8")) as Json;
-const editor = Object.fromEntries(EDITOR.map((file) => [file, readJson(join(here, file))]));
 const recommended = (json: Json): string[] =>
   Array.isArray(json.recommendations) ? (json.recommendations as string[]) : [];
 
 /** @prose
- * # The cooldown
+ * # Files craftz owns
  *
- * pnpm's one-day wait is its default, so a repository keeps it by not setting
- * `minimumReleaseAge`. The fix removes that line and writes this repository's exclusions.
+ * CI, pnpm's settings and the editor's are the same in every repository, so each is the
+ * reference's, word for word, and the fix writes it whole. What a repository adds goes
+ * elsewhere, a step in `verify` and a setting in its own config, so no fix edits one by its lines.
+ *
+ * Two follow from the repository's axes. pnpm's override points `vite` at the Vite+ the
+ * repository installs, so a Vite+ that's behind drifts once, in `versions-vite-plus`. An app adds
+ * Svelte's editor settings, from [app/](../reference/app/README.md), since every app starts from
+ * base. The editor's files are compared as JSON, since `vp fmt` lays them out.
  */
+type Axes = { vitePlus?: string; app: boolean };
 
-/** @prose
- * # The actions
- *
- * The versions are read from this repository's CI and a package's release workflow. Only the
- * versions are compared, since a repository can add steps of its own, like sitez installing its
- * packed tarball. The fix rewrites each `uses:` line to this repository's version, and removes a
- * `dependabot.yml`, since versions move here first.
- */
-const WORKFLOWS = [".github/workflows/ci.yml", ".github/workflows/release.yml"];
-const USES = /(uses:\s*)([^@\s]+)@(\S+)/g;
-const actionVersions = (text: string): [string, string][] =>
-  [...text.matchAll(USES)].map((m) => [m[2] ?? "", m[3] ?? ""]);
-const ACTIONS = Object.fromEntries(
-  actionVersions(
-    read(join(here, WORKFLOWS[0] ?? "")) + read(join(here, "package", WORKFLOWS[1] ?? "")),
-  ),
-);
+const axesOf = (repo: Repo): Axes => ({
+  vitePlus: repo.vitePlus,
+  app: repo.worker?.deploys === "app",
+});
+
+function axesIn(dir: string): Axes {
+  const pkg = readPkg(dir);
+  const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+  return { vitePlus: deps["vite-plus"], app: workerIn(dir)?.deploys === "app" };
+}
+
+// A file craftz owns, as the reference in `std` writes it for a repository with these axes.
+function owned(file: string, axes: Axes, std: string): string {
+  if (RELEASE_FILES.includes(file)) return read(join(std, "package", file));
+  const text = read(join(std, file));
+  if (file === WORKSPACE) {
+    const own = axes.vitePlus;
+    return own ? text.replace(/vite-plus-core@[\w.-]+/, `vite-plus-core@${own}`) : text;
+  }
+  if (!EDITOR.includes(file) || !axes.app) return text;
+  const ours = JSON.parse(text) as Json;
+  const adds = readJson(join(std, "app", file));
+  const merged = file.endsWith("extensions.json")
+    ? { recommendations: [...recommended(ours), ...recommended(adds)] }
+    : { ...ours, ...adds };
+  return `${JSON.stringify(merged, null, 2)}\n`;
+}
+
+function same(file: string, have: string, want: string): boolean {
+  if (!file.endsWith(".json")) return have === want;
+  try {
+    return JSON.stringify(JSON.parse(have)) === JSON.stringify(JSON.parse(want));
+  } catch {
+    return false;
+  }
+}
+
+// A rule that each of `files` is craftz's, where `applies` says the repository has them.
+function owns(id: string, files: string[], applies: (pkg: Pkg) => boolean = () => true): Rule {
+  return {
+    id,
+    check: (repo) => {
+      if (!applies(repo.pkg)) return undefined;
+      const axes = axesOf(repo);
+      return drifted(
+        files.flatMap((file) => {
+          const have = repo.files[file];
+          if (!have) return [`no ${file}`];
+          return same(file, have, owned(file, axes, here)) ? [] : [`${file} differs from craftz's`];
+        }),
+      );
+    },
+    fix: {
+      in: "files",
+      apply: (dir, std) => {
+        if (!applies(readPkg(dir))) return;
+        const axes = axesIn(dir);
+        for (const file of files) {
+          const path = join(dir, file);
+          const want = owned(file, axes, std);
+          if (existsSync(path) && same(file, read(path), want)) continue;
+          mkdirSync(dirname(path), { recursive: true });
+          writeFileSync(path, want);
+        }
+      },
+    },
+  };
+}
+
+const WORKSPACE = "pnpm-workspace.yaml";
+const CI = ".github/workflows/ci.yml";
 
 /** @prose
  * # The agents' instructions
@@ -462,12 +507,7 @@ const nav = (text: string): string[] =>
  *
  * A package releases the way every package does, with the files in [package/](../reference/package/README.md)
  * copied in unchanged: the release workflow, the notes' config, and the `label` workflow that
- * checks a pull request has one. CI's `concurrency` is this repository's, word for word.
- *
- * CI had the label check as a step, and ran again when a label changed, so a pull request opened
- * with its label ran `verify` twice. The fix copies the files and takes the step, its triggers
- * and the old `concurrency` out of CI, as [edit.ts](edit.ts) says. One laid out otherwise is
- * left to do by hand, and the check still says so.
+ * checks a pull request has one.
  */
 const RELEASE_FILES = [
   ".github/workflows/release.yml",
@@ -602,27 +642,15 @@ export const RULES: Rule[] = [
   {
     id: "versions-vite-plus",
     holdable: true,
-    check: ({ files, deps, vitePlus: own }) => {
+    check: ({ deps, vitePlus: own }) => {
       if (!own) return { drift: ["not on Vite+"] };
       const drift: string[] = [];
       if (own !== vitePlus) drift.push(`vite-plus is ${own}, not ${vitePlus}`);
-      const override = /vite-plus-core@([\w.-]+)/.exec(files["pnpm-workspace.yaml"] ?? "")?.[1];
-      if (!override) drift.push("pnpm-workspace.yaml has no vite override");
-      else if (override !== vitePlus) {
-        drift.push(`pnpm-workspace.yaml points vite at ${override}, not ${vitePlus}`);
-      }
       if (deps.vite) drift.push(`depends on vite ${deps.vite} directly`);
       return { value: own, drift };
     },
-    // Moves vite-plus and the override together. A repository not on Vite+ moves by hand.
-    fix: {
-      in: "files",
-      apply: (dir, std) => {
-        pin(dir, std, "vite-plus");
-        const want = versionsIn(std)["vite-plus"];
-        if (want) editFile(join(dir, "pnpm-workspace.yaml"), (text) => withOverride(text, want));
-      },
-    },
+    // A repository not on Vite+ moves by hand. The override moves with it, in versions-workspace.
+    fix: { in: "files", apply: (dir, std) => pin(dir, std, "vite-plus") },
   },
   version("versions-typescript", "typescript"),
   version("versions-prose", "@amitkaps/prose"),
@@ -646,29 +674,7 @@ export const RULES: Rule[] = [
   },
   version("versions-wrangler", "wrangler"),
   version("versions-publint", "publint"),
-  {
-    id: "versions-cooldown",
-    check: ({ files }) => {
-      const workspace = files["pnpm-workspace.yaml"] ?? "";
-      const drift: string[] = [];
-      const age = /^minimumReleaseAge:\s*(\S+)/m.exec(workspace)?.[1];
-      if (age) drift.push(`sets minimumReleaseAge to ${age}, not pnpm's default`);
-      const exclude = EXCLUDE.exec(workspace)?.[0] ?? "";
-      const names = [...exclude.matchAll(/-\s*"?([^"\n]+)"?/g)].map((m) => m[1]?.trim());
-      if (!names.includes("@amitkaps/*")) drift.push("doesn't exclude @amitkaps/*");
-      for (const name of names.filter((n) => n !== "@amitkaps/*")) {
-        drift.push(`excludes ${name}`);
-      }
-      return drifted(drift);
-    },
-    fix: {
-      in: "files",
-      apply: (dir, std) => {
-        const ours = read(join(std, "pnpm-workspace.yaml"));
-        editFile(join(dir, "pnpm-workspace.yaml"), (text) => withCooldown(text, ours));
-      },
-    },
-  },
+  owns("versions-workspace", [WORKSPACE]),
   {
     id: "toolchain-types",
     holdable: true,
@@ -750,48 +756,7 @@ export const RULES: Rule[] = [
       return { value, drift: same ? [] : [`${where} is ${value}, not ${BROWSERS.join(" ")}`] };
     },
   },
-  {
-    id: "toolchain-editor",
-    check: ({ files }) =>
-      drifted(
-        EDITOR.flatMap((file) => {
-          const text = files[file];
-          if (!text) return [`no ${file}`];
-          let have: Json;
-          try {
-            have = JSON.parse(text) as Json;
-          } catch {
-            return [`${file} isn't plain JSON`];
-          }
-          const want = editor[file] ?? {};
-          // One line says the file differs, since the fix writes this repository's keys at once.
-          const same = file.endsWith("extensions.json")
-            ? recommended(want).every((name) => recommended(have).includes(name))
-            : Object.keys(want).every(
-                (key) => JSON.stringify(have[key]) === JSON.stringify(want[key]),
-              );
-          return same ? [] : [`${file} differs from craftz's`];
-        }),
-      ),
-    fix: {
-      in: "files",
-      apply: (dir, std) => {
-        for (const file of EDITOR) {
-          const ours = readJson(join(std, file));
-          const path = join(dir, file);
-          const theirs = existsSync(path) ? readJson(path) : {};
-          const merged = file.endsWith("extensions.json")
-            ? {
-                ...theirs,
-                recommendations: [...new Set([...recommended(ours), ...recommended(theirs)])],
-              }
-            : { ...theirs, ...ours };
-          mkdirSync(dirname(path), { recursive: true });
-          writeJson(path, merged);
-        }
-      },
-    },
-  },
+  owns("toolchain-editor", EDITOR),
   {
     id: "scripts-required",
     check: ({ pkg, worker: site }) => {
@@ -1013,34 +978,12 @@ export const RULES: Rule[] = [
     fix: { in: "github", apply: writeRuleset },
   },
   {
-    id: "github-actions",
-    check: ({ files }) => {
-      const drift: string[] = [];
-      for (const file of WORKFLOWS) {
-        for (const [action, version] of actionVersions(files[file] ?? "")) {
-          const want = ACTIONS[action];
-          if (want && version !== want) drift.push(`${action} is ${version}, not ${want}`);
-        }
-      }
-      if (files[".github/dependabot.yml"]) drift.push("has a dependabot.yml");
-      return drifted([...new Set(drift)]);
-    },
-    fix: {
-      in: "files",
-      apply: (dir) => {
-        for (const file of WORKFLOWS) {
-          const path = join(dir, file);
-          const text = read(path);
-          if (!text) continue;
-          writeFileSync(
-            path,
-            text.replace(USES, (line: string, uses: string, action: string) =>
-              ACTIONS[action] ? `${uses}${action}@${ACTIONS[action]}` : line,
-            ),
-          );
-        }
-        rmSync(join(dir, ".github", "dependabot.yml"), { force: true });
-      },
+    ...owns("github-ci", [CI]),
+    // Versions move in the reference first, so a repository doesn't take Dependabot's.
+    check: (repo) => {
+      const finding = owns("github-ci", [CI]).check(repo);
+      const dependabot = repo.files[".github/dependabot.yml"] ? ["has a dependabot.yml"] : [];
+      return drifted([...(finding?.drift ?? []), ...dependabot]);
     },
   },
   {
@@ -1123,36 +1066,7 @@ export const RULES: Rule[] = [
       },
     },
   },
-  {
-    id: "releases-files",
-    check: ({ pkg, files }) => {
-      if (pkg.private) return undefined;
-      const drift = RELEASE_FILES.flatMap((file) => {
-        if (!files[file]) return [`no ${file}`];
-        return files[file] === read(join(here, "package", file))
-          ? []
-          : [`${file} differs from craftz's`];
-      });
-      const ci = files[CI] ?? "";
-      if (/^ {6}- name: Label$/m.test(ci))
-        drift.push("ci.yml checks the label, which label.yml does");
-      if (/^ {4}types: \[.*\blabeled\b/m.test(ci))
-        drift.push("ci.yml runs again when a label changes");
-      if (!ci.includes(concurrency)) drift.push("ci.yml's concurrency isn't craftz's");
-      return drifted(drift);
-    },
-    fix: {
-      in: "files",
-      apply: (dir, std) => {
-        if (readPkg(dir).private) return;
-        for (const file of RELEASE_FILES) {
-          mkdirSync(dirname(join(dir, file)), { recursive: true });
-          writeFileSync(join(dir, file), readFileSync(join(std, "package", file)));
-        }
-        editFile(join(dir, CI), withoutLabel);
-      },
-    },
-  },
+  owns("releases-files", RELEASE_FILES, (pkg) => !pkg.private),
   {
     id: "releases-packing",
     check: ({ pkg, files, deps }) => {

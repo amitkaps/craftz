@@ -47,10 +47,11 @@ for (const [what, start] of starts) {
     // Every site answers only on its domain, internal or not.
     if (worker) expect([worker.workersDev, worker.previewUrls]).toEqual([false, false]);
     expect(worker?.deploys).toBe(start.site ? "static" : undefined);
-    usePacked(dir, inject("tarball"));
+    const restore = usePacked(dir, inject("tarball"));
     const run = (...args: string[]) =>
       promisify(execFile)("pnpm", args, { cwd: dir, maxBuffer: 64 * 1024 * 1024 });
     await run("install");
+    restore();
     await run("run", "verify");
   });
 }

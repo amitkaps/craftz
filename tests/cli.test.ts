@@ -32,8 +32,9 @@ beforeAll(async () => {
     { package: true, site: false, private: false, internal: false },
     "An example, from craftz's test.",
   );
-  usePacked(dir, inject("tarball"));
+  const restore = usePacked(dir, inject("tarball"));
   execFileSync("pnpm", ["install"], { cwd: dir, stdio: "pipe" });
+  restore();
 }, 120_000);
 
 test("check finds what fix puts back", () => {

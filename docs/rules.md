@@ -53,7 +53,7 @@ lint: {
 
 ### The editor
 
-- [`toolchain-editor`]{#toolchain-editor}: every repository has the reference's [.vscode/settings.json](../reference/.vscode/settings.json), the one Vite+ writes, and recommends the extensions its `.vscode/extensions.json` does. A repository can add settings of its own, like base's for Svelte, and `align` keeps them when it writes the reference's.
+- [`toolchain-editor`]{#toolchain-editor}: every repository has the reference's [.vscode/settings.json](../reference/.vscode/settings.json), the one Vite+ writes, and its [.vscode/extensions.json](../reference/.vscode/extensions.json), the same content, read as JSON. An app adds [app/](../reference/app/README.md)'s, which format `.svelte` files and recommend Svelte's extension, since every app starts from base. The fix writes both whole.
 
 The settings make oxc the formatter, on save, with its fixes. The extensions recommended are oxc's and Vitest's, by name, rather than Vite+'s extension pack, which only wraps the two and could add more without a change to these rules. The oxc extension then runs the repository's own `vp fmt` and `vp lint`, so the editor formats with the oxfmt Vite+ pins and the `fmt` block in `vite.config.ts`, the same as `check`.
 
@@ -96,7 +96,7 @@ Bump deliberately, everywhere at once. Being on the latest pnpm doesn't matter. 
 The tools every repository shares are on one version, written the same way, so moving one never leaves two repositories to reconcile. The reference's [package.json](../reference/package.json) has each at an exact version, not a range, so the version a repository names is the one it installs, and nothing moves but through a release of craftz. npm isn't read. A new release is drift only once the reference moves to it, past pnpm's one-day wait.
 
 - [`versions-types-node`]{#versions-types-node}: `@types/node` is the reference's, where a repository has it. It's the major of the Node that `engines` allows, so code can't use newer APIs.
-- [`versions-vite-plus`]{#versions-vite-plus}: every repository is on the reference's `vite-plus`, with the override at the same version and no direct `vite`. [Toolchain](#toolchain-vite) says why.
+- [`versions-vite-plus`]{#versions-vite-plus}: every repository is on the reference's `vite-plus`, with no direct `vite`. pnpm's settings point `vite` at it, by `versions-workspace`. [Toolchain](#toolchain-vite) says why.
 - [`versions-typescript`]{#versions-typescript}: `typescript` is the reference's, where a repository has it.
 - [`versions-prose`]{#versions-prose}: `@amitkaps/prose` is the reference's, where a repository has it.
 - [`versions-markz`]{#versions-markz}: `@amitkaps/markz` is the reference's, where a repository has it.
@@ -111,9 +111,11 @@ A beta's tags don't say which build goes with which, so it's moved by hand. `ali
 
 A repository's own libraries, like svelte or micromark, are its own to choose. `align` moves them within their major version, and lists a new major in its pull request for review.
 
-`pnpm-workspace.yaml` is a settings file, not a workspace. Every repository has the same three settings: the cooldown, `allowBuilds` and the Vite+ override. `allowBuilds` lets esbuild and workerd run their install scripts, when wrangler or the Cloudflare plugin is installed.
+`pnpm-workspace.yaml` is a settings file, not a workspace. Every repository has the same three settings: the cooldown, `allowBuilds` and the Vite+ override. `allowBuilds` lets esbuild and workerd run their install scripts, when wrangler or the Cloudflare plugin is installed, and does nothing where neither is.
 
-- [`versions-cooldown`]{#versions-cooldown}: pnpm's one-day wait on a new version is kept, with only `@amitkaps/*` excluded. A bad release can be caught before it's installed, and our own skip the wait, since each reaches npm only after the owner approves it.
+- [`versions-workspace`]{#versions-workspace}: `pnpm-workspace.yaml` is [the reference's](../reference/pnpm-workspace.yaml), word for word, with the override at the repository's own `vite-plus`. The fix writes it whole. A setting a repository wants for itself is a change to these rules.
+
+- **The cooldown.** pnpm's one-day wait on a new version is kept, with only `@amitkaps/*` excluded. A bad release can be caught before it's installed, and our own skip the wait, since each reaches npm only after the owner approves it.
 
 ## Holds
 
@@ -224,7 +226,7 @@ The config says so in its `@prose` comment. With `cf` logged in, `craftz status`
 Every `main` takes changes the same way. Work happens on a branch, in a pull request, and `ci` has to pass on a branch that's up to date with `main`. The pull request is squash-merged, so `main` reads as one commit per change, and nobody pushes to it, admins included.
 
 - [`github-rules`]{#github-rules}: `main` has one ruleset, named `main`, from [.github/ruleset.json](../reference/.github/ruleset.json). It requires a pull request with no approvals, since there's one maintainer, and the `ci` check, and a package's the `label` check too. It keeps history linear, and blocks force pushes and deleting the branch. Nobody bypasses it.
-- [`github-actions`]{#github-actions}: every workflow uses the actions at the versions the reference's do, and there's no Dependabot. A repository can add steps of its own, but the versions move in the reference first, like every other version.
+- [`github-ci`]{#github-ci}: `.github/workflows/ci.yml` is [the reference's](../reference/.github/workflows/ci.yml), word for word, and there's no Dependabot, since versions move in the reference first. The fix writes it whole. A step a repository adds goes in `verify`, so CI is the same everywhere. A workflow of the repository's own, like markz's fuzz search, is its own.
 - **Merge settings:** from [.github/settings.json](../reference/.github/settings.json). Squash is the only merge, a branch is deleted once it's merged, and auto-merge is on. The topic `craftz` goes with them, so `align` finds the repository.
 
 `craftz settings` writes both for one repository, and asks before removing classic branch protection. `align` writes both to every repository or to the ones named, and removes classic protection without asking. `craftz settings --check` reads both. GitHub shows the branch rules to anyone, but the merge settings only to the owner, so it needs `gh`'s login. A check GitHub's rate limit stopped shows as not checked, not as drift.
@@ -269,7 +271,7 @@ The docs are published at `/docs/<file>.md`, so a link to one works on GitHub an
 
 markz, prose, pagez and sitez are packages, published to npm. A package is any repository whose `package.json` isn't private, and every one releases the same way.
 
-- [`releases-files`]{#releases-files}: The release files are [the reference's package/](../reference/package/README.md), copied into the package unchanged: the release workflow, `.github/release.yml`, which groups the notes, and the `label` workflow, which checks a pull request has one. They name no package, so the copies stay identical and the survey checks them word for word. CI doesn't check the label, or run again when one changes, so a pull request opened with its label runs `verify` once. Its `concurrency` is the reference's.
+- [`releases-files`]{#releases-files}: The release files are [the reference's package/](../reference/package/README.md), copied into the package unchanged: the release workflow, `.github/release.yml`, which groups the notes, and the `label` workflow, which checks a pull request has one. They name no package, so the copies stay identical and the survey checks them word for word. The fix writes them whole.
 - [`releases-packing`]{#releases-packing}: A package packs `dist` with publint. `files` is `["dist"]`, followed only by what the package reads as it runs, like craftz's `docs/rules.md`. `prepack` is `pnpm run build`, and `publishConfig.access` is `public`. publint runs inside `vp pack`, with `pack: { publint: { strict: true } }` and `publint` as a dev dependency, so `build` fails on a package npm would serve badly, and there's no separate publint step.
 - [`releases-types`]{#releases-types}: Types come from Oxc. The pack block sets `dts: { generator: "oxc" }`, so `vp pack` writes the `.d.ts` files without the TypeScript compiler, and fails on an export whose type isn't written out. It's set there, not as `isolatedDeclarations` in `tsconfig.json`, which the editor would apply to tests and config too. A package has no `typescript` dependency, like a site: `vp check` type-checks with tsgolint, which Vite+ installs.
 - [`releases-bundled`]{#releases-bundled}: Our own packages are bundled, not depended on. prose and sitez have markz as a dev dependency, and `vp pack` puts it inside `dist/`. So a package's users never install a second markz, and each package releases on its own, in any order. Picking up a new markz takes a release of the package that bundles it.
@@ -315,7 +317,7 @@ The next merge that changes `package.json` finds that version on npm with no tag
 
 ## CI
 
-GitHub Actions runs one job, named `ci`, on pull requests and on `main`. It installs with `pnpm install --frozen-lockfile` and runs `pnpm run verify`, plus whatever a package adds, like publint or a size budget. In a package, a second workflow, `label`, checks the pull request has one [release-notes label](#release-notes), and runs again when a label changes, without installing anything. The `main` ruleset requires `ci`, and a package's `label` too. Cloudflare's own check on each commit isn't required, since it runs after the merge.
+GitHub Actions runs one job, named `ci`, on pull requests and on `main`. It installs with `pnpm install --frozen-lockfile` and runs `pnpm run verify`, and nothing else. What a package adds, like publint or a size budget, runs in `verify`, so CI is the same in every repository. It doesn't check the label, or run again when one changes, so a pull request opened with its label runs `verify` once. In a package, a second workflow, `label`, checks the pull request has one [release-notes label](#release-notes), and runs again when a label changes, without installing anything. The `main` ruleset requires `ci`, and a package's `label` too. Cloudflare's own check on each commit isn't required, since it runs after the merge.
 
 ## Repositories
 
