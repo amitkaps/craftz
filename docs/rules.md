@@ -115,9 +115,19 @@ A repository's own libraries, like svelte or micromark, are its own to choose. `
 
 - [`versions-cooldown`]{#versions-cooldown}: pnpm's one-day wait on a new version is kept, with only `@amitkaps/*` excluded. A bad release can be caught before it's installed, and our own skip the wait, since each reaches npm only after the owner approves it.
 
-## Held
+## Holds
 
-When a tool a repository depends on can't support a rule yet, the check is held. `craftz check` prints it with its reason, and doesn't count it as drift. Each hold says when to look again, like svelte-check accepting TypeScript 7. Holds are listed in [src/survey.ts](../src/survey.ts).
+When a tool a repository depends on keeps it from a rule, the repository holds the rule, in its own `package.json`, with the reason. The reason says when to look again, like svelte-check accepting TypeScript 7. `craftz check` prints a held rule's drift as a warning, with its reason, and still passes.
+
+```json
+"craftz": {
+  "hold": {
+    "versions-typescript": "svelte-check accepts TypeScript 5 and 6 only. Move when its peer range takes 7."
+  }
+}
+```
+
+Only a rule a tool can block can be held: a tool's version, other than craftz's own, and `cloudflare-config`. A hold on any other rule fails `craftz check`.
 
 A hold is for what a tool can't do, never for a preference. The point of one set of rules is that a choice like Vite+ is made once and paid for once, not argued again in each repository. A hold whose check stops drifting fails `craftz check` until it's removed, so none outlives its reason.
 

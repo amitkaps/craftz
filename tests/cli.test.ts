@@ -8,18 +8,17 @@
  *
  * fix has to name the one file it changed, and a second run has to change nothing.
  *
- * A folder is the repository its `origin` names, whatever the folder is called, so a worktree
- * gets its repository's holds.
+ * A hold in `package.json` makes a holdable rule's error a warning, and the check passes. A hold
+ * on a rule that isn't holdable, or one with nothing to hold, fails it.
  *
  * `craftz new` runs from the package too, so the files it writes from have to be in it.
  */
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, join } from "node:path";
+import { join } from "node:path";
 import { beforeAll, expect, inject, test } from "vite-plus/test";
 import { write } from "../src/new.ts";
-import { repoIn } from "../src/survey.ts";
 import { usePacked } from "./packed.ts";
 
 const dir = join(mkdtempSync(join(tmpdir(), "craftz-cli-")), "example");
@@ -70,13 +69,40 @@ test("new runs from the package, with the files it writes", () => {
   expect([status, stderr]).toEqual([1, expect.stringMatching(/^Usage: craftz new /)]);
 });
 
-test("a folder is the repository its origin names", () => {
-  const dir = mkdtempSync(join(tmpdir(), "craftz-worktree-"));
-  const git = (...args: string[]) => spawnSync("git", ["-C", dir, ...args]);
-  git("init", "-q");
-  expect(repoIn(dir)).toBe(basename(dir));
-  git("remote", "add", "origin", "git@github.com:amitkaps/base.git");
-  expect(repoIn(dir)).toBe("base");
+test("a hold makes a holdable rule's error a warning", () => {
+  const file = join(dir, "package.json");
+  const original = readFileSync(file, "utf8");
+  const pkg = JSON.parse(original) as {
+    devDependencies: Record<string, string>;
+    craftz?: { hold: Record<string, string> };
+  };
+  try {
+    pkg.devDependencies["@types/node"] = "25.9.3";
+    pkg.craftz = { hold: { "versions-types-node": "A tool needs 25. Move when it takes 26." } };
+    writeFileSync(file, JSON.stringify(pkg, null, 2));
+    const held = craftz("check", dir);
+    expect([held.status, held.stdout]).toEqual([
+      0,
+      expect.stringContaining("warning: versions-types-node"),
+    ]);
+    expect(held.stdout).toContain("held: A tool needs 25.");
+
+    pkg.craftz = { hold: { "scripts-verify": "A choice." } };
+    writeFileSync(file, JSON.stringify(pkg, null, 2));
+    const choice = craftz("check", dir);
+    expect([choice.status, choice.stdout]).toEqual([
+      1,
+      expect.stringContaining("scripts-verify: is held, but it isn't"),
+    ]);
+
+    pkg.devDependencies["@types/node"] = JSON.parse(original).devDependencies["@types/node"];
+    pkg.craftz = { hold: { "versions-types-node": "Nothing left to hold." } };
+    writeFileSync(file, JSON.stringify(pkg, null, 2));
+    const stale = craftz("check", dir);
+    expect([stale.status, stale.stdout]).toEqual([1, expect.stringContaining("drop the hold")]);
+  } finally {
+    writeFileSync(file, original);
+  }
 });
 
 test("upgrade leaves craftz itself to pnpm bump", () => {

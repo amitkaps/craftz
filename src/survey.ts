@@ -7,14 +7,13 @@
  * Each repository is compared with the files in [reference/](../reference/), so there's no second
  * copy of them to keep in step. [The rules](../docs/rules.md) say what each check means.
  */
-import { execFileSync } from "node:child_process";
-import { basename, join } from "node:path";
+import { join } from "node:path";
 import { type Rule, RULES } from "./rules.ts";
 import { parts, stated } from "./stated.ts";
-import { OWNER, TOPIC, type Pkg, read } from "./reference.ts";
+import { OWNER, TOPIC, type Pkg, origin, read } from "./reference.ts";
 import { type Worker, worker } from "./worker.ts";
 
-export { type Worker, worker };
+export { type Worker, origin, worker };
 
 /** @prose
  * # The repositories
@@ -159,38 +158,45 @@ export type Finding = {
 };
 
 /** @prose
- * # Held
+ * # Holds
  *
- * Some drift can't be fixed yet, because a tool the repository depends on doesn't support the
- * standard. Each hold names the repository and the check, says why, and says when to look
- * again. A held check is printed with its reason, and doesn't fail `craftz check`.
+ * A repository holds a rule a tool keeps it from, in `craftz.hold` in its `package.json`, with
+ * the reason, which says when to look again. A held rule that drifts is a warning, printed with
+ * its reason, and doesn't fail `craftz check`.
  *
- * A hold is for what a tool can't do, never for a choice. When the reason goes away, so does
- * the hold. A held check that has nothing left to hold reports that as drift, so a hold can't
- * outlive its reason.
+ * A hold is for what a tool can't do, never for a choice, so only a `holdable` rule can be held.
+ * A hold on any other rule is an error, and so is one on a rule with no drift left, so a hold
+ * can't outlive its reason.
  */
-export const HELD: Record<string, Record<string, string>> = {
-  base: {
-    "versions-typescript":
-      "svelte-check accepts TypeScript 5 and 6 only. Move when its peer range takes 7.",
-    "cloudflare-config":
-      "cf can't deploy SvelteKit, since the adapter doesn't write cf's Build Output. Move when it does.",
-  },
-};
-
-function hold(repo: string, check: Check, finding: Finding | undefined): Finding | undefined {
-  const reason = HELD[repo]?.[check.name];
-  if (!reason) return finding;
-  if (!finding?.drift.length) {
-    return { ...finding, drift: [`${check.name} is held, but nothing has drifted: drop the hold`] };
-  }
-  return { ...finding, held: reason };
+function holding(holds: Record<string, string>, it: Repo): Finding[] {
+  const findings = CHECKS.flatMap((check) => {
+    const finding = check.run(it);
+    const reason = holds[check.name];
+    if (!reason) return finding ?? [];
+    if (!check.holdable) {
+      return { rule: check.name, drift: ["is held, but it isn't a rule a tool can block"] };
+    }
+    if (!finding?.drift.length) {
+      return {
+        ...finding,
+        rule: check.name,
+        drift: ["is held, but nothing has drifted: drop the hold"],
+      };
+    }
+    return { ...finding, held: reason };
+  });
+  const unknown = Object.keys(holds).filter((id) => !CHECKS.some((c) => c.name === id));
+  return [
+    ...findings,
+    ...unknown.map((id) => ({ drift: [`${id} is held, but no rule has that id`] })),
+  ];
 }
 
 export type Check = {
   name: string;
   // The part of the rules it's in, which orders the checks.
   group: string;
+  holdable: boolean;
   run: (repo: Repo) => Finding | undefined;
 };
 
@@ -207,6 +213,7 @@ function fromRule(rule: Rule): Check {
   return {
     name: rule.id,
     group: statement?.part ?? "",
+    holdable: rule.holdable ?? false,
     run: (repo) => {
       const finding = rule.check(repo);
       return finding && { ...finding, rule: rule.id };
@@ -231,30 +238,9 @@ function repoOf(files: Files): Repo {
  *
  * Checks a folder from disk, which is how `craftz check` reads a repository, in its own CI or on
  * a laptop. Branch rules and labels aren't read, since they're settings, which `craftz settings`
- * reads and writes.
- *
- * A listed repository's holds apply, found by the repository its `origin` names, so a worktree or
- * a checkout under another name gets them too. A folder with no `origin` on GitHub, like one
- * `pnpm new` just wrote, goes by its own name.
+ * reads and writes. The holds are the folder's own, in its `package.json`.
  */
-/** The repository the folder's `origin` names, when it's the owner's on GitHub. */
-export function origin(dir: string): string | undefined {
-  let url = "";
-  try {
-    url = execFileSync("git", ["-C", dir, "remote", "get-url", "origin"], {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-    }).trim();
-  } catch {}
-  return new RegExp(`github\\.com[:/]${OWNER}/([^/]+?)(?:\\.git)?$`).exec(url)?.[1];
-}
-
-/** The repository a folder holds: the one its `origin` names, or else the folder's name. */
-export const repoIn = (dir: string): string => origin(dir) ?? basename(dir);
-
 export async function checkFolder(dir: string): Promise<{ findings: Finding[]; worker?: Worker }> {
-  const repo = repoIn(dir);
   const it = repoOf(fromDisk(dir));
-  const findings = CHECKS.flatMap((c) => hold(repo, c, c.run(it)) ?? []);
-  return { findings, worker: it.worker };
+  return { findings: holding(it.pkg.craftz?.hold ?? {}, it), worker: it.worker };
 }
