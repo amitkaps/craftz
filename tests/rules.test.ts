@@ -13,7 +13,7 @@ import { BROWSERS } from "../src/browsers.ts";
 import { COMPATIBILITY_DATE } from "../src/runtime.ts";
 import { site } from "../src/cloudflare.ts";
 import { BETA, RULES } from "../src/rules.ts";
-import { parts, stated } from "../src/stated.ts";
+import { parts, printed, stated } from "../src/stated.ts";
 import { CRAFTZ, type Pkg, VERSIONS, here, standard } from "../src/reference.ts";
 import { rulesetFor } from "../src/settings.ts";
 import { CHECKS, type Repo, worker } from "../src/survey.ts";
@@ -30,17 +30,23 @@ test("the rules doc states every rule that's checked, and only those", () => {
   expect([...statedIds].sort()).toEqual([...checked].sort());
 });
 
-test("a rule points to its own id", () => {
+test("a rule is read under its part, with its links resolved, and never from an example", () => {
   const markdown =
-    "## Scripts and Node\n\n- [`scripts-x`]{#scripts-x}: a rule.\n\n```md\n- [`scripts-y`]{#scripts-y}: an example.\n```\n";
+    "## Scripts and Node\n\n### Within\n\n- [`scripts-x`]{#scripts-x}: a rule, as [the reference](../reference/README.md) has it.\n\n```md\n- [`scripts-y`]{#scripts-y}: an example.\n```\n";
   expect(stated(markdown)).toEqual([
     {
       id: "scripts-x",
-      text: "a rule.",
+      text: "a rule, as [the reference](https://craftz.amitkaps.com/reference/README.md) has it.",
       part: "Scripts and Node",
-      see: "craftz rules scripts-x",
     },
   ]);
+});
+
+test("the printed doc resolves every relative link against the site", () => {
+  expect(printed("See [Holds](#holds) and [the reference](../reference/README.md).\n")).toBe(
+    "See [Holds](https://craftz.amitkaps.com/docs/rules.md#holds) and [the reference](https://craftz.amitkaps.com/reference/README.md).\n",
+  );
+  expect(printed()).not.toMatch(/\]\((?!https?:)/);
 });
 
 test("the survey runs every rule", () => {

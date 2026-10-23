@@ -32,7 +32,8 @@ import { CRAFTZ, OWNER, type Pkg, here, read } from "./reference.ts";
 import { fixFiles } from "./rules.ts";
 import { cloudflareLogin, githubLogin, hasClassic } from "./settings.ts";
 import { upgrade } from "./upgrade.ts";
-import { RULES_DOC, stated } from "./stated.ts";
+import { finding, printOne } from "@amitkaps/markz/rules";
+import { craftzRules, printed } from "./stated.ts";
 import { notes } from "./notes.ts";
 import { type Finding, checkFolder, origin } from "./survey.ts";
 import { workerIn } from "./worker.ts";
@@ -58,14 +59,20 @@ const HELP = `Usage: craftz <command>
 
 const [command, arg, ...rest] = process.argv.slice(2);
 
-const lines = (f: Finding): string[] => f.drift.map((d) => (f.rule ? `${f.rule}: ${d}` : d));
+// Each drift a finding, in markz's line. Drift is a warning, and a held rule's drift ends with
+// its reason.
+const lines = (f: Finding): string[] =>
+  f.drift.map((message) =>
+    finding({ tool: "craftz", level: "warning", code: f.rule, message, held: f.held }),
+  );
 
 /** @prose
  * # Check and fix
  *
- * `check` prints a folder's errors, warnings and notes, as
- * [the design](../docs/design.md#errors-warnings-and-notes) has them, and exits 1 only on an
- * error. It reads no settings, so it runs in CI with no login.
+ * `check` prints a folder's warnings and notes, as
+ * [the design](../docs/design.md#errors-warnings-and-notes) has them, each in markz's line, and
+ * exits 1 on a warning that isn't held. It reads no settings, so it runs in CI with no login.
+ * The lines stay grouped under the folder, since `align` reads them per repository.
  *
  * `fix` writes every fix, the same ones `pnpm align` runs, then checks again. A fix can move
  * versions, so `pnpm install` comes next, then `pnpm run fix` for the format.
@@ -73,19 +80,17 @@ const lines = (f: Finding): string[] => f.drift.map((d) => (f.rule ? `${f.rule}:
 async function check(dir: string): Promise<boolean> {
   const { findings } = await checkFolder(dir);
   const pkg = JSON.parse(read(join(dir, "package.json")) || "{}") as Pkg;
-  const sees = new Map(stated().map((s) => [s.id, s.see]));
   const drift = findings.filter((f) => !f.held && f.drift.length);
   console.log(drift.length ? `✗ ${dir}` : `✓ ${dir}`);
   for (const line of drift.flatMap(lines)) console.log(`    ${line}`);
-  for (const see of new Set(drift.map((f) => sees.get(f.rule ?? "")))) {
-    if (see) console.log(`    see: ${see}`);
-  }
-  for (const f of findings.filter((f) => f.held)) {
-    console.log(`    warning: ${lines(f).join("; ")}\n      held: ${f.held}`);
-  }
-  for (const note of await notes(pkg)) console.log(`    note: ${note}`);
-  for (const f of findings.filter((f) => f.unchecked))
-    console.log(`    not checked: ${f.unchecked}`);
+  for (const line of findings.filter((f) => f.held).flatMap(lines)) console.log(`    ${line}`);
+  const said = [
+    ...(await notes(pkg)),
+    ...findings.flatMap((f) => (f.unchecked ? [`not checked: ${f.unchecked}`] : [])),
+  ];
+  for (const message of said)
+    console.log(`    ${finding({ tool: "craftz", level: "note", message })}`);
+  if (drift.length) console.log("    craftz: `craftz rules <id>` prints the rule an id names");
   return drift.length > 0;
 }
 
@@ -227,14 +232,15 @@ async function settings(dir: string, checking: boolean, yes: boolean): Promise<b
 
 if (command === "rules" && !rest.length) {
   if (!arg) {
-    process.stdout.write(readFileSync(RULES_DOC, "utf8"));
+    process.stdout.write(printed());
   } else {
-    const rule = stated().find((s) => s.id === arg);
+    const rule = printOne([craftzRules()], arg);
     if (!rule) {
-      console.error(`craftz: no rule named ${arg}. \`craftz rules\` prints them all.`);
+      const message = `no rule \`${arg}\`, and \`craftz rules\` prints every one`;
+      console.error(finding({ tool: "craftz", level: "error", message }));
       process.exit(1);
     }
-    console.log(`${rule.id}, under ${rule.part}\n\n${rule.text}`);
+    process.stdout.write(rule);
   }
 } else if (command === "check" && !rest.length) {
   process.exitCode = (await check(resolve(arg ?? "."))) ? 1 : 0;
