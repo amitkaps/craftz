@@ -21,11 +21,10 @@ Every repository is on 0.3.0. 0.4.0 is a breaking release, so it carries every c
 - **Pull requests.** `pnpm pr` and `pnpm gone` run craftz's commands, in place of the scripts every repository copied. `pr` starts where the title says, and stops when the branch has nothing new for `main`. A package's label is checked by `label.yml`, so a pull request runs `verify` once. `gone` removes a merged branch's worktree.
 - **What's live.** `craftz status` reads CI on `main`, the open pull requests, npm's version against `package.json` on `main`, the latest release, and a site's build, addresses and audience, on cf or wrangler.
 - **Releases.** The release workflow stages a version on npm and tags it once approved, and each release's notes say what to change when a repository moves. `pnpm bump` moves the reference's versions before a release. After it, `pnpm align` runs `craftz upgrade` in a clone of each repository, so a change reaches the others only once it's released. `craftz new` starts a repository that passes the rules, from any folder with `pnpm dlx`. `craftz release` opens a package's release from its own folder. align and bump are this repository's own scripts, for whoever keeps the repositories, and the package doesn't ship them.
-- **The repositories.** The public ones carry the topic `craftz`, which is how align finds them.
+- **The repositories.** The public ones carry the topic `craftz`, which is how align finds them. The one that kept the rules before craftz is deleted, with its site, since craftz holds its rules and lessons.
 
 ## Later
 
-- The old repository retires. The one that kept the rules before craftz is archived with its history, and its site redirects to craftz's, for the links outside these repositories. Nothing in these repositories links to it, and every `AGENTS.md` links to craftz.
 - The beta packages that [`versions-beta`](rules.md#versions-beta) names move to their releases when they graduate, which align reports.
 - The app moves to cf when SvelteKit's adapter writes cf's Build Output, and wrangler leaves the reference with it.
 - The app moves to TypeScript 7 when svelte-check's peer range takes it.
