@@ -1,14 +1,4 @@
 {
   "extends": "@amitkaps/craftz/tsconfig.json",
-  "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "lib": ["ESNext"],
-    "types": ["node"],
-    "skipLibCheck": true,
-    "noEmit": true,
-    "allowImportingTsExtensions": true
-  },
   "include": ["src", "tests", "vite.config.ts", "cloudflare.config.ts"]
 }
