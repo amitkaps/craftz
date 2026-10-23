@@ -83,7 +83,10 @@ test("our own package is exact and at least the reference's, and its fix only ra
 
   const fixed = (value: string) => {
     const dir = mkdtempSync(join(tmpdir(), "craftz-"));
-    writeFileSync(join(dir, "package.json"), JSON.stringify({ devDependencies: { [name]: value } }));
+    writeFileSync(
+      join(dir, "package.json"),
+      JSON.stringify({ devDependencies: { [name]: value } }),
+    );
     if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
     return JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).devDependencies[name];
   };
