@@ -1,14 +1,10 @@
 # Plan
 
-craftz 0.4.0 is on npm, and its docs are live at [craftz.amitkaps.com](https://craftz.amitkaps.com). What each release changed is in its [notes on GitHub](https://github.com/amitkaps/craftz/releases). This plan says what's next, in order, and what works now. [The design](design.md) is the whole of what craftz becomes. Each repository moves to a release in its own pull request, which its own plan tracks.
+craftz 0.5.0 is on npm, and its docs are live at [craftz.amitkaps.com](https://craftz.amitkaps.com). What each release changed is in its [notes on GitHub](https://github.com/amitkaps/craftz/releases). This plan says what's next, in order, and what works now. [The design](design.md) is the whole of what craftz becomes. Each repository moves to a release in its own pull request, which its own plan tracks.
 
 ## Next, in order
 
-0.5.0 is a breaking release: a static site's `cloudflare.config.ts` is `site()`, and the site installs neither cf nor Cloudflare's plugin, since `craftz deploy` uploads it. craftz's own site deploys this way from `main`, with the build token every Worker uses. An app on wrangler, like base, deploys as it did.
-
-- [ ] **Release 0.5.0.** Its notes say what each repository changes. align's fix rewrites the config, the Vite config and the dependencies, so what's left by hand is the type errors 0.4.0 found in prose and pagez, and in a private site.
-- [ ] **Move craftz-test first.** Align it alone and merge, and check its Workers Build deploys with `craftz deploy`.
-- [ ] **Move the rest.** `pnpm align` moves every repository. A private site's `_redirects` goes with its Worker, as `_headers` does for craftz's site, so check its 301s once it's live.
+- [ ] **Rules read with markz's.** `craftz rules` reads rules.md with markz's [`rules`](https://github.com/amitkaps/markz/blob/main/docs/plan.md), bundled, in place of `stated.ts`'s regex. A relative link prints resolved against the site, where 10 print broken today. Each finding takes markz's line. Drift is a warning, a held rule is a warning that ends with `; held: <reason>` and passes, and a note is a note. `check`'s report keeps its group per repository, since align reads it. It waits for markz's subpath.
 
 ## Where it is
 
