@@ -1,20 +1,9 @@
 # @prose
 # # pnpm's settings
 #
-# pnpm 12 reads project settings from here. It's a settings file, not a workspace, and its
-# settings are the rules', from craftz.
-
-# @prose
-# Vite+ ships its own build of Vite, and every `vite` in the tree is pointed at it. Bump this
-# alongside the `vite-plus` devDependency, in every repository at once. Since that build is
-# an npm alias, pnpm can't check it against the usual `vite` peer ranges, so those checks
-# are off for `vite`.
-overrides:
-  "vite@*": "npm:@voidzero-dev/vite-plus-core@1.3.0"
-
-peerDependencyRules:
-  allowAny:
-    - vite
+# pnpm 12 reads project settings from here, not from `.npmrc` or `package.json`. It's a
+# settings file, not a workspace. craftz writes it, the same in every repository, so a change
+# here is a change to [the rules](https://craftz.amitkaps.com/docs/rules.md).
 
 # @prose
 # pnpm holds back a version for a day after it's published, so a bad release can be caught
@@ -25,7 +14,20 @@ minimumReleaseAgeExclude:
   - "@amitkaps/*"
 
 # @prose
-# Dependencies allowed to run install scripts. workerd is a native binary, the local Cloudflare
-# runtime, which `cf` brings along when it reads the Workers' build settings.
+# Dependencies allowed to run install scripts. Both are native binaries: esbuild for the
+# build, and workerd for the local Cloudflare runtime.
 allowBuilds:
+  esbuild: true
   workerd: true
+
+# @prose
+# Vite+ ships its own build of Vite, and every `vite` in the tree is pointed at it, at the
+# version of the `vite-plus` devDependency, so the two move together. Since that build is an
+# npm alias, pnpm can't check it against the usual `vite` peer ranges, so those checks
+# are off for `vite`.
+overrides:
+  "vite@*": "npm:@voidzero-dev/vite-plus-core@1.3.0"
+
+peerDependencyRules:
+  allowAny:
+    - vite

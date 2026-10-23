@@ -233,45 +233,61 @@ export default defineConfig({
 `);
 });
 
-test("a package's CI leaves the label to label.yml, and the fix takes it out", () => {
-  const ci = readFileSync(join(here, ".github/workflows/ci.yml"), "utf8");
-  const step = `      # @prose
-      # # One label
-      - name: Label
-        run: |
-          node -e '
-            process.exit(0);
-          '
-
-`;
-  const old = ci
-    .replace(
-      "  pull_request:\n    branches: [main]\n",
-      (on) =>
-        `  # A label added or taken off runs it again.\n${on}    types: [opened, synchronize, reopened, labeled, unlabeled]\n`,
-    )
-    .replace(
-      /^# A new push.*\nconcurrency:\n.*\n/m,
-      "# Grouped apart.\nconcurrency:\n  group: ci-${{ github.ref }}\n",
-    )
-    .replace("      - run: pnpm install", `${step}      - run: pnpm install`);
-  expect(old).not.toBe(ci);
-  const dir = mkdtempSync(join(tmpdir(), "craftz-ci-"));
-  writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "x" }));
+test("the files craftz owns are its own word for word, and the fix writes them whole", () => {
+  const read = (file: string) => readFileSync(join(here, file), "utf8");
+  const ci = read(".github/workflows/ci.yml");
+  const workspace = read("pnpm-workspace.yaml");
+  // A Vite+ that's behind keeps its override, so only versions-vite-plus says it's behind.
+  const held = workspace.replace(/vite-plus-core@[\w.-]+/, "vite-plus-core@1.0.0");
+  const dir = mkdtempSync(join(tmpdir(), "craftz-owned-"));
+  const pkg = { name: "x", devDependencies: { "vite-plus": "1.0.0" } };
+  writeFileSync(join(dir, "package.json"), JSON.stringify(pkg));
   mkdirSync(join(dir, ".github/workflows"), { recursive: true });
-  writeFileSync(join(dir, ".github/workflows/ci.yml"), old);
-  const rule = RULES.find((r) => r.id === "releases-files");
-  const files = { ".github/workflows/ci.yml": old };
-  expect(rule?.check({ pkg: { name: "x" }, files } as unknown as Repo)?.drift).toEqual([
-    "no .github/workflows/release.yml",
-    "no .github/workflows/label.yml",
-    "no .github/release.yml",
-    "ci.yml checks the label, which label.yml does",
-    "ci.yml runs again when a label changes",
-    "ci.yml's concurrency isn't craftz's",
+  writeFileSync(join(dir, ".github/workflows/ci.yml"), ci.replace("name: Verify", "name: Check"));
+  writeFileSync(join(dir, "pnpm-workspace.yaml"), workspace);
+  const files = () =>
+    Object.fromEntries(
+      [".github/workflows/ci.yml", "pnpm-workspace.yaml"].map((file) => [
+        file,
+        readFileSync(join(dir, file), "utf8"),
+      ]),
+    );
+  const repo = () => ({ pkg, files: files(), deps: pkg.devDependencies, vitePlus: "1.0.0" });
+  const ids = ["github-ci", "versions-workspace"];
+  const rules = RULES.filter((r) => ids.includes(r.id));
+  expect(rules.map((rule) => rule.check(repo() as unknown as Repo)?.drift)).toEqual([
+    ["pnpm-workspace.yaml differs from craftz's"],
+    [".github/workflows/ci.yml differs from craftz's"],
   ]);
-  if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
-  expect(readFileSync(join(dir, ".github/workflows/ci.yml"), "utf8")).toBe(ci);
+  for (const rule of rules) if (rule.fix?.in === "files") rule.fix.apply(dir, here);
+  expect(files()).toEqual({ ".github/workflows/ci.yml": ci, "pnpm-workspace.yaml": held });
+  expect(rules.map((rule) => rule.check(repo() as unknown as Repo)?.drift)).toEqual([[], []]);
+});
+
+test("the editor's settings are compared as JSON, and an app's add Svelte's", () => {
+  const settings = ".vscode/settings.json";
+  const extensions = ".vscode/extensions.json";
+  const read = (file: string) => JSON.parse(readFileSync(join(here, file), "utf8")) as object;
+  const rule = RULES.find((r) => r.id === "toolchain-editor");
+  const repo = (files: object, deploys?: string) =>
+    ({ pkg: {}, files, worker: deploys && { deploys } }) as unknown as Repo;
+  // Laid out otherwise, as `vp fmt` can, it's still the reference's.
+  const spread = {
+    [settings]: JSON.stringify(read(settings), null, 4),
+    [extensions]: JSON.stringify(read(extensions), null, 4),
+  };
+  expect(rule?.check(repo(spread))?.drift).toEqual([]);
+  expect(rule?.check(repo(spread, "app"))?.drift).toEqual([
+    `${settings} differs from craftz's`,
+    `${extensions} differs from craftz's`,
+  ]);
+  const app = {
+    [settings]: JSON.stringify({ ...read(settings), ...read(`app/${settings}`) }),
+    [extensions]: JSON.stringify({
+      recommendations: ["oxc.oxc-vscode", "vitest.explorer", "svelte.svelte-vscode"],
+    }),
+  };
+  expect(rule?.check(repo(app, "app"))?.drift).toEqual([]);
 });
 
 test("a prose site names .prose as its folder, and the fix writes it", () => {
@@ -291,22 +307,6 @@ test("a prose site names .prose as its folder, and the fix writes it", () => {
   const fixed = readFileSync(join(dir, "vite.config.ts"), "utf8");
   expect(fixed).toContain('  publicDir: ".prose",\n');
   expect(rule?.check(repo(fixed))?.drift).toEqual([]);
-});
-
-test("a CI whose only prose was the label step's gets the reference's opening comment", () => {
-  const ci = readFileSync(join(here, ".github/workflows/ci.yml"), "utf8");
-  const step =
-    "      # @prose\n      # # One label\n      - name: Label\n        run: |\n          node -e '\n            process.exit(0);\n          '\n\n";
-  const old = ci
-    .replace(/^(?:#.*\n)+/, "")
-    .replace("      - run: pnpm install", `${step}      - run: pnpm install`);
-  const dir = mkdtempSync(join(tmpdir(), "craftz-ci-prose-"));
-  writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "x" }));
-  mkdirSync(join(dir, ".github/workflows"), { recursive: true });
-  writeFileSync(join(dir, ".github/workflows/ci.yml"), old);
-  const fix = RULES.find((r) => r.id === "releases-files")?.fix;
-  if (fix?.in === "files") fix.apply(dir, here);
-  expect(readFileSync(join(dir, ".github/workflows/ci.yml"), "utf8")).toBe(ci);
 });
 
 test("verify runs craftz check after prose check, and the fix puts it there once", () => {

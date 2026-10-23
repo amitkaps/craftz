@@ -13,9 +13,9 @@
  * puts a site behind Cloudflare Access, which its config then says.
  *
  * It writes only what's the new repository's own: its name and description, its source, the
- * Vite config for what it publishes and deploys, and CI. Then it runs every fix in [rules.ts](rules.ts), the same ones
- * `craftz fix` runs. They write the rest: the versions and engines, the shared scripts, the
- * editor settings, the cooldown, the shared sections of `AGENTS.md`, a package's release files,
+ * Vite config for what it publishes and deploys. Then it runs every fix in [rules.ts](rules.ts), the same ones
+ * `craftz fix` runs. They write the rest: the versions and engines, the shared scripts, CI, the
+ * editor settings, pnpm's settings, the shared sections of `AGENTS.md`, a package's release files,
  * and a first version of each doc. So it can't follow the rules any less than `craftz fix` does,
  * and a rule's fix reaches the next repository with no second copy here. What it does write is
  * built from [the reference](../reference/README.md) where it can be, like `tsconfig.json`,
@@ -115,25 +115,6 @@ async function packageJson(name: string, shape: Shape, description: string): Pro
   );
 }
 
-function workspace(shape: Shape): string {
-  const text = read("pnpm-workspace.yaml");
-  const blocks = text.split(/\n(?=# @prose\n)/);
-  const pick = (key: string): string => {
-    const found = blocks.find((b) => b.includes(`\n${key}:`));
-    if (!found) throw new Error(`the reference's pnpm-workspace.yaml has no ${key}`);
-    return found.trim();
-  };
-  const header = [
-    "# @prose",
-    "# # pnpm's settings",
-    "#",
-    "# pnpm 12 reads project settings from here. It's a settings file, not a workspace, and its",
-    "# settings are the rules', from craftz.",
-  ].join("\n");
-  const parts = [header, ...(shape.site ? [pick("allowBuilds")] : []), pick("overrides")];
-  return parts.join("\n\n");
-}
-
 function tsconfig(shape: Shape): string {
   const { extends: shared } = JSON.parse(read("tsconfig.json")) as { extends: string };
   const include = [
@@ -210,30 +191,6 @@ ${[plugins, ...(shape.package ? [pack] : [])].join("\n")}
   },
 });
 `;
-}
-
-// The reference's CI, with a header that fits the new one.
-function ci(shape: Shape): string {
-  const job = read(".github/workflows/ci.yml").slice(
-    read(".github/workflows/ci.yml").indexOf("name: CI"),
-  );
-  const header = [
-    "# @prose",
-    "# # CI",
-    "#",
-    "# Checks every pull request and every push to `main` with `pnpm run verify`.",
-    ...(shape.site
-      ? ["# Cloudflare runs the same script before each deploy, which its Git integration does."]
-      : []),
-    ...(shape.package
-      ? ["# The release workflow runs the same script before it stages a version."]
-      : []),
-    ...(shape.package || shape.site
-      ? []
-      : ["# Nothing deploys or releases: the scripts run on a laptop."]),
-    "# The job is named `ci`, the check that branch protection requires.",
-  ].join("\n");
-  return `${header}\n${job}`;
 }
 
 function agents(name: string, description: string): string {
@@ -343,10 +300,8 @@ export async function write(
   if (existsSync(dir)) throw new Error(`${dir} already exists`);
   const files: Record<string, string> = {
     "package.json": `${await packageJson(name, start, description)}\n`,
-    "pnpm-workspace.yaml": `${workspace(start)}\n`,
     "tsconfig.json": `${tsconfig(start)}\n`,
     "vite.config.ts": viteConfig(start),
-    ".github/workflows/ci.yml": ci(start),
     "AGENTS.md": agents(name, description),
     "README.md": readme(name, start, description),
     // npm leaves a `.gitignore` out of a package, so the reference holds it without the dot.

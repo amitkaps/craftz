@@ -1,9 +1,10 @@
 # @prose
 # # CI
 #
-# Checks every pull request and every push to `main` with `pnpm run verify`.
-# The release workflow runs the same script before it stages a version.
-# The job is named `ci`, the check that branch protection requires.
+# Checks every pull request and every push to `main` with `pnpm run verify`, the script a
+# site's deploy and a package's release run first too. It doesn't deploy or release, and it's
+# the same in every repository, so what a repository adds goes in `verify`. The job is named
+# `ci`, the check that branch protection requires.
 name: CI
 
 on:
