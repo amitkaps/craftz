@@ -27,7 +27,9 @@ A package removes both. A repository checks itself against the version it instal
 
 ## One rule, one check, one fix
 
-Each rule has one implementation. [The rules](rules.md) word it once, as a list item that opens with its id. [src/rules.ts](../src/rules.ts) holds its check and, where it can be automated, its fix, under the same id. A test fails if either has an id the other doesn't. `craftz check` and `craftz fix` run the rules in a repository, and align calls the same code in each clone, with no second copy of any rule. A fix that edits a repository's own code, like `vite.config.ts` or CI, does it through [src/edit.ts](../src/edit.ts), which reads the file by its lines. That's the property to protect as craftz grows.
+Each rule has one implementation. [The rules](rules.md) word it once, as a list item that opens with its id. [src/rules.ts](../src/rules.ts) holds its check and, where it can be automated, its fix, under the same id. A test fails if either has an id the other doesn't. `craftz check` and `craftz fix` run the rules in a repository, and align calls the same code in each clone, with no second copy of any rule. That's the property to protect as craftz grows.
+
+A rule is yes or no. It has one right answer, so a repository meets it or drifts, and a reader never picks between options. Where a tool keeps a repository from the answer, the repository holds the rule, as [errors, warnings and notes](#errors-warnings-and-notes) say. A rule never grows a second answer for it.
 
 The files a rule compares with are in [reference/](../reference/README.md), laid out as a repository has them. A version, a strict option or a workflow is read from there, not written out twice, so the rules can't disagree with the example.
 
@@ -71,17 +73,27 @@ Some pairs meet badly, and they're allowed, with what's lost said where it appli
 
 When cf can deploy SvelteKit, only `craftz deploy` changes, and the app needs no change of its own.
 
+## No edits by line
+
+A fix never edits a file by its lines. Regular expressions depend on how a file is laid out, and most fixes that missed a real repository missed there. Each file a rule reaches is one of three kinds, and none needs a line edit.
+
+- **Files craftz owns** are written whole, from [reference/](../reference/README.md) and the repository's axes, and checked for an exact match. They're the workflows, `.github/release.yml`, `.vscode/` and `pnpm-workspace.yaml`. What a package adds to CI, like publint or a size budget, goes in `verify`, so CI is the same everywhere.
+- **Code the repository writes** takes craftz's values through a call, and the check only looks for the call. `vite.config.ts` uses `craftz()` and `cloudflare.config.ts` uses `worker()`, so no value in either is read or edited.
+- **JSON** is parsed. `package.json` holds the versions and the holds, and `tsconfig.json` extends the one craftz ships.
+
+Markdown is read by its headings, like `AGENTS.md`'s sections, since a heading is the structure. A fix that moved repositories off an old layout is deleted once every repository is past it, so the edits don't pile up.
+
 ## A thin plugin
 
-`vite.config.ts` is code, so a value in it can only be read and edited by its lines, which break when a file is laid out otherwise. So the values every config shares, `fmt` and `lint`, aren't in the file. `craftz()` sets them, from the installed version, and the check only looks for `craftz()`. Vite+ holds a config to them each time it loads it, in the editor as well as in `verify`, and a new craftz changes them with no edit to the file. `tsconfig.json` is JSON, which reads cleanly, so its options are checked where they are.
+`vite.config.ts` and `cloudflare.config.ts` are code. So the values every config shares aren't in either file, but in a call to craftz, from the installed version. `craftz()` sets `fmt`, `lint`, and a package's publint, declarations and platform. A site names its folder as an option, since `craftz()` never guesses one. `worker()` sets a Worker's compatibility date and turns its other addresses off. Vite+ and cf hold a config to them each time they load it, and a new craftz changes them with no edit to the file.
 
-A fix edits a config only where the plugin can't do the job: adding a plugin, like `craftz()` itself, naming a site's folder, or changing a file Vite doesn't read.
+A fix edits a config only to add the call, once, when a repository first moves to craftz.
 
 `craftz()` fills in only what the repository leaves unset, or fails and names the conflict, and a test holds it to that. It has to, since a plugin's `config` hook wins over the repository's own `vite.config.ts` without a word. With `proseWrap: "preserve"` in the config and `"never"` from a plugin, oxfmt used the plugin's.
 
 ## Files that stay in the repository
 
-GitHub reads workflows and `.github/release.yml` from the repository, and the editor reads `.vscode/`. These stay as files, but short ones whose steps call craftz's commands, so they rarely change. craftz manages them, and each repository checks its own against the version it installs. `craftz check` compares them with the installed version's, and `craftz fix` writes them.
+GitHub reads workflows and `.github/release.yml` from the repository, the editor reads `.vscode/`, and pnpm reads `pnpm-workspace.yaml`. These stay as files, but short ones whose steps call craftz's commands, so they rarely change. craftz owns them, and each repository checks its own against the version it installs. `craftz check` compares them with the installed version's, and `craftz fix` writes them whole.
 
 They aren't reusable workflows, which would version separately from the package. The release workflow keeps npm's trusted publishing as it is.
 
@@ -139,7 +151,7 @@ A hold is a field in the repository's `package.json`, from a rule's id to its re
 
 A note that reads npm, like a newer craftz or a graduated beta, is left out when npm can't be reached. CI never fails because npm is down.
 
-Where a rule has two right answers, like an app deploying with wrangler while cf can't build it, the rule says so and its check takes either. That's not a hold, since neither answer is drift.
+An app that deploys with wrangler while cf can't build it holds `cloudflare-config`. Its `wrangler.toml` is its own until the hold goes, and no rule describes it.
 
 ## Versions come with craftz
 
