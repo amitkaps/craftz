@@ -349,6 +349,18 @@ export default site({
   },
 });
 `);
+  // An assets object on one line takes the folder in the same object.
+  writeFileSync(
+    file,
+    config('compatibilityDate: "2026-10-12",').replace(
+      /assets: \{\n.*\n.*\n {4}\},/,
+      'assets: { notFoundHandling: "404-page" },',
+    ),
+  );
+  if (fix?.in === "files") fix.apply(dir, here);
+  expect(readFileSync(file, "utf8")).toContain(
+    '  assets: { directory: "site/dist", notFoundHandling: "404-page" },\n});',
+  );
   // site() would fail a Worker that turns an address on, so that's left by hand.
   const on = config("workersDev: true,");
   writeFileSync(file, on);

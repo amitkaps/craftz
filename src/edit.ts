@@ -89,9 +89,16 @@ export function withSite(config: string, directory: string): string {
     .replace(new RegExp(`^${indent}`, "gm"), "");
   const folder = `    directory: "${directory}",\n`;
   const opened = /^  assets: \{\n/m;
+  // An assets object on one line, like `assets: { notFoundHandling: "404-page" },`.
+  const inline = /^  assets: \{ ?(.*?) ?\},\n/m;
   const keys = opened.test(body)
     ? body.replace(opened, (assets) => `${assets}${folder}`)
-    : `${body}  assets: {\n${folder}  },\n`;
+    : inline.test(body)
+      ? body.replace(
+          inline,
+          (_, own: string) => `  assets: { directory: "${directory}", ${own} },\n`,
+        )
+      : `${body}  assets: {\n${folder}  },\n`;
   const after = rest.slice(end.index + end[0].length).replace(/^\}\);\n?/, "");
   const before = config
     .slice(0, open.index)
