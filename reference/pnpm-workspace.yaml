@@ -6,10 +6,11 @@
 # here is a change to [the rules](https://craftz.amitkaps.com/docs/rules.md).
 
 # @prose
-# pnpm holds back a version for a day after it's published, so a bad release can be caught
-# before it's installed. That default is kept, and our own packages skip the wait, since each
-# reaches npm only after the owner approves it with 2FA. The scope, not a version, is named, so
-# a release needs no change here.
+# pnpm holds back a version for 12 hours after it's published, so a bad release can be caught
+# before it's installed. pnpm's default is a day, which held a toolchain move a day for no
+# gain. Our own packages skip the wait, since each reaches npm only after the owner approves
+# it with 2FA. The scope, not a version, is named, so a release needs no change here.
+minimumReleaseAge: 720
 minimumReleaseAgeExclude:
   - "@amitkaps/*"
 

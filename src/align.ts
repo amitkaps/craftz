@@ -79,7 +79,7 @@ async function sh(dir: string, log: string[], cmd: string, ...args: string[]): P
  * # Updates
  *
  * A repository's own libraries, like zod or happy-dom, move to their newest release within the
- * major version they're on, which pnpm's one-day wait allows.
+ * major version they're on, which pnpm's 12-hour wait allows.
  *
  * A new major can change what the code has to do, so it's listed in the pull request rather than taken. Below 1.0, a minor counts as a
  * major, as npm's ranges treat it.
@@ -132,7 +132,7 @@ async function update(dir: string, log: string[], skip: string[]): Promise<strin
  * The reference is installed where it stands, as a project of its own, and moves its libraries and
  * tools as above, and the Vite+ override with `vite-plus`. What the install writes there is
  * removed, so only `package.json` and `pnpm-workspace.yaml` change. Every tool is in its
- * `package.json`, wrangler too, so one update moves them all, within pnpm's one-day wait, and each
+ * `package.json`, wrangler too, so one update moves them all, within pnpm's 12-hour wait, and each
  * stays exact.
  */
 async function updateReference(dir: string, log: string[]): Promise<string[]> {

@@ -6,7 +6,7 @@ craftz 0.3.0 is on npm, and its docs are live at [craftz.amitkaps.com](https://c
 
 Every repository is on 0.3.0. 0.4.0 is a breaking release, so it carries every change that touches each repository, and the repositories change once. What's in it is under [Where it is](#where-it-is).
 
-- [ ] **Move the shared tools.** `pnpm bump` moves Vite+ to 1.4.0, wrangler to 4.152.0 and pnpm to 12.15.0, once Vite+ 1.4.0 is past pnpm's one-day wait on 2026-10-24. Vite+ 1.4.0's newer oxlint and oxfmt can flag code that passed before, so read each repository's align pull request for formatting changes.
+- [ ] **Move the shared tools.** `pnpm bump` moves Vite+ to 1.4.0, wrangler to 4.152.0 and pnpm to 12.15.0, once Vite+ 1.4.0 is past pnpm's 12-hour wait at 15:40 UTC on 2026-10-23. Vite+ 1.4.0's newer oxlint and oxfmt can flag code that passed before, so read each repository's align pull request for formatting changes.
 - [ ] **Release 0.4.0.** Its notes say what each repository changes: markz says `craftz({ browser: true })`, prose and pagez write out their constructors' parameter properties, and prose and amitkaps fix what checking their JavaScript finds. `pnpm align` moves every repository to it.
 
 ## Where it is
