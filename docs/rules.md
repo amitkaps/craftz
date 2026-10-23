@@ -80,14 +80,14 @@ A target only rewrites syntax, like CSS nesting or a regular expression's flags.
 ```json
 "devEngines": {
   "packageManager": { "name": "pnpm", "version": "12.13.0", "onFail": "download" },
-  "runtime": { "name": "node", "version": ">=26", "onFail": "error" }
+  "runtime": { "name": "node", "version": ">=26.12.1", "onFail": "error" }
 },
-"engines": { "node": ">=26" },
+"engines": { "node": ">=26.12.1" },
 "packageManager": "pnpm@12.13.0"
 ```
 
 - [`versions-pnpm`]{#versions-pnpm}: pnpm is pinned exactly, with `onFail: download`. Whatever pnpm is installed globally, pnpm fetches and runs the pinned one, so a new pnpm release never breaks a checkout. CI reads `packageManager`, so keep the two equal.
-- [`versions-node`]{#versions-node}: `devEngines` asks for the reference's Node with `onFail: error`, and `engines` asks for the same. The wrong Node stops loudly. A package supports the Node it's built and tested on, and nothing older, so CI runs on one Node. Node 26 is the LTS release from October 2026. When the next LTS arrives, every repository moves to it at once, and for a package that's a breaking release.
+- [`versions-node`]{#versions-node}: `devEngines` asks for the reference's Node with `onFail: error`, and `engines` asks for the same. The wrong Node stops loudly. A package supports the Node it's built and tested on, and nothing older, so CI runs on one Node. Node 26 is the LTS release from October 2026, and the floor is 26.12.1, its October security release, which cf's beta needs too. When the next LTS arrives, every repository moves to it at once, and for a package that's a breaking release.
 
 Bump deliberately, everywhere at once. Being on the latest pnpm doesn't matter. Being on the same one does.
 

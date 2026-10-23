@@ -124,7 +124,7 @@ test("a site's build target set differently fails", () => {
 });
 
 test("a package packs for Node, with publint and Oxc's types", () => {
-  const pkg = JSON.stringify({ name: "x", engines: { node: ">=26" } });
+  const pkg = JSON.stringify({ name: "x", engines: { node: ">=26.12.1" } });
   const pack = { publint: { strict: true }, dts: { generator: "oxc" } };
   const root = folder({ "package.json": pkg });
   expect(resolved({ pack: { entry: ["src/index.ts"] } }, root)["pack"]).toEqual({
@@ -137,7 +137,7 @@ test("a package packs for Node, with publint and Oxc's types", () => {
   expect(craftz({ browser: true }).config(at)["pack"]).toEqual({
     ...pack,
     platform: "neutral",
-    target: [...BROWSERS, "node26"],
+    target: [...BROWSERS, "node26.12.1"],
   });
   // A repository that's private isn't a package.
   const tool = folder({ "package.json": JSON.stringify({ private: true }) });
