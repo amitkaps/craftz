@@ -75,7 +75,8 @@ test("our own package is exact and at least the reference's, and its fix only ra
   const ahead = `${Number(want.split(".")[0]) + 1}.0.0`;
   const behind = "0.0.0";
   const rule = RULES.find((r) => r.id === "versions-markz");
-  const drift = (value: string) => rule?.check({ deps: { [name]: value } } as Repo)?.drift;
+  const drift = (value: string) =>
+    rule?.check({ deps: { [name]: value } } as unknown as Repo)?.drift;
   expect(drift(want)).toEqual([]);
   expect(drift(ahead)).toEqual([]);
   expect(drift(behind)).toEqual([`${name} is ${behind}, behind ${want}`]);
