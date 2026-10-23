@@ -123,7 +123,21 @@ A finding is one of three, and craftz sets which for each rule.
 - **A warning** prints on every run and doesn't fail. A held rule is a warning.
 - **A note** says something worth knowing with nothing drifted, like a newer craftz or a beta that's graduated.
 
-A repository can't turn a rule off, and can't make a rule an error or a note. It can hold a rule, which makes that rule's error a warning, and only a rule craftz marks as one a tool can block, like a tool's version or the deploy. The hold lives in the repository it holds, with its reason and when to look again, so adding or dropping one is that repository's own pull request. A hold whose rule stops drifting is an error until it's taken out, so none outlives its reason.
+Only an error fails `check`. A warning or a note prints, and `check` still passes.
+
+A repository can't turn a rule off, and can't make a rule an error or a note. It can hold a rule, which makes that rule's error a warning, and only a rule craftz marks as holdable, one a tool can block, like a tool's version or the deploy. A hold on any other rule is an error. The hold lives in the repository it holds, so adding or dropping one is that repository's own pull request, with no craftz release. A hold whose rule stops drifting is an error until it's taken out, so none outlives its reason.
+
+A hold is a field in the repository's `package.json`, from a rule's id to its reason, which says when to look again. `check` reads `package.json` already, and a fix edits JSON without a regular expression. An option to `craftz()` was ruled out, since `check` would have to load `vite.config.ts` to find it.
+
+```json
+"craftz": {
+  "hold": {
+    "versions-typescript": "svelte-check accepts TypeScript 5 and 6 only. Move when its peer range takes 7."
+  }
+}
+```
+
+A note that reads npm, like a newer craftz or a graduated beta, is left out when npm can't be reached. CI never fails because npm is down.
 
 Where a rule has two right answers, like an app deploying with wrangler while cf can't build it, the rule says so and its check takes either. That's not a hold, since neither answer is drift.
 
