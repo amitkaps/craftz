@@ -161,7 +161,16 @@ function viteConfig(shape: Shape): string {
       ? []
       : ["There's nothing to build or serve, so Vite+ is here for its checks and tests."]),
   ];
-  const plugins = `  plugins: [craftz()${shape.site ? ", cloudflare({ assetsOnly: true })" : ""}],
+  const plugins = shape.site
+    ? `  plugins: [
+    craftz(),
+    lazyPlugins(async () => {
+      const { cloudflare } = await import("@cloudflare/vite-plugin");
+      return [cloudflare({ assetsOnly: true })];
+    }),
+  ],
+`
+    : `  plugins: [craftz()],
 `;
   const pack = `  pack: {
     entry: ["src/index.ts"],
@@ -175,9 +184,9 @@ function viteConfig(shape: Shape): string {
  *
  * ${wrapped(why.join(" ")).join("\n * ")}
  */
-import { defineConfig } from "vite-plus";
+import { defineConfig${shape.site ? ", lazyPlugins" : ""} } from "vite-plus";
 import { craftz } from "@amitkaps/craftz";
-${shape.site ? `import { cloudflare } from "@cloudflare/vite-plugin";\n` : ""}
+
 export default defineConfig({
 ${[plugins, ...(shape.package ? [pack] : [])].join("\n")}
   test: {

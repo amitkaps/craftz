@@ -146,7 +146,7 @@ pnpm align markz           # one repository, to the latest craftz
 pnpm align markz --local   # the same, but nothing leaves the laptop, and settings are only read
 ```
 
-align clones each repository's `main` into a temporary folder and installs it, runs `craftz upgrade`'s steps, then runs `verify`. It opens a pull request with auto-merge on, writes the GitHub and Worker settings, and waits for the merges. A repository already in line gets no pull request, and a failed one keeps its clone and log for a look. Run it after each release.
+align clones each repository's `main` into a temporary folder and installs it, runs `craftz upgrade`'s steps, writes the lockfile afresh, then runs `verify`. A fresh lockfile drops what nothing installs any more, and moves the nested packages within pnpm's wait, as the tools move. It opens a pull request with auto-merge on, writes the GitHub and Worker settings, and waits for the merges. A repository whose files and lockfile are already in line gets no pull request, and a failed one keeps its clone and log for a look. Run it after each release.
 
 `--local` stops before the push, so a clone can be read or compared with another run. It reads each repository's settings and lists what has drifted, without writing them.
 

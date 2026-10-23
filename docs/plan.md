@@ -28,7 +28,6 @@ Every repository is on 0.3.0. 0.4.0 is a breaking release, so it carries every c
 - The beta packages that [`versions-beta`](rules.md#versions-beta) names move to their releases when they graduate, which align reports.
 - The app moves to cf when SvelteKit's adapter writes cf's Build Output, and wrangler leaves the reference with it.
 - The app moves to TypeScript 7 when svelte-check's peer range takes it.
-- A site's `vp check` loads Cloudflare's plugin, though only `vp build` uses it. Vite+ loads the whole config for `fmt` and `lint` too, and the plugin takes a second to import, most of it compiling its 4 MB bundle and miniflare's 6 MB one. So a site checks in about 7 seconds where a package takes under 3, and three sites are most of craftz's test time. A config can't load it only to build, since `vp check` passes it `command: "build"`, as `vp build` does. It waits for Vite+ to tell a check from a build, or for the plugin to load less until it's used.
 - A size budget for packages a browser loads, measured as markz's `pnpm size` does: bundled, minified and gzipped. It waits for a second package that needs one, since a Node tool like craftz pays for its install, not its bundle. Speed stays each package's own, since what it times differs.
 
 ## Open questions
