@@ -203,8 +203,8 @@ async function alignTo(dir: string, repo: string, log: string[], byHand: Run): P
  * So the lockfile and `node_modules` are removed and installed again, on every run, and every
  * nested package moves within pnpm's one-day wait, as the tools do.
  *
- * The pull request lists every version that moved, read from `package.json` before and after, and the
- * majors left for review. It's opened from a branch named `align`, which a later run updates
+ * The pull request lists every version that moved, read from `package.json` before and after, the
+ * dependencies a fix removed, and the majors left for review. It's opened from a branch named `align`, which a later run updates
  * rather than opening a second one.
  *
  * The repositories clone and install side by side, but `verify` runs one at a time. markz's
@@ -263,6 +263,24 @@ function pack(): string {
   return join(work, file);
 }
 
+/** @prose
+ * # Progress
+ *
+ * The repositories run side by side and the report waits for all of them, so each step prints a
+ * line as it ends, with the repository's name and how long the step took. They go to stderr, so
+ * the report on stdout reads the same whether or not they're shown.
+ */
+const width = Math.max(...targets.map((repo) => repo.length));
+
+function progress(repo: string): (what: string) => void {
+  let last = Date.now();
+  return (what) => {
+    const seconds = Math.round((Date.now() - last) / 1000);
+    last = Date.now();
+    console.error(`  ${repo.padEnd(width)}  ${what}${seconds ? ` ${seconds}s` : ""}`);
+  };
+}
+
 let turn: Promise<unknown> = Promise.resolve();
 function oneAtATime<T>(task: () => Promise<T>): Promise<T> {
   const run = turn.then(task);
@@ -276,28 +294,39 @@ async function files(repo: string): Promise<Outcome> {
   const lines: string[] = [];
   const logFile = join(work, `${repo}.log`);
   const left = new Set<string>();
+  const step = progress(repo);
   const byHand: Run = (command, ...args) =>
     sh(dir, log, command, ...args).catch((error: unknown) => {
       for (const finding of findings(error)) left.add(finding);
     });
   try {
     await sh(work, log, "gh", "repo", "clone", `${OWNER}/${repo}`, dir, "--", "--quiet");
+    step("cloned");
     const before = versionsIn(dir, repo);
     const majors = await alignTo(dir, repo, log, byHand);
+    step("upgraded");
     rmSync(join(dir, "pnpm-lock.yaml"), { force: true });
     rmSync(join(dir, "node_modules"), { recursive: true, force: true });
     await sh(dir, log, "pnpm", "install");
     await sh(dir, log, "pnpm", "install", "--frozen-lockfile");
     await byHand("pnpm", "run", "fix");
+    step("installed afresh and fixed");
 
     // trimEnd, since each line opens with a status column that may be a space.
     const changed = (await sh(dir, log, "git", "status", "--porcelain")).trimEnd();
-    if (!changed && !left.size) return { repo, lines: ["in line"] };
+    if (!changed && !left.size) {
+      step("in line");
+      return { repo, lines: ["in line"] };
+    }
 
     const after = versionsIn(dir, repo);
-    const moved = Object.keys(after)
+    const moved = [...new Set([...Object.keys(after), ...Object.keys(before)])]
       .filter((name) => before[name] !== after[name])
-      .map((name) => `${name} ${after[name]}, from ${before[name] ?? "nothing"}`);
+      .map((name) =>
+        after[name]
+          ? `${name} ${after[name]}, from ${before[name] ?? "nothing"}`
+          : `${name} removed`,
+      );
     const other = changed
       .split("\n")
       .filter(Boolean)
@@ -307,7 +336,11 @@ async function files(repo: string): Promise<Outcome> {
     // Staged first, so verify sees what the commit will hold: a check that lists files with git,
     // like prose's lexer test, would otherwise still find the ones a fix deleted.
     await sh(dir, log, "git", "add", "-A");
-    await oneAtATime(() => byHand("pnpm", "run", "verify"));
+    await oneAtATime(async () => {
+      step("its turn to verify");
+      await byHand("pnpm", "run", "verify");
+    });
+    step(left.size ? `✗ ${left.size} left by hand` : "verified");
     if (left.size) {
       writeFileSync(logFile, log.join("\n"));
       return {
@@ -361,11 +394,13 @@ async function files(repo: string): Promise<Outcome> {
       await sh(dir, log, "gh", "pr", "edit", "align", "--body", body);
     }
     await sh(dir, log, "gh", "pr", "merge", "align", "--auto", "--squash");
+    step("pull request opened");
     lines.push(...moved, ...other, ...majors.map((m) => `left for review: ${m}`), url.trim());
     return { repo, lines, pr: url.trim() };
   } catch (error) {
     writeFileSync(logFile, log.join("\n"));
     const reason = error instanceof Error ? error.message.split("\n")[0] : String(error);
+    step(`✗ failed: ${reason}`);
     return { repo, lines, failed: `${reason}\n      log: ${logFile}\n      clone: ${dir}` };
   }
 }
@@ -403,7 +438,8 @@ for (const outcome of outcomes) {
 /** @prose
  * # Waiting for the merges
  *
- * A run ends when its pull requests have merged, so its report says what `main` now holds.
+ * A run ends when its pull requests have merged, so its report says what `main` now holds. Each
+ * one prints as it merges, with those still open.
  *
  * It asks GitHub every ten seconds, as `pnpm pr --wait` does. A check counts by its latest run,
  * since adding a label starts a new run that cancels the old one. One that falls behind `main` has
@@ -449,12 +485,16 @@ async function merge(url: string): Promise<string | undefined> {
 const opened = outcomes.flatMap((outcome) => (outcome.pr ? [outcome] : []));
 if (opened.length) {
   console.log(`Waiting for ${opened.length} pull request${opened.length > 1 ? "s" : ""} to merge.`);
-  const merged = await Promise.all(
-    opened.map(async ({ repo, pr = "" }) => ({ repo, problem: await merge(pr) })),
+  // Each prints as it ends, with what's still open.
+  const open = new Set(opened.map(({ repo }) => repo));
+  await Promise.all(
+    opened.map(async ({ repo, pr = "" }) => {
+      const problem = await merge(pr);
+      open.delete(repo);
+      failed ||= Boolean(problem);
+      const rest = open.size ? `, ${open.size} left: ${[...open].join(", ")}` : "";
+      console.log(problem ? `✗ ${repo}: ${problem}${rest}` : `✓ ${repo} merged${rest}`);
+    }),
   );
-  for (const { repo, problem } of merged) {
-    failed ||= Boolean(problem);
-    console.log(problem ? `✗ ${repo}: ${problem}` : `✓ ${repo} merged`);
-  }
 }
 process.exitCode = failed ? 1 : 0;
