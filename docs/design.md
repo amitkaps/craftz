@@ -129,15 +129,13 @@ A repository is checked against the version it installs, never craftz's latest. 
 
 ## Errors, warnings and notes
 
-A finding is one of three, and craftz sets which for each rule.
+A finding is one of three, each printed in markz's line, as prose and markz print theirs: `craftz: warning: versions-markz: …`.
 
-- **An error** fails `craftz check`, so it fails `verify` and the pull request. Most rules are errors.
-- **A warning** prints on every run and doesn't fail. A held rule is a warning.
-- **A note** says something worth knowing with nothing drifted, like a newer craftz or a beta that's graduated.
+- **A warning** is drift from a rule. It fails `craftz check`, so it fails `verify` and the pull request, unless the repository holds the rule. A held rule's warning ends with `; held: <reason>`, and `check` still passes.
+- **A note** says something worth knowing with nothing drifted, like a newer craftz or a beta that's graduated. It never fails.
+- **An error** is a command that can't run, like `craftz rules` given an id no rule has. It always fails.
 
-Only an error fails `check`. A warning or a note prints, and `check` still passes.
-
-A repository can't turn a rule off, and can't make a rule an error or a note. It can hold a rule, which makes that rule's error a warning, and only a rule craftz marks as holdable, one a tool can block, like a tool's version or the deploy. A hold on any other rule is an error. The hold lives in the repository it holds, so adding or dropping one is that repository's own pull request, with no craftz release. A hold whose rule stops drifting is an error until it's taken out, so none outlives its reason.
+A repository can't turn a rule off, and can't make its warning a note. It can hold a rule, which lets that rule's warning pass, and only a rule craftz marks as holdable, one a tool can block, like a tool's version or the deploy. A hold on any other rule is an error. The hold lives in the repository it holds, so adding or dropping one is that repository's own pull request, with no craftz release. A hold whose rule stops drifting is an error until it's taken out, so none outlives its reason.
 
 A hold is a field in the repository's `package.json`, from a rule's id to its reason, which says when to look again. `check` reads `package.json` already, and a fix edits JSON without a regular expression. An option to `craftz()` was ruled out, since `check` would have to load `vite.config.ts` to find it.
 

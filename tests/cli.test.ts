@@ -45,8 +45,8 @@ test("check finds what fix puts back", () => {
 
   const checked = craftz("check", dir);
   expect(checked.status).toBe(1);
-  expect(checked.stdout).toContain("releases-packing: prepack is undefined");
-  expect(checked.stdout).toContain("see: craftz rules releases-packing");
+  expect(checked.stdout).toContain("    craftz: warning: releases-packing: prepack is undefined");
+  expect(checked.stdout).toContain("craftz: `craftz rules <id>` prints the rule an id names");
 
   const fixed = craftz("fix", dir);
   expect([fixed.status, fixed.stdout]).toEqual([0, expect.stringContaining(`✓ ${dir}`)]);
@@ -56,9 +56,14 @@ test("check finds what fix puts back", () => {
   expect([again.status, again.stdout]).toEqual([0, expect.stringMatching(/^Changed nothing\./)]);
 });
 
-test("a rule prints with its part", () => {
+test("a rule prints with its address", () => {
   const { status, stdout } = craftz("rules", "releases-packing");
-  expect([status, stdout]).toEqual([0, expect.stringMatching(/^releases-packing, under /)]);
+  expect([status, stdout]).toEqual([
+    0,
+    expect.stringMatching(
+      /^- `releases-packing`: [^\n]+\n {2}https:\/\/craftz\.amitkaps\.com\/docs\/rules\.md#releases-packing\n$/,
+    ),
+  ]);
 });
 
 test("new runs from the package, with the files it writes", () => {
@@ -70,7 +75,7 @@ test("new runs from the package, with the files it writes", () => {
   expect([status, stderr]).toEqual([1, expect.stringMatching(/^Usage: craftz new /)]);
 });
 
-test("a hold makes a holdable rule's error a warning", () => {
+test("a hold lets a holdable rule's warning pass, with its reason", () => {
   const file = join(dir, "package.json");
   const original = readFileSync(file, "utf8");
   const pkg = JSON.parse(original) as {
@@ -84,9 +89,9 @@ test("a hold makes a holdable rule's error a warning", () => {
     const held = craftz("check", dir);
     expect([held.status, held.stdout]).toEqual([
       0,
-      expect.stringContaining("warning: versions-types-node"),
+      expect.stringContaining("craftz: warning: versions-types-node: "),
     ]);
-    expect(held.stdout).toContain("held: A tool needs 25.");
+    expect(held.stdout).toContain("; held: A tool needs 25.");
 
     pkg.craftz = { hold: { "scripts-verify": "A choice." } };
     writeFileSync(file, JSON.stringify(pkg, null, 2));

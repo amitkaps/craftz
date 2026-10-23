@@ -225,7 +225,7 @@ function versionsIn(dir: string, repo: string): Deps {
   };
 }
 
-// What a failed step leaves by hand: craftz check's findings, and the count of lint and type
+// What a failed step leaves by hand: craftz check's warnings that aren't held, and the count of lint and type
 // errors, or the step's first line when it printed neither. A candidate's own version is a
 // tarball, which versions-craftz names in every repository, so it's left out.
 function findings(error: unknown): string[] {
@@ -240,8 +240,12 @@ function findings(error: unknown): string[] {
   };
   const found = `${stdout}\n${stderr}`
     .split("\n")
-    .filter((line) => /^ {4}[a-z0-9-]+: /.test(line) || /^Found \d+ errors?/.test(line))
-    .map((line) => line.trim())
+    .filter(
+      (line) =>
+        (line.startsWith("    craftz: warning: ") && !line.includes("; held: ")) ||
+        /^Found \d+ errors?/.test(line),
+    )
+    .map((line) => line.trim().replace(/^craftz: warning: /, ""))
     .filter((line) => !(candidate && line.startsWith("versions-craftz:")));
   return found.length || candidate ? found : [message.split("\n")[0] ?? ""];
 }

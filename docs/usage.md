@@ -17,10 +17,10 @@ It needs Node 26.12.1 or newer, the Node it's built and tested on. The first fix
 
 ```sh
 pnpm craftz rules                 # every rule
-pnpm craftz rules scripts-verify  # one rule, with the part it's under
+pnpm craftz rules scripts-verify  # one rule, with its address
 ```
 
-`craftz rules` prints [the rules](rules.md) from the installed version, so a repository reads the rules it's checked against, and nothing is fetched. A finding names its rule as `see: craftz rules <id>`, so the line to run is the one printed.
+`craftz rules` prints [the rules](rules.md) from the installed version, so a repository reads the rules it's checked against, and nothing is fetched. Its links lead to the site, so they work outside the repository. A finding names its rule by id, so `craftz rules <id>` prints the rule it drifted from.
 
 ## Checking one repository
 
@@ -30,7 +30,7 @@ pnpm craftz check ../markz # another one, with this folder's craftz
 pnpm craftz fix            # write every fix, then check again
 ```
 
-`craftz check` runs every rule on the folder's files, with the installed version's rules, and prints what has drifted, each with its `see:` line. It exits 1 when anything has. It reads no settings and asks GitHub nothing, so it needs no login. A rule the repository [holds](rules.md#holds) prints as a warning, with its reason, and doesn't fail. A note says what's worth knowing, like a newer craftz, and never fails. It asks npm, and with no answer in a few seconds, there's no note.
+`craftz check` runs every rule on the folder's files, with the installed version's rules, and prints each drift as a warning, in markz's line, like `craftz: warning: versions-markz: …`. It exits 1 when anything has drifted. It reads no settings and asks GitHub nothing, so it needs no login. A rule the repository [holds](rules.md#holds) prints its warning with `; held:` and its reason, and doesn't fail. A note says what's worth knowing, like a newer craftz, and never fails. It asks npm, and with no answer in a few seconds, there's no note.
 
 `craftz fix` writes every fix that can be automated. It lists each file it changed, then checks again and prints what's left to do by hand. A second run changes nothing. A fix can move versions, so run `pnpm install` next, then `pnpm run fix` for the format.
 
