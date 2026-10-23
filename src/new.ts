@@ -136,17 +136,14 @@ function workspace(shape: Shape): string {
 }
 
 function tsconfig(shape: Shape): string {
-  const { extends: shared, compilerOptions } = JSON.parse(read("tsconfig.json")) as {
-    extends: string;
-    compilerOptions: object;
-  };
+  const { extends: shared } = JSON.parse(read("tsconfig.json")) as { extends: string };
   const include = [
     "src",
     "tests",
     "vite.config.ts",
     ...(shape.site ? ["cloudflare.config.ts"] : []),
   ];
-  return JSON.stringify({ extends: shared, compilerOptions, include }, null, 2);
+  return JSON.stringify({ extends: shared, include }, null, 2);
 }
 
 // Text as the lines of an `@prose` comment, each within 100 characters.
