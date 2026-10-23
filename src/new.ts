@@ -149,7 +149,7 @@ function viteConfig(shape: Shape): string {
     "`craftz()` sets the format, lint and build the rules ask for, so this config holds only what's its own.",
     ...(shape.package
       ? [
-          "`vp pack` writes ESM with its types, and runs publint, which fails the build on a package npm would serve badly.",
+          "`vp pack` writes ESM for Node, with its types from Oxc, and runs publint, which fails the build on a package npm would serve badly. `craftz()` sets all but the entry and the format.",
         ]
       : []),
     ...(shape.site
@@ -166,13 +166,8 @@ function viteConfig(shape: Shape): string {
   const pack = `  pack: {
     entry: ["src/index.ts"],
     format: ["esm"],
-    platform: "node",
-    // Oxc writes the types, so there's no typescript dependency, and fails on an export
-    // whose type isn't written out.
-    dts: { generator: "oxc" },
     clean: true,
     fixedExtension: false,
-    publint: { strict: true },
   },
 `;
   return `/** @prose

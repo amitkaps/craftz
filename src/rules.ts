@@ -222,11 +222,14 @@ const EDITOR = [".vscode/settings.json", ".vscode/extensions.json"];
 /** @prose
  * # The browsers
  *
- * The list comes from [browsers.ts](browsers.ts). A build bundles for browsers when it's a
- * package whose pack isn't `platform: "node"`, or a site that isn't a prose site, which is an
- * app. Each target in the config is read, the app's `build.target` or the package's
- * `pack.target`, and the browsers in it have to be the list, with any Node left out.
+ * The list comes from [browsers.ts](browsers.ts). `craftz()` sets it for a static site, and for
+ * a package that says `craftz({ browser: true })`, so either has nothing to read.
+ *
+ * A package that sets `pack.target` itself is told to say so instead. An app's config is its
+ * framework's, so its `build.target` is read, and the browsers in it have to be the list, with
+ * any Node left out.
  */
+const BROWSER = /\bcraftz\(\{\s*browser:\s*true\s*\}\)/;
 const TARGET = /\btarget:\s*\[([^\]]*)\]/g;
 const targetsIn = (vite: string): string[] =>
   [...vite.matchAll(TARGET)]
@@ -741,15 +744,20 @@ export const RULES: Rule[] = [
   },
   {
     id: "toolchain-browsers",
-    check: ({ files, worker: site }) => {
+    check: ({ pkg, files, worker: site }) => {
       const vite = files["vite.config.ts"] ?? "";
-      const pack = /\bpack:\s*\{/.test(vite) && !/platform:\s*"node"/.test(vite);
+      const browser = BROWSER.test(vite);
+      if (browser || filled(vite, site)) return { value: BROWSERS.join(" "), drift: [] };
+      if (!pkg.private && /\bpack:\s*\{[^]*?\btarget:/.test(vite)) {
+        return drifted([
+          "pack.target is set. A package for browsers says craftz({ browser: true })",
+        ]);
+      }
       // A site Vite bundles from source, unlike one that serves a folder `prose build` wrote.
       const bundled = Boolean(site) && !/publicDir:\s*"\.prose"/.test(vite);
-      if (!pack && filled(vite, site)) return { value: BROWSERS.join(" "), drift: [] };
-      if (!pack && !bundled) return undefined;
+      if (!bundled) return undefined;
       const have = targetsIn(vite);
-      const where = pack ? "pack.target" : "build.target";
+      const where = "build.target";
       if (!have.length) return drifted([`${where} isn't set`]);
       const value = have.join(" ");
       const same = [...new Set(have)].sort().join(" ") === [...BROWSERS].sort().join(" ");
@@ -1069,7 +1077,7 @@ export const RULES: Rule[] = [
   owns("releases-files", RELEASE_FILES, (pkg) => !pkg.private),
   {
     id: "releases-packing",
-    check: ({ pkg, files, deps }) => {
+    check: ({ pkg, deps }) => {
       if (pkg.private) return undefined;
       const drift: string[] = [];
       if (pkg.scripts?.prepack !== "pnpm run build")
@@ -1078,9 +1086,6 @@ export const RULES: Rule[] = [
         drift.push(`files is ${JSON.stringify(pkg.files)}, not "dist" first`);
       if (pkg.publishConfig?.access !== "public") drift.push("publishConfig.access isn't public");
       if (!deps.publint) drift.push("no publint dev dependency");
-      if (!/publint:\s*\{[^}]*strict:\s*true/.test(files["vite.config.ts"] ?? "")) {
-        drift.push("pack doesn't run publint with strict: true");
-      }
       return drifted(drift);
     },
     // The fields in package.json. The pack block in vite.config.ts is left to do by hand.
@@ -1102,14 +1107,9 @@ export const RULES: Rule[] = [
   },
   {
     id: "releases-types",
-    check: ({ pkg, files, deps }) => {
+    check: ({ pkg, deps }) => {
       if (pkg.private) return undefined;
-      const drift: string[] = [];
-      if (!/dts:\s*\{[^}]*generator:\s*"oxc"/.test(files["vite.config.ts"] ?? "")) {
-        drift.push('pack doesn\'t write types with generator: "oxc"');
-      }
-      if (deps.typescript) drift.push("has typescript, which Oxc's types don't need");
-      return drifted(drift);
+      return drifted(deps.typescript ? ["has typescript, which Oxc's types don't need"] : []);
     },
   },
   {

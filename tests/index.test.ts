@@ -123,6 +123,34 @@ test("a site's build target set differently fails", () => {
   );
 });
 
+test("a package packs for Node, with publint and Oxc's types", () => {
+  const pkg = JSON.stringify({ name: "x", engines: { node: ">=26" } });
+  const pack = { publint: { strict: true }, dts: { generator: "oxc" } };
+  const root = folder({ "package.json": pkg });
+  expect(resolved({ pack: { entry: ["src/index.ts"] } }, root)["pack"]).toEqual({
+    entry: ["src/index.ts"],
+    ...pack,
+    platform: "node",
+  });
+  // One for browsers too targets them and the Node its engines ask for.
+  const at = { root };
+  expect(craftz({ browser: true }).config(at)["pack"]).toEqual({
+    ...pack,
+    platform: "neutral",
+    target: [...BROWSERS, "node26"],
+  });
+  // A repository that's private isn't a package.
+  const tool = folder({ "package.json": JSON.stringify({ private: true }) });
+  expect(resolved({}, tool)["pack"]).toBeUndefined();
+});
+
+test("a package's pack set differently fails", () => {
+  const root = folder({ "package.json": JSON.stringify({ name: "x" }) });
+  expect(() => craftz().config({ pack: { platform: "neutral" }, root })).toThrow(
+    '  pack.platform is "neutral", and the rules set "node"',
+  );
+});
+
 test("the plugin's values are spelled as oxfmt formats them", async () => {
   const lines = Object.entries(RULED).flatMap(([block, keys]) => [
     `  ${block}: {`,

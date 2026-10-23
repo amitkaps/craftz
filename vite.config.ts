@@ -27,13 +27,10 @@ export default defineConfig({
   pack: {
     entry: ["src/index.ts", "src/cloudflare.ts", "src/cli.ts"],
     format: ["esm"],
-    platform: "node",
     // Oxc writes the types, so there's no typescript dependency, and fails on an export
     // whose type isn't written out.
-    dts: { generator: "oxc" },
     clean: true,
     fixedExtension: false,
-    publint: { strict: true },
     define: { __PINNED__: JSON.stringify({ browsers: BROWSERS, date: COMPATIBILITY_DATE }) },
     // worker()'s types are cf's Worker, written into its .d.ts, since a site has cf but not the
     // package cf takes them from.
