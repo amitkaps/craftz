@@ -29,6 +29,7 @@ export default site({
   writeFileSync(join(dir, ".prose/index.html"), "<h1>x</h1>");
   writeFileSync(join(dir, ".prose/docs/a.css"), "h1 {}");
   writeFileSync(join(dir, ".prose/_headers"), "/*\n  X-Frame-Options: DENY\n");
+  writeFileSync(join(dir, ".prose/_redirects"), "/old /docs/a.css 301\n");
   return dir;
 }
 
@@ -87,7 +88,11 @@ test("deploy uploads the files, then the Worker, its domains and its addresses",
   expect(JSON.parse(metadata)).toEqual({
     assets: {
       jwt: "completion",
-      config: { not_found_handling: "404-page", _headers: "/*\n  X-Frame-Options: DENY\n" },
+      config: {
+        not_found_handling: "404-page",
+        _headers: "/*\n  X-Frame-Options: DENY\n",
+        _redirects: "/old /docs/a.css 301\n",
+      },
     },
     compatibility_date: COMPATIBILITY_DATE,
   });

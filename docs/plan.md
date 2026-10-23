@@ -1,18 +1,19 @@
 # Plan
 
-craftz 0.3.0 is on npm, and its docs are live at [craftz.amitkaps.com](https://craftz.amitkaps.com). What each release changed is in its [notes on GitHub](https://github.com/amitkaps/craftz/releases). This plan says what's next, in order, and what works now. [The design](design.md) is the whole of what craftz becomes. Each repository moves to a release in its own pull request, which its own plan tracks.
+craftz 0.4.0 is on npm, and its docs are live at [craftz.amitkaps.com](https://craftz.amitkaps.com). What each release changed is in its [notes on GitHub](https://github.com/amitkaps/craftz/releases). This plan says what's next, in order, and what works now. [The design](design.md) is the whole of what craftz becomes. Each repository moves to a release in its own pull request, which its own plan tracks.
 
 ## Next, in order
 
-Every repository is on 0.3.0. 0.4.0 is a breaking release, so it carries every change that touches each repository, and the repositories change once. What's in it is under [Where it is](#where-it-is).
+0.5.0 is a breaking release: a static site's `cloudflare.config.ts` is `site()`, and the site installs neither cf nor Cloudflare's plugin, since `craftz deploy` uploads it. craftz's own site deploys this way from `main`, with the build token every Worker uses. An app on wrangler, like base, deploys as it did.
 
-- [ ] **Move the shared tools.** pnpm moves to 12.15.0 by hand, and `pnpm bump` moves wrangler to 4.152.0 and markz to 0.7.0. Vite+ 1.4.0 and the cf beta pair offer nothing we need, so they wait for the next move with a reason.
-- [ ] **Release 0.4.0.** Its notes say what each repository changes: markz says `craftz({ browser: true })`, prose and pagez write out their constructors' parameter properties, and prose and amitkaps fix what checking their JavaScript finds. `pnpm align` moves every repository to it.
+- [ ] **Release 0.5.0.** Its notes say what each repository changes. align's fix rewrites the config, the Vite config and the dependencies, so what's left by hand is the type errors 0.4.0 found in prose and pagez, and in a private site.
+- [ ] **Move craftz-test first.** Align it alone and merge, and check its Workers Build deploys with `craftz deploy`.
+- [ ] **Move the rest.** `pnpm align` moves every repository. A private site's `_redirects` goes with its Worker, as `_headers` does for craftz's site, so check its 301s once it's live.
 
 ## Where it is
 
 - **Each repository checks itself.** Its CI runs `craftz check` against the craftz it installs, so nothing checks it from outside. What needs a login stays on the laptop: `craftz settings --check`, `craftz status`, and `pnpm align --local` for every repository at once.
-- **Exact versions.** Every shared tool and craftz are pinned exactly, in one list, the reference's `package.json`, so a repository runs what it names. cf and the Vite plugin are a matching beta pair, and Node's floor is 26.12.1.
+- **Exact versions.** Every shared tool and craftz are pinned exactly, in one list, the reference's `package.json`, so a repository runs what it names. cf is a beta, which craftz installs for the compatibility date and the Worker's settings, and Node's floor is 26.12.1.
 - **`craftz upgrade`.** One command moves a repository to the latest craftz and runs that version's fix, and align runs its steps in a clone of each repository.
 - **The rules, checked and fixed.** [The rules](rules.md) are worded once, and their checks and fixes are in [src/](../src/), against the files in [reference/](../reference/README.md). `craftz rules`, `check` and `fix` run them from the installed version, and a second `fix` changes nothing. Every `verify` runs `pnpm craftz check`, so each pull request is checked against the craftz it installs. craftz checks itself from source, since the version it installs can't hold the rules it's changing. Its tests install the package `pnpm pack` writes, as a repository would, so a file the package leaves out fails a test here. Each rule is yes or no. A repository holds a rule a tool blocks in its own `package.json`, which `check` prints as a warning, and `check` notes a newer craftz and a graduated beta.
 - **GitHub's settings.** `craftz settings` writes only what has drifted and reads it back, with `--check` to only read. A package's ruleset requires `label` next to `ci`.
