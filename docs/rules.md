@@ -79,11 +79,11 @@ A target only rewrites syntax, like CSS nesting or a regular expression's flags.
 
 ```json
 "devEngines": {
-  "packageManager": { "name": "pnpm", "version": "12.13.0", "onFail": "download" },
+  "packageManager": { "name": "pnpm", "version": "12.15.0", "onFail": "download" },
   "runtime": { "name": "node", "version": ">=26.12.1", "onFail": "error" }
 },
 "engines": { "node": ">=26.12.1" },
-"packageManager": "pnpm@12.13.0"
+"packageManager": "pnpm@12.15.0"
 ```
 
 - [`versions-pnpm`]{#versions-pnpm}: pnpm is pinned exactly, with `onFail: download`. Whatever pnpm is installed globally, pnpm fetches and runs the pinned one, so a new pnpm release never breaks a checkout. CI reads `packageManager`, so keep the two equal.

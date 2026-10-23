@@ -82,7 +82,8 @@ async function sh(dir: string, log: string[], cmd: string, ...args: string[]): P
  * major version they're on, which pnpm's one-day wait allows.
  *
  * A new major can change what the code has to do, so it's listed in the pull request rather than taken. Below 1.0, a minor counts as a
- * major, as npm's ranges treat it.
+ * major, as npm's ranges treat it. Our own packages are taken at any version, since their numbers
+ * only count releases, and what a release changes is in its notes.
  *
  * A pre-release is pinned by hand, as [development.md](../docs/development.md#beta-packages)
  * says, since its tags don't say which build goes with which. Once npm's latest for it is a
@@ -115,7 +116,8 @@ async function update(dir: string, log: string[], skip: string[]): Promise<strin
       }
       continue;
     }
-    if (breaking(current, latest)) majors.push(`${name} ${latest}, from ${current}`);
+    if (breaking(current, latest) && !name.startsWith(`@${OWNER}/`))
+      majors.push(`${name} ${latest}, from ${current}`);
     else minor.push(name);
   }
   if (minor.length) await sh(dir, log, "pnpm", "update", "--latest", ...minor);
