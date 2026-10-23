@@ -87,7 +87,7 @@ pnpm pr "<title>" --wait          # and wait for the merge, then switch to main
 pnpm gone                         # delete the branches that merged
 ```
 
-A repository's `pr` and `gone` scripts run `craftz pr` and `craftz gone`, and every change reaches `main` this way. A package's pull request takes one label for the release notes, and stops without one before anything is committed. A site or a tool takes none.
+A repository's `pr` and `gone` scripts run `craftz pr` and `craftz gone`, and every change reaches `main` this way. A package's pull request takes one label for the release notes, and stops without one before anything is committed. A site or a tool takes none. `pr` first deletes the local branches that merged. A branch merged when its branch on GitHub is gone, when its last commit is a merged pull request's, or when it's on `main`.
 
 ## Releasing a package
 

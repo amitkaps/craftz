@@ -13,6 +13,8 @@
  * `.github/release.yml` groups the notes by. Without one it stops before anything is committed,
  * as CI would stop after. A site or a tool has no release notes, so it takes none.
  *
+ * It first deletes the other local branches that merged, as `craftz gone` does ([gone.ts](gone.ts)).
+ *
  * `--body <text>` is the description. `--wait` waits for the merge, then switches to `main`,
  * pulls, and deletes the branch. It stops before pushing a branch that has nothing new for
  * `main`, as [Nothing new](#nothing-new) says.
@@ -20,6 +22,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
+import { gone } from "./gone.ts";
 
 function fail(message: string): never {
   console.error(message);
@@ -112,6 +115,8 @@ export async function pr(args: string[]): Promise<void> {
     );
   }
 
+  // The branches that merged go first, apart from this one, which the steps below decide on.
+  gone({ others: true });
   let branch = output("git", "branch", "--show-current");
   let found: (BranchPr & { headRefOid: string }) | undefined;
   if (branch !== "main") {

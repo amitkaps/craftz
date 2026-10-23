@@ -7,7 +7,7 @@ The sections every repository's `AGENTS.md` has, word for word. The rest of the 
 This repository follows [craftz's rules](https://craftz.amitkaps.com/docs/rules.md), which set how every repository builds, checks, deploys and releases. Run `pnpm craftz rules` before changing any of that. It prints the rules for the version this repository installs, and `pnpm craftz rules <id>` prints one.
 
 - Change the toolchain, scripts, versions or deploys in craftz first, then bring each repository in line. Don't change them in one repository alone.
-- Open a pull request with `pnpm pr "<title>"`. It branches from `main`, or adds to the branch's open pull request when given its title, then commits, runs `pnpm run verify`, pushes and turns on auto-merge, and the pull request is squash-merged once CI passes. Nobody pushes to `main`. After a merge, `pnpm gone` deletes the merged branches.
+- Open a pull request with `pnpm pr "<title>"`. It branches from `main`, or adds to the branch's open pull request when given its title, then commits, runs `pnpm run verify`, pushes and turns on auto-merge, and the pull request is squash-merged once CI passes. `pnpm pr` first deletes the local branches that merged, and `pnpm gone` does that alone. Nobody pushes to `main`.
 - To see what's live, run `pnpm craftz status`: CI, pull requests, the release and the site. `--notes` adds the release's notes, and `--log` the build's log. Use it rather than reading GitHub, npm or Cloudflare another way.
 - In a package, give it one label for the release notes, `pnpm pr "<title>" --label <label>`: `breaking`, `added`, `fixed`, `improved`, `docs`, or `internal` for tests, tooling, site and lessons. CI fails without one.
 - Run tools through `pnpm run …` and `pnpm exec`, not global installs.

@@ -23,9 +23,21 @@ test("a branch is named after the title, at most 48 characters", () => {
   expect(branchOf("a ".repeat(30))).toBe("a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a");
 });
 
-test("only branches whose upstream is gone are deleted, with their worktrees", () => {
+test("branches whose upstream is gone are deleted, with their worktrees", () => {
   const refs = "main\t\t/repo\nmerged\t[gone]\t\nahead\t[ahead 1]\t\nold\t[gone]\t/repo moved";
   expect(goneIn(refs)).toEqual([{ branch: "merged" }, { branch: "old", worktree: "/repo moved" }]);
+});
+
+test("a branch whose last commit merged is deleted, with or without an upstream", () => {
+  const refs = [
+    "main\t\t/repo\tm1",
+    "kept\t\t\ta1",
+    "checkout\t\t\tb1",
+    "squashed\t[ahead 3]\t\tc1",
+    "after\t[ahead 1]\t\tc2",
+  ].join("\n");
+  const merged = (commit: string) => ["m1", "b1", "c1"].includes(commit);
+  expect(goneIn(refs, merged)).toEqual([{ branch: "checkout" }, { branch: "squashed" }]);
 });
 
 test("the fix runs the commands and deletes the copied scripts", () => {
