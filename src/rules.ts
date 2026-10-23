@@ -29,7 +29,7 @@ import {
   standard,
   versionsIn,
 } from "./reference.ts";
-import { PLUGIN, servingProse, withCraftz, withWorker } from "./edit.ts";
+import { PLUGIN, withCraftz } from "./edit.ts";
 import { rulesetFor, writeLabels, writeRuleset } from "./settings.ts";
 import { BROWSERS } from "./pinned.ts";
 import { stated } from "./stated.ts";
@@ -342,9 +342,6 @@ const CI = ".github/workflows/ci.yml";
  * A section runs from its `## ` heading to the next. The fix writes this repository's two
  * sections over a repository's own, or puts them before its first section when they're
  * missing, and leaves the rest of the file alone.
- *
- * The craftz section was called Standard before craftz. The fix renames a repository's Standard
- * section to craftz, so the old section doesn't stay beside the new one.
  */
 const SECTIONS = ["craftz", "Prose"];
 const sectionOf = (heading: string): RegExp =>
@@ -904,9 +901,8 @@ export const RULES: Rule[] = [
    *
    * A site is a prose site when cf deploys it and `verify` runs `pnpm prose build`.
    *
-   * The Vite config is code, so it's read with regular expressions. Its fix names `.prose` on the
-   * line after the plugins and adds the folders `.gitignore` leaves out. The rest is fixed by
-   * hand. `build` after
+   * The Vite config is code, so it's read with regular expressions. Its fix adds the folders
+   * `.gitignore` leaves out. The rest is fixed by hand. `build` after
    * `prose build` is `pnpm build` in a site, where it's `vp build`, and `vp build` in a
    * package, where `build` is `vp pack`.
    */
@@ -936,7 +932,6 @@ export const RULES: Rule[] = [
     fix: {
       in: "files",
       apply: (dir) => {
-        editFile(join(dir, "vite.config.ts"), servingProse);
         const ignore = join(dir, ".gitignore");
         const ignored = read(ignore) ?? "";
         const missing = [".cloudflare", ".wrangler"].filter(
@@ -954,9 +949,8 @@ export const RULES: Rule[] = [
    * `cloudflare.config.ts` is code, so the check only looks for `worker()`, which sets the date and
    * the addresses.
    *
-   * `worker()` fails a config that sets them too. The fix wraps the Worker in the call,
-   * takes out the three lines it sets and imports it, from source in craftz itself. That's for a
-   * config from before `worker()`, and it goes once every repository uses it.
+   * `worker()` fails a config that sets them too. There's no fix: `craftz new` writes the call,
+   * and a config without it is written by hand.
    *
    * A site on wrangler, like base, is left out. It's held on wrangler, so it moves when it moves
    * to cf.
@@ -968,13 +962,6 @@ export const RULES: Rule[] = [
       return drifted(
         USES_WORKER.test(files[site.file] ?? "") ? [] : [`${site.file} has no worker()`],
       );
-    },
-    fix: {
-      in: "files",
-      apply: (dir) => {
-        const from = ownCraftz(readPkg(dir)) ? "./src/cloudflare.ts" : `${CRAFTZ}/cloudflare`;
-        editFile(join(dir, "cloudflare.config.ts"), (config) => withWorker(config, from));
-      },
     },
   },
   {
@@ -1015,7 +1002,6 @@ export const RULES: Rule[] = [
         const ours = read(join(std, "AGENTS.md"));
         const path = join(dir, "AGENTS.md");
         let text = read(path) || "# AGENTS.md\n";
-        if (!sectionOf("craftz").test(text)) text = text.replace(/^## Standard$/m, "## craftz");
         let after = -1;
         for (const heading of SECTIONS) {
           const want = sectionOf(heading).exec(ours)?.[0];

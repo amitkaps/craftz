@@ -160,16 +160,6 @@ import { cloudflare } from "@cloudflare/vite-plugin";
 export default defineConfig({
   plugins: [cloudflare({ assetsOnly: true })],
 
-  // oxfmt's defaults, with each Markdown paragraph on one line.
-  fmt: { proseWrap: "never" },
-
-  // Type-aware lint that also type-checks.
-  lint: {
-    plugins: ["typescript", "unicorn", "import"],
-    categories: { correctness: "error" },
-    options: { typeAware: true, typeCheck: true },
-  },
-
   test: { include: ["tests/**/*.test.ts"] },
 });
 `,
@@ -194,8 +184,8 @@ export default defineConfig({
 `);
 });
 
-test("the fix keeps a config's own keys, and its plugins one to a line", () => {
-  const dir = mkdtempSync(join(tmpdir(), "craftz-trim-"));
+test("the fix keeps a config's plugins one to a line", () => {
+  const dir = mkdtempSync(join(tmpdir(), "craftz-lines-"));
   writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "x" }));
   writeFileSync(
     join(dir, "vite.config.ts"),
@@ -205,17 +195,6 @@ export default defineConfig({
   plugins: [
     cloudflare({ assetsOnly: true }),
   ],
-
-  // Oxfmt.
-  fmt: { proseWrap: "never", ignorePatterns: ["dist/**"] },
-
-  // Oxlint.
-  lint: {
-    plugins: ["typescript", "unicorn", "import"],
-    categories: { correctness: "error" },
-    options: { typeAware: true, typeCheck: true },
-    ignorePatterns: ["dist/**"],
-  },
 });
 `,
   );
@@ -230,14 +209,6 @@ export default defineConfig({
     craftz(),
     cloudflare({ assetsOnly: true }),
   ],
-
-  // Oxfmt.
-  fmt: { ignorePatterns: ["dist/**"] },
-
-  // Oxlint.
-  lint: {
-    ignorePatterns: ["dist/**"],
-  },
 });
 `);
 });
@@ -299,11 +270,9 @@ test("the editor's settings are compared as JSON, and an app's add Svelte's", ()
   expect(rule?.check(repo(app, "app"))?.drift).toEqual([]);
 });
 
-test("a prose site names .prose as its folder, and the fix writes it", () => {
+test("a prose site names .prose as its folder", () => {
   const vite =
     "export default defineConfig({\n  plugins: [craftz(), cloudflare({ assetsOnly: true })],\n});\n";
-  const dir = mkdtempSync(join(tmpdir(), "craftz-prose-site-"));
-  writeFileSync(join(dir, "vite.config.ts"), vite);
   const rule = RULES.find((r) => r.id === "cloudflare-prose-site");
   const repo = (text: string) =>
     ({
@@ -312,10 +281,8 @@ test("a prose site names .prose as its folder, and the fix writes it", () => {
       worker: { file: "cloudflare.config.ts" },
     }) as unknown as Repo;
   expect(rule?.check(repo(vite))?.drift).toEqual(["vite.config.ts doesn't serve .prose"]);
-  if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
-  const fixed = readFileSync(join(dir, "vite.config.ts"), "utf8");
-  expect(fixed).toContain('  publicDir: ".prose",\n');
-  expect(rule?.check(repo(fixed))?.drift).toEqual([]);
+  const served = vite.replace("],\n", '],\n  publicDir: ".prose",\n');
+  expect(rule?.check(repo(served))?.drift).toEqual([]);
 });
 
 test("verify runs craftz check after prose check, and the fix puts it there once", () => {
@@ -345,17 +312,12 @@ test("the prose site's fix adds the folders .gitignore leaves out, once", () => 
   );
 });
 
-test("a Worker takes its date and addresses from worker(), and the fix wraps it", () => {
-  const config = `import { defineConfig } from "cf/config";
+test("a Worker takes its date and addresses from worker()", () => {
+  const config = (body: string) => `import { defineConfig } from "cf/config";
+import { worker } from "${CRAFTZ}/cloudflare";
 
 export default defineConfig({
-  worker: {
-    name: "x",
-    compatibilityDate: "2026-09-09",
-    domains: ["x.amitkaps.com"],
-    workersDev: false,
-    assets: { notFoundHandling: "404-page" },
-  },
+  worker: ${body},
 });
 `;
   const drift = (text: string) => {
@@ -363,26 +325,15 @@ export default defineConfig({
     const repo = { files, worker: worker(files) } as unknown as Repo;
     return RULES.find((r) => r.id === "cloudflare-worker")?.check(repo)?.drift;
   };
-  expect(drift(config)).toEqual(["cloudflare.config.ts has no worker()"]);
-  const dir = mkdtempSync(join(tmpdir(), "craftz-worker-"));
-  writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "x" }));
-  writeFileSync(join(dir, "cloudflare.config.ts"), config);
-  const rule = RULES.find((r) => r.id === "cloudflare-worker");
-  for (let i = 0; i < 2; i++) if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
-  const fixed = readFileSync(join(dir, "cloudflare.config.ts"), "utf8");
-  expect(fixed).toBe(`import { defineConfig } from "cf/config";
-import { worker } from "${CRAFTZ}/cloudflare";
-
-export default defineConfig({
-  worker: worker({
+  const fields = `{
     name: "x",
     domains: ["x.amitkaps.com"],
     assets: { notFoundHandling: "404-page" },
-  }),
-});
-`);
-  expect(drift(fixed)).toEqual([]);
-  expect(worker({ "cloudflare.config.ts": fixed })).toMatchObject({
+  }`;
+  expect(drift(config(fields))).toEqual(["cloudflare.config.ts has no worker()"]);
+  const wrapped = config(`worker(${fields})`);
+  expect(drift(wrapped)).toEqual([]);
+  expect(worker({ "cloudflare.config.ts": wrapped })).toMatchObject({
     workersDev: false,
     previewUrls: false,
   });
@@ -400,22 +351,6 @@ test("worker() sets the date and addresses, and fails a config that sets them", 
     cloudflareWorker({ name: "x", workersDev: true, compatibilityFlags: ["nodejs_als"] } as never),
   ).toThrow("worker() sets workersDev, a Node.js flag, so cloudflare.config.ts can't");
 });
-test("the agents' fix writes craftz over the Standard section it replaces", () => {
-  const dir = mkdtempSync(join(tmpdir(), "craftz-agents-"));
-  const old =
-    "# AGENTS.md\n\nx\n\n## Standard\n\nOld.\n\n## Prose\n\nOld.\n\n## This repository\n\nOurs.\n";
-  writeFileSync(join(dir, "AGENTS.md"), old);
-  const rule = RULES.find((r) => r.id === "agents-sections");
-  if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
-  const text = readFileSync(join(dir, "AGENTS.md"), "utf8");
-  const files = { "AGENTS.md": text, "CLAUDE.md": "@AGENTS.md\n" };
-  expect(rule?.check({ files } as unknown as Repo)?.drift ?? []).toEqual([]);
-  expect(text).not.toContain("## Standard");
-  expect(text).toMatch(
-    /^# AGENTS\.md\n\nx\n\n## craftz\n[\s\S]*## Prose\n[\s\S]*## This repository\n\nOurs\.\n$/,
-  );
-});
-
 test("the betas this repository is on are the ones the rules name", () => {
   const deps = { ...standard.dependencies, ...standard.devDependencies };
   const pre = Object.keys(deps).filter((name) => /^\d+\.\d+\.\d+-/.test(deps[name] ?? ""));
