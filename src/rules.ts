@@ -167,6 +167,37 @@ const version = (id: string, name: string, holdable = true): Rule => ({
 });
 
 /** @prose
+ * # Our own version
+ *
+ * A package of ours that another builds on, checked as at least the reference's, so the one
+ * that builds on it can move before craftz does. Its fix raises a version that's behind and
+ * leaves one that leads, since every fix runs whether its rule drifted or not.
+ */
+const atLeast = (id: string, name: string): Rule => ({
+  id,
+  holdable: true,
+  check: ({ deps }) => {
+    const value = deps[name];
+    if (!value) return undefined;
+    const want = VERSIONS[name] ?? "";
+    if (!EXACT.test(value)) return { value, drift: [`${name} is ${value}, not an exact version`] };
+    return { value, drift: behind(value, want) ? [`${name} is ${value}, behind ${want}`] : [] };
+  },
+  fix: {
+    in: "files",
+    apply: (dir, std) => {
+      const pkg = readPkg(dir);
+      const value = pkg.devDependencies?.[name] ?? pkg.dependencies?.[name];
+      const want = versionsIn(std)[name];
+      if (value && want && (!EXACT.test(value) || behind(value, want))) pin(dir, std, name);
+    },
+  },
+});
+const EXACT = /^\d+\.\d+\.\d+$/;
+const behind = (value: string, want: string) =>
+  value.localeCompare(want, "en", { numeric: true }) < 0;
+
+/** @prose
  * # The betas
  *
  * The packages `versions-beta` names, as code in its line of the rules, so the list is kept
@@ -653,8 +684,8 @@ export const RULES: Rule[] = [
     fix: { in: "files", apply: (dir, std) => pin(dir, std, "vite-plus") },
   },
   version("versions-typescript", "typescript"),
-  version("versions-prose", "@amitkaps/prose"),
-  version("versions-markz", "@amitkaps/markz"),
+  atLeast("versions-prose", "@amitkaps/prose"),
+  atLeast("versions-markz", "@amitkaps/markz"),
   // No tool keeps a repository from craftz, so its version can't be held.
   version("versions-craftz", CRAFTZ, false),
   version("versions-cf", "cf"),

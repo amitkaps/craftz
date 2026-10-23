@@ -69,6 +69,33 @@ test("only the rules' betas are on a pre-release, each an exact build", () => {
   expect(drift({ zod: "^4.0.0", vite: "npm:@voidzero-dev/vite-plus-core@1.3.0" })).toBeUndefined();
 });
 
+test("our own package is exact and at least the reference's, and its fix only raises", () => {
+  const name = "@amitkaps/markz";
+  const want = VERSIONS[name] ?? "";
+  const ahead = `${Number(want.split(".")[0]) + 1}.0.0`;
+  const behind = "0.0.0";
+  const rule = RULES.find((r) => r.id === "versions-markz");
+  const drift = (value: string) =>
+    rule?.check({ deps: { [name]: value } } as unknown as Repo)?.drift;
+  expect(drift(want)).toEqual([]);
+  expect(drift(ahead)).toEqual([]);
+  expect(drift(behind)).toEqual([`${name} is ${behind}, behind ${want}`]);
+  expect(drift(`^${want}`)).toEqual([`${name} is ^${want}, not an exact version`]);
+
+  const fixed = (value: string) => {
+    const dir = mkdtempSync(join(tmpdir(), "craftz-"));
+    writeFileSync(
+      join(dir, "package.json"),
+      JSON.stringify({ devDependencies: { [name]: value } }),
+    );
+    if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
+    return JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).devDependencies[name];
+  };
+  expect(fixed(ahead)).toBe(ahead);
+  expect(fixed(behind)).toBe(want);
+  expect(fixed(`^${want}`)).toBe(want);
+});
+
 test("a build for browsers targets this repository's browsers", () => {
   const rule = RULES.find((r) => r.id === "toolchain-browsers");
   const list = BROWSERS.map((b) => `"${b}"`).join(", ");
