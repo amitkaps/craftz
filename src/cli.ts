@@ -6,45 +6,17 @@
  * the installed package, so the version that checks a repository is the version it reads, and
  * nothing is fetched but what GitHub says about the repository.
  *
- * `craftz rules` prints [the rules](../docs/rules.md), and `craftz rules <id>` prints one, which
- * is what a finding names. It works like `prose rules`, so an agent that knows one knows the
- * other.
+ * `craftz rules` prints [the rules](../docs/rules.md), or one by id, as `prose rules` does, so an
+ * agent that knows one knows the other. `craftz check` runs them on a folder, and `craftz fix`
+ * writes their fixes ([rules.ts](rules.ts)). `craftz upgrade` moves to the latest craftz
+ * ([upgrade.ts](upgrade.ts)), and `craftz settings` sets GitHub and the Worker
+ * ([apply.ts](apply.ts)). `craftz status` reads what's live ([status.ts](status.ts)), and
+ * `craftz deploy` deploys a built site. `craftz pr`, `craftz gone` and `craftz release` open and
+ * clear pull requests ([pr.ts](pr.ts), [gone.ts](gone.ts), [release.ts](release.ts)), and
+ * `craftz new` starts a repository ([new.ts](new.ts)).
  *
- * `craftz check` runs every rule on a folder's files, the current one unless another is named.
- * It prints its errors, its warnings and its notes, as [the design](../docs/design.md#errors-warnings-and-notes)
- * has them, and exits 1 only on an error. It reads no settings, so it runs in CI with no login.
- * `craftz fix` writes every fix in the files, the same ones `pnpm align` runs,
- * then lists the files it changed, checks again and prints what's left to do by hand. A fix can
- * move versions, so `pnpm install` comes next, then `pnpm run fix` for the format.
- *
- * `craftz upgrade` moves a repository to the latest craftz and runs its fix, as
- * [upgrade.ts](upgrade.ts) says, and runs those next steps itself.
- *
- * `craftz settings` writes what the rules set outside the files, on GitHub and on a site's
- * Worker, for the repository the folder's `origin` names, then reads it back. `--check` only
- * reads. Classic branch protection on `main` isn't craftz's, so removing it asks first, or takes
- * `--yes` where there's no one to ask. It needs `gh` logged in as the owner, and `cf` for a
- * Worker.
- *
- * `craftz status` reads what's live: CI on `main`, the open pull requests, a package's version on
- * npm and its latest release, and a site's latest build and addresses, as [status.ts](status.ts)
- * says. `--log` prints the latest build's log too, and `--notes` the release's notes. It exits 1
- * when anything has failed.
- *
- * `craftz deploy` deploys a site that's already built, as its `ship` script, which the Worker's
- * deploy command runs. What it runs follows from the Worker config's file, since each tool reads
- * only its own. `cloudflare.config.ts` uploads the Build Output with `cf deploy --prebuilt`, and
- * `wrangler.toml` runs `wrangler deploy`, which an app is held on until cf can deploy one. Each
- * tool is the repository's own dependency, so the version the rules check is the one that
- * deploys.
- *
- * `craftz pr` opens a pull request that merges itself, as [pr.ts](pr.ts) says, and `craftz gone`
- * deletes the branches that merged, as [gone.ts](gone.ts) says. A repository runs them as
- * `pnpm pr` and `pnpm gone`. `craftz release` opens the pull request that releases a package, as
- * [release.ts](release.ts) says.
- *
- * `craftz new` starts a repository that already follows the rules, as [new.ts](new.ts) says. It's
- * the one command that works outside a repository, as `pnpm dlx @amitkaps/craftz new`.
+ * Each says how it works where it's written, and [usage](../docs/usage.md) how to run it. What
+ * runs in this file has its own block below.
  */
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
@@ -87,7 +59,16 @@ const [command, arg, ...rest] = process.argv.slice(2);
 
 const lines = (f: Finding): string[] => f.drift.map((d) => (f.rule ? `${f.rule}: ${d}` : d));
 
-// Prints a folder's errors, warnings and notes, and returns whether there's an error.
+/** @prose
+ * # Check and fix
+ *
+ * `check` prints a folder's errors, warnings and notes, as
+ * [the design](../docs/design.md#errors-warnings-and-notes) has them, and exits 1 only on an
+ * error. It reads no settings, so it runs in CI with no login.
+ *
+ * `fix` writes every fix, the same ones `pnpm align` runs, then checks again. A fix can move
+ * versions, so `pnpm install` comes next, then `pnpm run fix` for the format.
+ */
 async function check(dir: string): Promise<boolean> {
   const { findings } = await checkFolder(dir);
   const pkg = JSON.parse(read(join(dir, "package.json")) || "{}") as Pkg;
@@ -121,7 +102,16 @@ function target(dir: string): Target {
   return { repo, pkg, site, noCloudflare: site && cloudflareLogin() };
 }
 
-// Deploys the folder's site with the tool its deploy axis names, and returns the exit code.
+/** @prose
+ * # Deploy
+ *
+ * Deploys a site that's already built, as its `ship` script, which the Worker's deploy command
+ * runs. The tool follows from the Worker config's file, since each tool reads only its own.
+ *
+ * `cloudflare.config.ts` uploads the Build Output with `cf deploy --prebuilt`, and `wrangler.toml`
+ * runs `wrangler deploy`, which an app is held on until cf can deploy one. Each tool is the
+ * repository's own dependency, so the version the rules check is the one that deploys.
+ */
 function deploy(dir: string): number {
   const site = workerIn(dir);
   if (!site) {
@@ -155,7 +145,8 @@ async function live(dir: string, log: boolean, notes: boolean): Promise<boolean>
   return failed;
 }
 
-// Moves the folder to the latest craftz, says from which version, and returns the check's exit code.
+// Moves the folder to the latest craftz, as upgrade.ts says, runs the steps a fix leaves, and
+// returns the check's exit code.
 async function moveOn(dir: string): Promise<number> {
   const versionOf = (): string | undefined => {
     const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as Pkg;
@@ -190,7 +181,14 @@ async function ask(question: string): Promise<boolean> {
   return /^y(es)?$/i.test(answer.trim());
 }
 
-// Prints a repository's settings, and returns whether any is still off.
+/** @prose
+ * # Settings
+ *
+ * Writes what the rules set outside the files, on GitHub and on a site's Worker, for the
+ * repository the folder's `origin` names, then reads it back. `--check` only reads. Classic
+ * branch protection on `main` isn't craftz's, so removing it asks first, or takes `--yes` where
+ * there's no one to ask.
+ */
 async function settings(dir: string, checking: boolean, yes: boolean): Promise<boolean> {
   if (!githubLogin()) {
     console.error("craftz settings needs gh logged in as the owner.");
@@ -279,7 +277,8 @@ if (command === "rules" && !rest.length) {
 } else if (command === "gone" && !arg) {
   gone();
 } else if (command === "new") {
-  // Loaded only here, since it brings the formatter.
+  // Loaded only here, since it brings the formatter. It's the one command that works outside a
+  // repository, as `pnpm dlx @amitkaps/craftz new`.
   const { start } = await import("./new.ts");
   await start([arg, ...rest].filter((it) => it !== undefined));
 } else if (command === "-h" || command === "--help") {
