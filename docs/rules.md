@@ -49,7 +49,7 @@ lint: {
 
 `craftz()` in the config's `plugins` sets the `fmt` and `lint` blocks, so a config with it holds neither. It fills in only what the config leaves unset, and fails a config that sets one of them differently, naming the key.
 
-- [`toolchain-craftz`]{#toolchain-craftz}: every repository on Vite+ depends on `@amitkaps/craftz` and puts `craftz()` first in its config's `plugins`, so its format, lint and site build come from the version it installs. craftz's own config imports the plugin from source. The fix adds both, and takes out the `fmt` and `lint` blocks where they're the ones the plugin sets.
+- [`toolchain-craftz`]{#toolchain-craftz}: every repository on Vite+ depends on `@amitkaps/craftz` and puts `craftz()` first in its config's `plugins`, so its format, lint and site build come from the version it installs. craftz's own config imports the plugin from source. The fix adds both. A key the config sets that the plugin sets differently fails the config, and is settled by hand.
 
 ### The editor
 
