@@ -8,7 +8,6 @@ node_modules
 
 # Output
 dist
-.cloudflare
 .prose
 
 # OS
@@ -19,6 +18,6 @@ Thumbs.db
 .env
 .env.*
 
-# Cloudflare Vite plugin
+# Wrangler
 .dev.vars*
 .wrangler

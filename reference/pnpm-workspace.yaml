@@ -17,7 +17,7 @@ minimumReleaseAgeExclude:
 
 # @prose
 # Dependencies allowed to run install scripts. Both are native binaries: esbuild for the
-# build, and workerd for the local Cloudflare runtime.
+# build, and workerd for the local Cloudflare runtime, where an app installs wrangler.
 allowBuilds:
   esbuild: true
   workerd: true

@@ -22,8 +22,8 @@
  * no settings written. Its clone keeps the changes, with `verify` run, so they can be read or
  * compared with another run, and its settings are read and listed where they've drifted.
  */
-import { execFile } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { execFile, execFileSync } from "node:child_process";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -31,7 +31,7 @@ import { checkSettings, writeSettings } from "./apply.ts";
 import { fixFiles } from "./rules.ts";
 import { CRAFTZ, OWNER, TOOLS } from "./reference.ts";
 import { repos } from "./survey.ts";
-import { upgrade } from "./upgrade.ts";
+import { type Run, upgrade } from "./upgrade.ts";
 import { workerIn } from "./worker.ts";
 import { cloudflareLogin, githubLogin } from "./settings.ts";
 
@@ -46,10 +46,12 @@ const noCloudflare = cloudflareLogin();
 if (noCloudflare) console.log(`not written: the Workers' build settings, since ${noCloudflare}`);
 
 const args = process.argv.slice(2);
-const local = args.includes("--local");
-const named = args.filter((arg) => arg !== "--local");
+const candidate = args.includes("--candidate");
+const local = candidate || args.includes("--local");
+const named = args.filter((arg) => !arg.startsWith("--"));
 const targets = named.length ? named : await repos();
 const work = mkdtempSync(join(tmpdir(), "align-"));
+const tarball = candidate ? pack() : undefined;
 
 type Pkg = {
   private?: boolean;
@@ -172,7 +174,7 @@ async function moveReference(dir: string, log: string[]): Promise<string[]> {
  * The fix brings that version's holds, like base's TypeScript, and changes nothing that's in line
  * already. What it leaves to do by hand fails `verify`, which runs `craftz check`.
  */
-async function alignTo(dir: string, repo: string, log: string[]): Promise<string[]> {
+async function alignTo(dir: string, repo: string, log: string[], byHand: Run): Promise<string[]> {
   if (repo === SELF) {
     const std = join(dir, "reference");
     const majors = await updateReference(std, log);
@@ -181,7 +183,12 @@ async function alignTo(dir: string, repo: string, log: string[]): Promise<string
     return [...majors, ...(await update(dir, log, [...TOOLS, "vite-plus"]))];
   }
   await sh(dir, log, "pnpm", "install");
-  await upgrade((command, ...args) => sh(dir, log, command, ...args));
+  // Its fix fails on what's left by hand, which the run lists and goes past.
+  await upgrade(
+    (command, ...args) =>
+      args[0] === "run" ? byHand(command, ...args) : sh(dir, log, command, ...args),
+    tarball,
+  );
   return update(dir, log, [...TOOLS, "vite-plus", CRAFTZ]);
 }
 
@@ -205,6 +212,57 @@ async function alignTo(dir: string, repo: string, log: string[]): Promise<string
  */
 type Outcome = { repo: string; lines: string[]; failed?: string; pr?: string };
 
+const PACKAGE_FILES = ["package.json", "pnpm-lock.yaml", "reference/package.json"];
+
+// The versions a repository moves, and in craftz, the reference's too, which is what bump moves.
+function versionsIn(dir: string, repo: string): Deps {
+  const own = depsOf(readJson<Pkg>(join(dir, "package.json")));
+  if (repo !== SELF) return own;
+  const reference = depsOf(readJson<Pkg>(join(dir, "reference", "package.json")));
+  return {
+    ...own,
+    ...Object.fromEntries(Object.entries(reference).map(([name, v]) => [`${name} (reference)`, v])),
+  };
+}
+
+// What a failed step leaves by hand: craftz check's findings, and the count of lint and type
+// errors, or the step's first line when it printed neither. A candidate's own version is a
+// tarball, which versions-craftz names in every repository, so it's left out.
+function findings(error: unknown): string[] {
+  const {
+    stdout = "",
+    stderr = "",
+    message = "",
+  } = error as {
+    stdout?: string;
+    stderr?: string;
+    message?: string;
+  };
+  const found = `${stdout}\n${stderr}`
+    .split("\n")
+    .filter((line) => /^ {4}[a-z0-9-]+: /.test(line) || /^Found \d+ errors?/.test(line))
+    .map((line) => line.trim())
+    .filter((line) => !(candidate && line.startsWith("versions-craftz:")));
+  return found.length || candidate ? found : [message.split("\n")[0] ?? ""];
+}
+
+/** @prose
+ * # A candidate
+ *
+ * `pnpm align --candidate` tries this checkout on every repository before it's released. It packs
+ * craftz, as `pnpm publish` would, and moves each clone to the tarball in place of npm's latest.
+ * It's local, since a pull request can't install a tarball on a laptop.
+ *
+ * Each repository then lists what it leaves by hand, which is what the release's notes say to do.
+ */
+function pack(): string {
+  const root = join(import.meta.dirname, "..");
+  execFileSync("pnpm", ["pack", "--pack-destination", work], { cwd: root, stdio: "pipe" });
+  const file = readdirSync(work).find((name) => name.endsWith(".tgz"));
+  if (!file) throw new Error("pnpm pack wrote no tarball");
+  return join(work, file);
+}
+
 let turn: Promise<unknown> = Promise.resolve();
 function oneAtATime<T>(task: () => Promise<T>): Promise<T> {
   const run = turn.then(task);
@@ -217,33 +275,47 @@ async function files(repo: string): Promise<Outcome> {
   const log: string[] = [];
   const lines: string[] = [];
   const logFile = join(work, `${repo}.log`);
+  const left = new Set<string>();
+  const byHand: Run = (command, ...args) =>
+    sh(dir, log, command, ...args).catch((error: unknown) => {
+      for (const finding of findings(error)) left.add(finding);
+    });
   try {
     await sh(work, log, "gh", "repo", "clone", `${OWNER}/${repo}`, dir, "--", "--quiet");
-    const before = depsOf(readJson<Pkg>(join(dir, "package.json")));
-    const majors = await alignTo(dir, repo, log);
+    const before = versionsIn(dir, repo);
+    const majors = await alignTo(dir, repo, log, byHand);
     rmSync(join(dir, "pnpm-lock.yaml"), { force: true });
     rmSync(join(dir, "node_modules"), { recursive: true, force: true });
     await sh(dir, log, "pnpm", "install");
     await sh(dir, log, "pnpm", "install", "--frozen-lockfile");
-    await sh(dir, log, "pnpm", "run", "fix");
+    await byHand("pnpm", "run", "fix");
 
     // trimEnd, since each line opens with a status column that may be a space.
     const changed = (await sh(dir, log, "git", "status", "--porcelain")).trimEnd();
-    if (!changed) return { repo, lines: ["in line"] };
+    if (!changed && !left.size) return { repo, lines: ["in line"] };
 
-    const after = depsOf(readJson<Pkg>(join(dir, "package.json")));
+    const after = versionsIn(dir, repo);
     const moved = Object.keys(after)
       .filter((name) => before[name] !== after[name])
       .map((name) => `${name} ${after[name]}, from ${before[name] ?? "nothing"}`);
     const other = changed
       .split("\n")
-      .filter((line) => !["package.json", "pnpm-lock.yaml"].includes(line.slice(3)))
+      .filter(Boolean)
+      .filter((line) => !PACKAGE_FILES.includes(line.slice(3)))
       .map((line) => `${line.slice(3)} ${line.startsWith(" D") ? "deleted" : "from craftz"}`);
 
     // Staged first, so verify sees what the commit will hold: a check that lists files with git,
     // like prose's lexer test, would otherwise still find the ones a fix deleted.
     await sh(dir, log, "git", "add", "-A");
-    await oneAtATime(() => sh(dir, log, "pnpm", "run", "verify"));
+    await oneAtATime(() => byHand("pnpm", "run", "verify"));
+    if (left.size) {
+      writeFileSync(logFile, log.join("\n"));
+      return {
+        repo,
+        lines: [...moved, ...other],
+        failed: `left by hand:\n${[...left].map((line) => `      ${line}`).join("\n")}\n      log: ${logFile}\n      clone: ${dir}`,
+      };
+    }
     if (local) {
       lines.push(
         ...moved,

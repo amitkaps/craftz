@@ -7,6 +7,7 @@
  * Each repository is compared with the files in [reference/](../reference/), so there's no second
  * copy of them to keep in step. [The rules](../docs/rules.md) say what each check means.
  */
+import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { type Rule, RULES } from "./rules.ts";
 import { parts, stated } from "./stated.ts";
@@ -18,17 +19,17 @@ export { type Worker, origin, worker };
 /** @prose
  * # The repositories
  *
- * Every public repository of the owner's with the topic `craftz`, other than craftz itself and
- * any that's archived. `craftz settings` adds the topic, so a repository joins when its settings
- * are written, and leaves when it's archived. A private one isn't listed, since craftz is public
- * and would name it.
+ * Every repository of the owner's with the topic `craftz`, private ones too, other than craftz
+ * itself and any that's archived. `craftz settings` adds the topic, so a repository joins when its
+ * settings are written, and leaves when it's archived.
  *
- * GitHub's search answers without a login, and only with public repositories then, so a login
- * never adds a private one to the list.
+ * GitHub's search lists a private repository only to a login, so it searches as `gh`, which align
+ * needs anyway. The names stay in the terminal and in each repository's own pull request, so
+ * craftz, which is public, never names a private one.
  */
 export async function repos(): Promise<string[]> {
-  const q = `topic:${TOPIC} user:${OWNER} is:public archived:false`;
-  const token = process.env["GITHUB_TOKEN"];
+  const q = `topic:${TOPIC} user:${OWNER} archived:false`;
+  const token = process.env["GITHUB_TOKEN"] ?? ghToken();
   const res = await fetch(
     `https://api.github.com/search/repositories?q=${encodeURIComponent(q)}&per_page=100`,
     { headers: token ? { authorization: `Bearer ${token}` } : {} },
@@ -39,6 +40,14 @@ export async function repos(): Promise<string[]> {
     .map((it) => it.name)
     .filter((name) => name !== "craftz")
     .sort();
+}
+
+function ghToken(): string | undefined {
+  try {
+    return execFileSync("gh", ["auth", "token"], { encoding: "utf8" }).trim() || undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 const FILES = [

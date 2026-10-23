@@ -1,10 +1,10 @@
 /** @prose
  * # Editing a repository's files
  *
- * The fixes that edit code a repository writes itself, `vite.config.ts` and
- * `cloudflare.config.ts`, each once, to add craftz's call, and to load Cloudflare's plugin only
- * when Vite runs. [rules.ts](rules.ts) reads and writes the files, and keeps only the rules. CI
- * and pnpm's settings are craftz's, written whole.
+ * The fixes that edit code a repository writes itself, `vite.config.ts` and `cloudflare.config.ts`,
+ * each once, to add craftz's calls, and to take Cloudflare's plugin out. [rules.ts](rules.ts) reads
+ * and writes the files, and keeps only the rules. CI and pnpm's settings are craftz's, written
+ * whole.
  *
  * Each edit is read with regular expressions, which depend on how a file is laid out, so most
  * fixes that missed a real repository missed here. An edit takes a file's text and gives back
@@ -52,53 +52,69 @@ export function withCraftz(vite: string): string {
 }
 
 /** @prose
- * # Loading Cloudflare's plugin
+ * # A static site's configs
  *
- * `cloudflare-plugin`'s fix moves Cloudflare's plugin into Vite+'s `lazyPlugins()`, imported
- * inside it, so the format, lint and type checks read the config without loading the plugin and
- * the workerd it brings. Vite still loads it to build, serve and test.
+ * `cloudflare-site`'s fix rewrites a cf config as `site()`'s: the Worker that `worker: {…}` or
+ * `worker: worker({…})` held becomes `site()`'s argument, without what `site()` sets, and the
+ * folder Vite served goes in `assets.directory`. A config that turns an address on, or sets a
+ * Node.js flag, comes back unchanged, since `site()` would fail it, and that's settled by hand.
  *
- * It rewrites a config whose plugins are on one line, as `craftz new` wrote them, one to a line,
- * as the format writes a list that holds a function.
+ * `cloudflare-static`'s fix takes Cloudflare's plugin out of `vite.config.ts`, with the
+ * `lazyPlugins()` that loaded it, and the `publicDir` that named its folder, which is
+ * `cloudflare.config.ts`'s now, unless Vite still builds the site from an `index.html`.
  */
 
-const STATIC = /^import \{ cloudflare \} from "@cloudflare\/vite-plugin";\n/m;
+const CF_IMPORT = /^import \{ defineConfig \} from "cf\/config";\n/m;
+const SETS = /^[ \t]+(compatibilityDate: "[^"]*"|workersDev: false|previewUrls: false),\n/gm;
 
-/** A list's items, split at the commas outside brackets. */
-function items(list: string): string[] {
-  const found: string[] = [];
-  let depth = 0;
-  let start = 0;
-  for (let i = 0; i < list.length; i++) {
-    const char = list[i] ?? "";
-    if ("([{".includes(char)) depth++;
-    else if (")]}".includes(char)) depth--;
-    else if (char === "," && depth === 0) {
-      found.push(list.slice(start, i).trim());
-      start = i + 1;
-    }
+/** A Worker config that takes its Worker from `site()`, serving `directory`. */
+export function withSite(config: string, directory: string): string {
+  const open = /^([ \t]*)worker: (?:worker\()?\{\n/m.exec(config);
+  if (
+    !open ||
+    !CF_IMPORT.test(config) ||
+    /workersDev: true|previewUrls: true|nodejs_/.test(config)
+  ) {
+    return config;
   }
-  return [...found, list.slice(start).trim()].filter(Boolean);
+  const [line, indent = ""] = open;
+  const close = new RegExp(`\n${indent}\\}\\)?,\n`);
+  const rest = config.slice(open.index + line.length);
+  const end = close.exec(rest);
+  if (!end) return config;
+  // The Worker's keys, one level out, as site()'s argument.
+  const body = rest
+    .slice(0, end.index + 1)
+    .replace(SETS, "")
+    .replace(new RegExp(`^${indent}`, "gm"), "");
+  const folder = `    directory: "${directory}",\n`;
+  const opened = /^  assets: \{\n/m;
+  const keys = opened.test(body)
+    ? body.replace(opened, (assets) => `${assets}${folder}`)
+    : `${body}  assets: {\n${folder}  },\n`;
+  const after = rest.slice(end.index + end[0].length).replace(/^\}\);\n?/, "");
+  const before = config
+    .slice(0, open.index)
+    .replace(CF_IMPORT, `import { site } from "${CRAFTZ}/cloudflare";\n`)
+    .replace(/^import \{ worker \} from "[^"]*";\n/m, "")
+    .replace(/^export default defineConfig\(\{\n/m, "export default site({\n");
+  return `${before}${keys}});\n${after}`;
 }
 
-/** A Vite config that loads Cloudflare's plugin in `lazyPlugins()`. */
-export function withLazyCloudflare(vite: string): string {
-  const line = /^([ \t]*)plugins: \[(.*\bcloudflare\(.*)\],$/m.exec(vite);
-  if (!STATIC.test(vite) || !IMPORT.test(vite) || !line) return vite;
-  const [whole, indent = "", list = ""] = line;
-  const inner = `${indent}  `;
-  const plugins = items(list).map((item) =>
-    item.startsWith("cloudflare(")
-      ? [
-          `${inner}lazyPlugins(async () => {`,
-          `${inner}  const { cloudflare } = await import("@cloudflare/vite-plugin");`,
-          `${inner}  return [${item}];`,
-          `${inner}}),`,
-        ].join("\n")
-      : `${inner}${item},`,
-  );
-  return vite
-    .replace(STATIC, "")
-    .replace(IMPORT, 'import { defineConfig, lazyPlugins } from "vite-plus";\n')
-    .replace(whole, [`${indent}plugins: [`, ...plugins, `${indent}],`].join("\n"));
+const LAZY =
+  /^[ \t]*lazyPlugins\(async \(\) => \{\n[^]*?@cloudflare\/vite-plugin[^]*?\n[ \t]*\}\),\n/m;
+// The publicDir line, with the comment lines just above it.
+const PUBLIC_DIR = /(?:^[ \t]*\/\/.*\n)*^[ \t]*publicDir: "[^"]*",\n(?:[ \t]*\n)?/m;
+
+/** A Vite config without Cloudflare's plugin, and without `publicDir` unless Vite builds. */
+export function withoutCloudflare(vite: string, builds: boolean): string {
+  const without = vite
+    .replace(LAZY, "")
+    .replace(
+      /^import \{ defineConfig, lazyPlugins \} from "vite-plus";$/m,
+      'import { defineConfig } from "vite-plus";',
+    )
+    .replace(/^import \{ cloudflare \} from "@cloudflare\/vite-plugin";\n/m, "")
+    .replace(/,?\s*cloudflare\(\{[^}]*\}\)/, "");
+  return builds ? without : without.replace(PUBLIC_DIR, "");
 }

@@ -23,6 +23,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { type Target, checkSettings, writeSettings } from "./apply.ts";
+import { deploy as upload } from "./deploy.ts";
 import { gone } from "./gone.ts";
 import { pr } from "./pr.ts";
 import { release } from "./release.ts";
@@ -108,25 +109,35 @@ function target(dir: string): Target {
  * Deploys a site that's already built, as its `ship` script, which the Worker's deploy command
  * runs. The tool follows from the Worker config's file, since each tool reads only its own.
  *
- * `cloudflare.config.ts` uploads the Build Output with `cf deploy --prebuilt`, and `wrangler.toml`
- * runs `wrangler deploy`, which an app is held on until cf can deploy one. Each tool is the
+ * A static site's `cloudflare.config.ts` is uploaded by craftz itself ([deploy.ts](deploy.ts)),
+ * so the site installs no Cloudflare tool. An app's `wrangler.toml` runs `wrangler deploy`, the
  * repository's own dependency, so the version the rules check is the one that deploys.
  */
-function deploy(dir: string): number {
+async function deploy(dir: string): Promise<number> {
   const site = workerIn(dir);
   if (!site) {
     console.error(`craftz deploy: ${dir} has no Worker config, so there's nothing to deploy.`);
     return 1;
   }
-  const [tool, ...args] =
-    site.file === "cloudflare.config.ts" ? ["cf", "deploy", "--prebuilt"] : ["wrangler", "deploy"];
-  const bin = join(dir, "node_modules", ".bin", tool ?? "");
+  if (site.file === "cloudflare.config.ts") {
+    console.log(`craftz deploy: ${site.name}, from ${site.file}`);
+    try {
+      for (const line of await upload(dir)) console.log(`    ${line}`);
+      return 0;
+    } catch (error) {
+      console.error(`craftz deploy: ${(error as Error).message}`);
+      return 1;
+    }
+  }
+  const bin = join(dir, "node_modules", ".bin", "wrangler");
   if (!existsSync(bin)) {
-    console.error(`craftz deploy: ${site.name} is in ${site.file}, so it needs ${tool} installed.`);
+    console.error(
+      `craftz deploy: ${site.name} is in ${site.file}, so it needs wrangler installed.`,
+    );
     return 1;
   }
-  console.log(`craftz deploy: ${site.name}, from ${site.file}, with ${tool} ${args.join(" ")}`);
-  return spawnSync(bin, args, { cwd: dir, stdio: "inherit" }).status ?? 1;
+  console.log(`craftz deploy: ${site.name}, from ${site.file}, with wrangler deploy`);
+  return spawnSync(bin, ["deploy"], { cwd: dir, stdio: "inherit" }).status ?? 1;
 }
 
 // Prints what's live for a repository, and returns whether anything has failed.
@@ -266,7 +277,7 @@ if (command === "rules" && !rest.length) {
   );
   process.exitCode = failed ? 1 : 0;
 } else if (command === "deploy" && !arg) {
-  process.exitCode = deploy(process.cwd());
+  process.exitCode = await deploy(process.cwd());
 } else if (command === "pr") {
   await pr([arg, ...rest].filter((it) => it !== undefined));
 } else if (command === "release") {

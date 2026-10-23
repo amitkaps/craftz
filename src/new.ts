@@ -2,31 +2,36 @@
  * # New
  *
  * Starts a repository that follows the rules from its first commit. It writes the folder in the
- * current one, formatted, then installs, runs `verify` and makes the first commit, so what it
- * hands over already passes. It formats with oxfmt's own `format`, with the options `craftz()`
- * sets, so nothing about the format is copied here.
+ * current one, formatted, then installs, makes the first commit and runs `verify`, so what it
+ * hands over already passes.
  *
- * What it starts is two of [the axes](../docs/rules.md#axes): `--package` publishes it to npm,
- * and `--site` deploys a static site to Cloudflare. Either, both or neither, which is scripts run
- * on a laptop. An app starts from base instead. The other two axes are flags of their own.
- * `--private` makes the GitHub repository private, which keeps it off craftz's list, and `--internal`
- * puts a site behind Cloudflare Access, which its config then says.
+ * The commit comes first, since a prose site builds from one. It formats with oxfmt's own
+ * `format`, with the options `craftz()` sets, so nothing about the format is copied here.
  *
- * It writes only what's the new repository's own: its name and description, its source, the
- * Vite config for what it publishes and deploys. Then it runs every fix in [rules.ts](rules.ts), the same ones
- * `craftz fix` runs. They write the rest: the versions and engines, the shared scripts, CI, the
- * editor settings, pnpm's settings, the shared sections of `AGENTS.md`, a package's release files,
- * and a first version of each doc. So it can't follow the rules any less than `craftz fix` does,
- * and a rule's fix reaches the next repository with no second copy here. What it does write is
- * built from [the reference](../reference/README.md) where it can be, like `tsconfig.json`,
- * which extends craftz's, and `.gitignore`, which the reference holds as `gitignore`. The licence is craftz's own. The
- * format and lint the rules ask for, and a site's build target, aren't written at all: the
- * config uses `craftz()`, which sets them from the version the repository installs. `pnpm test` checks the result against the survey.
+ * What it starts is two of [the axes](../docs/rules.md#axes): `--package` publishes it to npm, and
+ * `--site` deploys a static site to Cloudflare. Either, both or neither, which is scripts run on a
+ * laptop. A site alone is Vite's, from an `index.html`, and a package's site is the repository read
+ * as prose, since `vp pack` writes Vite's `dist`. An app starts from base instead. The other two
+ * axes are flags of their own. `--private` makes the GitHub repository private, which keeps it off
+ * craftz's list, and `--internal` puts a site behind Cloudflare Access, which its config then says.
+ *
+ * It writes only what's the new repository's own: its name and description, its source, the Vite
+ * config for what it publishes and deploys. Then it runs every fix in [rules.ts](rules.ts), the
+ * same ones `craftz fix` runs. They write the rest: the versions and engines, the shared scripts,
+ * CI, the editor settings, pnpm's settings, the shared sections of `AGENTS.md`, a package's release
+ * files, and a first version of each doc. So it can't follow the rules any less than `craftz fix`
+ * does, and a rule's fix reaches the next repository with no second copy here. What it does write
+ * is built from [the reference](../reference/README.md) where it can be, like `tsconfig.json`,
+ * which extends craftz's, and `.gitignore`, which the reference holds as `gitignore`. The licence
+ * is craftz's own. The format and lint the rules ask for, and a site's build target, aren't written
+ * at all: the config uses `craftz()`, which sets them from the version the repository installs.
+ * `pnpm test` checks the result against the survey.
  *
  * `--push` also creates the repository on GitHub, pushes the first commit and writes its GitHub
- * settings, as `craftz settings` does. That first push is the only one to `main` the rules allow, since
- * the branch rules aren't on yet. Its settings include the topic `craftz`, so align finds it.
- * What's left is printed at the end: the Worker, Access or npm's setup, which have no API to do them from here.
+ * settings, as `craftz settings` does. That first push is the only one to `main` the rules allow,
+ * since the branch rules aren't on yet. Its settings include the topic `craftz`, so align finds it.
+ * What's left is printed at the end: the Worker, Access or npm's setup, which have no API to do
+ * them from here.
  */
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -60,12 +65,10 @@ async function packageJson(name: string, shape: Shape, description: string): Pro
     Object.fromEntries(tools.map((tool) => [tool, reference.devDependencies[tool]]));
   const scripts = (...names: string[]) =>
     Object.fromEntries(names.map((script) => [script, reference.scripts[script]]));
-  const site = shape.site ? ours("@cloudflare/vite-plugin", "cf") : {};
   const devDependencies = {
     "@amitkaps/craftz": npm(CRAFTZ),
     "@amitkaps/prose": npm("@amitkaps/prose"),
     ...ours("@types/node", "vite-plus"),
-    ...site,
   };
 
   if (!shape.package) {
@@ -86,7 +89,7 @@ async function packageJson(name: string, shape: Shape, description: string): Pro
       2,
     );
   }
-  // A package's build is `vp pack`, so its site is built by `vp build` itself, as markz's is.
+  // A package's build is `vp pack`, so its site is the one `prose build` writes, as markz's is.
   return JSON.stringify(
     {
       name: `@${OWNER}/${name}`,
@@ -105,7 +108,7 @@ async function packageJson(name: string, shape: Shape, description: string): Pro
         build: "vp pack",
         ...scripts("check"),
         test: "vp test --run",
-        verify: `pnpm check && pnpm prose check && pnpm craftz check && pnpm test && pnpm build${shape.site ? " && vp build" : ""}`,
+        verify: `pnpm check && pnpm prose check && pnpm craftz check && pnpm test && pnpm build${shape.site ? " && pnpm prose build" : ""}`,
         ...(shape.site ? scripts("ship") : {}),
       },
       devDependencies,
@@ -141,7 +144,7 @@ function wrapped(text: string): string[] {
 function viteConfig(shape: Shape): string {
   const what = listed([
     ...(shape.package ? ["packs the package"] : []),
-    ...(shape.site ? ["builds the site"] : []),
+    ...(shape.site && !shape.package ? ["builds the site"] : []),
     "checks it",
   ]);
   const why = [
@@ -154,23 +157,16 @@ function viteConfig(shape: Shape): string {
       : []),
     ...(shape.site
       ? [
-          "The Cloudflare plugin writes an assets-only Build Output, which `pnpm ship` uploads as it is, through `craftz deploy`. The Worker itself is in [cloudflare.config.ts](cloudflare.config.ts).",
+          shape.package
+            ? "The site is the repository read as prose, the folder `prose build` writes, so Vite doesn't build it. [cloudflare.config.ts](cloudflare.config.ts) names it, and `pnpm ship` uploads it, through `craftz deploy`."
+            : "Vite builds the site from `index.html` into `dist`, which [cloudflare.config.ts](cloudflare.config.ts) names, and `pnpm ship` uploads it, through `craftz deploy`.",
         ]
       : []),
     ...(shape.package || shape.site
       ? []
       : ["There's nothing to build or serve, so Vite+ is here for its checks and tests."]),
   ];
-  const plugins = shape.site
-    ? `  plugins: [
-    craftz(),
-    lazyPlugins(async () => {
-      const { cloudflare } = await import("@cloudflare/vite-plugin");
-      return [cloudflare({ assetsOnly: true })];
-    }),
-  ],
-`
-    : `  plugins: [craftz()],
+  const plugins = `  plugins: [craftz()],
 `;
   const pack = `  pack: {
     entry: ["src/index.ts"],
@@ -184,7 +180,7 @@ function viteConfig(shape: Shape): string {
  *
  * ${wrapped(why.join(" ")).join("\n * ")}
  */
-import { defineConfig${shape.site ? ", lazyPlugins" : ""} } from "vite-plus";
+import { defineConfig } from "vite-plus";
 import { craftz } from "@amitkaps/craftz";
 
 export default defineConfig({
@@ -227,7 +223,7 @@ Read [the docs](docs/README.md) for its design, plan and lessons. It follows [cr
 `;
 }
 
-function cloudflareConfig(name: string, internal: boolean): string {
+function cloudflareConfig(name: string, internal: boolean, directory: string): string {
   const why = internal
     ? `
  *
@@ -237,19 +233,17 @@ function cloudflareConfig(name: string, internal: boolean): string {
   return `/** @prose
  * # The Worker
  *
- * What Cloudflare runs: its name, domain and how it serves the files. \`worker()\` sets the
+ * What Cloudflare runs: its name, domain and the folder it serves. \`site()\` sets the
  * compatibility date and turns off \`workers.dev\` and preview URLs, so the site answers only on
  * its domain. Keep the name equal to the Worker connected to this repository in the dashboard.
  * The build and deploy commands are set on the Worker, as craftz's rules list.${why}
  */
-import { defineConfig } from "cf/config";
-import { worker } from "${CRAFTZ}/cloudflare";
+import { site } from "${CRAFTZ}/cloudflare";
 
-export default defineConfig({
-  worker: worker({
-    name: "${name}",
-    domains: ["${name}.amitkaps.com"],
-  }),
+export default site({
+  name: "${name}",
+  domains: ["${name}.amitkaps.com"],
+  assets: { directory: "${directory}" },
 });
 `;
 }
@@ -318,14 +312,16 @@ export async function write(
     "tests/README.md": "# Tests\n\nThe tests, one file for each part of [the source](../src/).\n",
   };
   if (start.site) {
-    files["cloudflare.config.ts"] = cloudflareConfig(name, start.internal);
-    files["index.html"] = page(name, description);
+    const directory = start.package ? ".prose" : "dist";
+    files["cloudflare.config.ts"] = cloudflareConfig(name, start.internal, directory);
+    if (!start.package) files["index.html"] = page(name, description);
   }
   for (const [file, text] of Object.entries(files)) {
     mkdirSync(dirname(join(dir, file)), { recursive: true });
     writeFileSync(join(dir, file), text);
   }
   fixFiles(dir, here);
+  execFileSync("git", ["init", "-q", "-b", "main"], { cwd: dir });
   // Formatted as `vp fmt` formats it, with what `craftz()` sets, so the repository starts out formatted.
   const { fmt } = craftz().config({ root: dir }) as { fmt: FormatConfig };
   for (const file of readdirSync(dir, { recursive: true, encoding: "utf8" })) {
@@ -386,10 +382,9 @@ export async function start(argv: string[]): Promise<void> {
     execFileSync(command, a, { cwd: dir, stdio: "inherit" });
   };
   run("pnpm", "install");
-  run("pnpm", "run", "verify");
-  run("git", "init", "-q", "-b", "main");
   run("git", "add", "-A");
   run("git", "commit", "-q", "-m", `Start ${name} from craftz's rules`);
+  run("pnpm", "run", "verify");
 
   if (push) {
     run(
