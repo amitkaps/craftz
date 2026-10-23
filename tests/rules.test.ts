@@ -11,7 +11,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { BROWSERS } from "../src/browsers.ts";
 import { COMPATIBILITY_DATE } from "../src/runtime.ts";
-import { worker as cloudflareWorker } from "../src/cloudflare.ts";
+import { site } from "../src/cloudflare.ts";
 import { BETA, RULES } from "../src/rules.ts";
 import { parts, stated } from "../src/stated.ts";
 import { CRAFTZ, type Pkg, VERSIONS, here, standard } from "../src/reference.ts";
@@ -99,18 +99,18 @@ test("our own package is exact and at least the reference's, and its fix only ra
 test("a build for browsers targets this repository's browsers", () => {
   const rule = RULES.find((r) => r.id === "toolchain-browsers");
   const list = BROWSERS.map((b) => `"${b}"`).join(", ");
-  const drift = (vite: string, site = false, pkg: Pkg = { private: true }) =>
+  const drift = (vite: string, deploys = false, pkg: Pkg = { private: true }, directory?: string) =>
     rule?.check({
       pkg,
       files: { "vite.config.ts": vite },
-      worker: site ? { deploys: "app" } : undefined,
+      worker: deploys ? { deploys: "app", directory } : undefined,
     } as unknown as Repo)?.drift;
   const pkg: Pkg = {};
   expect(BROWSERS.length).toBeGreaterThan(0);
   expect(
     drift(`plugins: [craftz()], pack: { entry: ["src/index.ts"] }`, false, pkg),
   ).toBeUndefined();
-  expect(drift(`publicDir: ".prose"`, true)).toBeUndefined();
+  expect(drift("plugins: [craftz()]", true, { private: true }, ".prose")).toBeUndefined();
   expect(drift(`plugins: [craftz({ browser: true })], pack: {}`, false, pkg)).toEqual([]);
   expect(drift(`pack: { target: [${list}, "node26"] }`, false, pkg)).toEqual([
     "pack.target is set. A package for browsers says craftz({ browser: true })",
@@ -297,21 +297,6 @@ test("the editor's settings are compared as JSON, and an app's add Svelte's", ()
   expect(rule?.check(repo(app, "app"))?.drift).toEqual([]);
 });
 
-test("a prose site names .prose as its folder", () => {
-  const vite =
-    "export default defineConfig({\n  plugins: [craftz(), cloudflare({ assetsOnly: true })],\n});\n";
-  const rule = RULES.find((r) => r.id === "cloudflare-prose-site");
-  const repo = (text: string) =>
-    ({
-      files: { "vite.config.ts": text, ".gitignore": ".cloudflare\n.wrangler\n" },
-      pkg: { scripts: { build: "vp pack", verify: "pnpm prose build && vp build" } },
-      worker: { file: "cloudflare.config.ts" },
-    }) as unknown as Repo;
-  expect(rule?.check(repo(vite))?.drift).toEqual(["vite.config.ts doesn't serve .prose"]);
-  const served = vite.replace("],\n", '],\n  publicDir: ".prose",\n');
-  expect(rule?.check(repo(served))?.drift).toEqual([]);
-});
-
 test("verify runs craftz check after prose check, and the fix puts it there once", () => {
   const dir = mkdtempSync(join(tmpdir(), "craftz-verify-"));
   const file = join(dir, "package.json");
@@ -329,94 +314,161 @@ test("verify runs craftz check after prose check, and the fix puts it there once
   expect(rule?.check({ pkg: read() } as Repo)?.drift).toEqual([]);
 });
 
-test("the prose site's fix adds the folders .gitignore leaves out, once", () => {
-  const dir = mkdtempSync(join(tmpdir(), "craftz-prose-ignore-"));
-  writeFileSync(join(dir, ".gitignore"), "node_modules\n.cloudflare");
-  const fix = RULES.find((r) => r.id === "cloudflare-prose-site")?.fix;
-  for (let i = 0; i < 2; i++) if (fix?.in === "files") fix.apply(dir, here);
-  expect(readFileSync(join(dir, ".gitignore"), "utf8")).toBe(
-    "node_modules\n.cloudflare\n.wrangler\n",
-  );
-});
-
-test("Cloudflare's plugin loads in lazyPlugins(), and the fix moves it there, once", () => {
-  const dir = mkdtempSync(join(tmpdir(), "craftz-lazy-"));
-  const file = join(dir, "vite.config.ts");
-  writeFileSync(
-    file,
-    `import { cloudflare } from "@cloudflare/vite-plugin";
-import { defineConfig } from "vite-plus";
-import { craftz } from "@amitkaps/craftz";
-
-export default defineConfig({
-  plugins: [craftz(), built, cloudflare({ assetsOnly: true })],
-});
-`,
-  );
-  const rule = RULES.find((r) => r.id === "cloudflare-plugin");
-  const drift = () =>
-    rule?.check({ files: { "vite.config.ts": readFileSync(file, "utf8") } } as unknown as Repo)
-      ?.drift;
-  expect(drift()).toEqual([
-    "vite.config.ts imports Cloudflare's plugin at the top, not in lazyPlugins()",
-  ]);
-  for (let i = 0; i < 2; i++) if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
-  expect(readFileSync(file, "utf8")).toBe(`import { defineConfig, lazyPlugins } from "vite-plus";
-import { craftz } from "@amitkaps/craftz";
-
-export default defineConfig({
-  plugins: [
-    craftz(),
-    built,
-    lazyPlugins(async () => {
-      const { cloudflare } = await import("@cloudflare/vite-plugin");
-      return [cloudflare({ assetsOnly: true })];
-    }),
-  ],
-});
-`);
-  expect(drift()).toEqual([]);
-});
-
-test("a Worker takes its date and addresses from worker()", () => {
-  const config = (body: string) => `import { defineConfig } from "cf/config";
+test("the site fix rewrites a cf config as site(), serving Vite's folder, once", () => {
+  const dir = mkdtempSync(join(tmpdir(), "craftz-site-"));
+  const file = join(dir, "cloudflare.config.ts");
+  const config = (worker: string) => `import { defineConfig } from "cf/config";
 import { worker } from "${CRAFTZ}/cloudflare";
 
 export default defineConfig({
-  worker: ${body},
+  worker: worker({
+    name: "x",
+    domains: ["x.amitkaps.com"],
+    ${worker}
+    assets: {
+      // Its own 404 page.
+      notFoundHandling: "404-page",
+    },
+  }),
 });
 `;
+  writeFileSync(join(dir, "package.json"), JSON.stringify({ scripts: { verify: "pnpm check" } }));
+  writeFileSync(join(dir, "vite.config.ts"), `export default {\n  publicDir: "site/dist",\n};\n`);
+  const fix = RULES.find((r) => r.id === "cloudflare-site")?.fix;
+  writeFileSync(file, config('compatibilityDate: "2026-10-12",'));
+  for (let i = 0; i < 2; i++) if (fix?.in === "files") fix.apply(dir, here);
+  expect(readFileSync(file, "utf8")).toBe(`import { site } from "${CRAFTZ}/cloudflare";
+
+export default site({
+  name: "x",
+  domains: ["x.amitkaps.com"],
+  assets: {
+    directory: "site/dist",
+    // Its own 404 page.
+    notFoundHandling: "404-page",
+  },
+});
+`);
+  // site() would fail a Worker that turns an address on, so that's left by hand.
+  const on = config("workersDev: true,");
+  writeFileSync(file, on);
+  if (fix?.in === "files") fix.apply(dir, here);
+  expect(readFileSync(file, "utf8")).toBe(on);
+});
+
+test("a site's Worker is site(), which the survey reads with its folder", () => {
   const drift = (text: string) => {
     const files = { "cloudflare.config.ts": text };
     const repo = { files, worker: worker(files) } as unknown as Repo;
-    return RULES.find((r) => r.id === "cloudflare-worker")?.check(repo)?.drift;
+    return RULES.find((r) => r.id === "cloudflare-site")?.check(repo)?.drift;
   };
-  const fields = `{
+  const old = `import { defineConfig } from "cf/config";
+
+export default defineConfig({
+  worker: {
     name: "x",
-    domains: ["x.amitkaps.com"],
-    assets: { notFoundHandling: "404-page" },
-  }`;
-  expect(drift(config(fields))).toEqual(["cloudflare.config.ts has no worker()"]);
-  const wrapped = config(`worker(${fields})`);
-  expect(drift(wrapped)).toEqual([]);
-  expect(worker({ "cloudflare.config.ts": wrapped })).toMatchObject({
+  },
+});
+`;
+  expect(drift(old)).toEqual(["cloudflare.config.ts has no site()"]);
+  const config = `import { site } from "${CRAFTZ}/cloudflare";
+
+export default site({
+  name: "x",
+  domains: ["x.amitkaps.com"],
+  assets: { directory: ".prose" },
+});
+`;
+  expect(drift(config)).toEqual([]);
+  expect(worker({ "cloudflare.config.ts": config })).toMatchObject({
+    domain: "x.amitkaps.com",
     workersDev: false,
     previewUrls: false,
+    directory: ".prose",
+    deploys: "static",
   });
 });
 
-test("worker() sets the date and addresses, and fails a config that sets them", () => {
-  expect(cloudflareWorker({ name: "x" })).toEqual({
+test("site() sets the date and addresses, and fails a config that sets them", () => {
+  const assets = { directory: "dist" };
+  expect(site({ name: "x", domains: [], assets })).toEqual({
     name: "x",
+    domains: [],
+    assets,
     compatibilityDate: COMPATIBILITY_DATE,
     workersDev: false,
     previewUrls: false,
   });
   expect(() =>
     // The types refuse it too, so it's cast, as a JavaScript config would pass it.
-    cloudflareWorker({ name: "x", workersDev: true, compatibilityFlags: ["nodejs_als"] } as never),
-  ).toThrow("worker() sets workersDev, a Node.js flag, so cloudflare.config.ts can't");
+    site({ name: "x", domains: [], assets, workersDev: true } as never),
+  ).toThrow("site() sets workersDev, so cloudflare.config.ts can't");
 });
+
+test("a static site installs nothing of Cloudflare's, and the fix takes it out, once", () => {
+  const dir = mkdtempSync(join(tmpdir(), "craftz-static-"));
+  const config = `import { site } from "${CRAFTZ}/cloudflare";
+
+export default site({
+  name: "x",
+  domains: [],
+  assets: { directory: ".prose" },
+});
+`;
+  writeFileSync(join(dir, "cloudflare.config.ts"), config);
+  const pkg = {
+    scripts: { build: "vp pack", verify: "pnpm build && pnpm prose build && vp build" },
+    devDependencies: { "@cloudflare/vite-plugin": "2.0.0", cf: "1.0.0", "vite-plus": "1.3.0" },
+  };
+  writeFileSync(join(dir, "package.json"), JSON.stringify(pkg));
+  writeFileSync(
+    join(dir, "vite.config.ts"),
+    `import { defineConfig, lazyPlugins } from "vite-plus";
+import { craftz } from "@amitkaps/craftz";
+
+export default defineConfig({
+  plugins: [
+    craftz(),
+    lazyPlugins(async () => {
+      const { cloudflare } = await import("@cloudflare/vite-plugin");
+      return [cloudflare({ assetsOnly: true })];
+    }),
+  ],
+
+  // The site is the folder \`prose build\` writes.
+  publicDir: ".prose",
+});
+`,
+  );
+  const rule = RULES.find((r) => r.id === "cloudflare-static");
+  const drift = () => {
+    const read = (file: string) => readFileSync(join(dir, file), "utf8");
+    const own = JSON.parse(read("package.json")) as Pkg;
+    const files = { "vite.config.ts": read("vite.config.ts"), "cloudflare.config.ts": config };
+    const repo = { pkg: own, files, deps: own.devDependencies, worker: worker(files) };
+    return rule?.check(repo as unknown as Repo)?.drift;
+  };
+  expect(drift()).toEqual([
+    "depends on cf, which a static site doesn't use",
+    "depends on @cloudflare/vite-plugin, which a static site doesn't use",
+    "vite.config.ts loads Cloudflare's plugin",
+    "verify runs vp build, with no index.html to build",
+  ]);
+  for (let i = 0; i < 2; i++) if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
+  expect(readFileSync(join(dir, "vite.config.ts"), "utf8"))
+    .toBe(`import { defineConfig } from "vite-plus";
+import { craftz } from "@amitkaps/craftz";
+
+export default defineConfig({
+  plugins: [
+    craftz(),
+  ],
+
+});
+`);
+  expect(drift()).toEqual([]);
+});
+
 test("the betas this repository is on are the ones the rules name", () => {
   const deps = { ...standard.dependencies, ...standard.devDependencies };
   const pre = Object.keys(deps).filter((name) => /^\d+\.\d+\.\d+-/.test(deps[name] ?? ""));

@@ -1,41 +1,43 @@
 /** @prose
- * # worker()
+ * # site()
  *
- * What every Worker sets the same, for a repository's `cloudflare.config.ts`, as `craftz()` is for
- * `vite.config.ts`. The config names its Worker, its domain and how it serves its files, and
- * `worker()` adds the rest:
+ * A static site's Worker, for a repository's `cloudflare.config.ts`, as `craftz()` is for
+ * `vite.config.ts`. The config names its Worker, its domains and the folder it serves, with how
+ * it serves it, and `site()` adds the rest:
  *
  * - the compatibility date, which is the build date of the workerd craftz's cf installs, so a
  *   repository moves to a newer date by moving to a newer craftz.
  * - `workersDev` and `previewUrls` off, so the site answers only on its domain.
  *
- * A config that sets any of them, or a Node.js compatibility flag, fails, naming each, so a
- * date can't be left behind when craftz moves on. The date turns on Node.js compatibility
- * itself.
+ * Its types are craftz's own, not cf's, since a static site doesn't install cf. They hold only
+ * what a site sets, so a config that sets the date or an address fails the type check. `site()`
+ * fails it too, naming each, for a config that isn't type-checked.
  *
- * It imports only the date, so cf and Cloudflare's plugin load it in a moment. Its types are cf's,
- * which every site installs, so the editor knows a Worker's fields, and says when a config sets
- * one of these.
+ * `craftz deploy` imports the config and uploads the folder ([deploy.ts](deploy.ts)), and the
+ * survey reads its name and domain as text ([worker.ts](worker.ts)).
  */
-import type { WorkerConfig } from "cf/config";
 import { COMPATIBILITY_DATE } from "./pinned.ts";
 
-const SET = {
-  compatibilityDate: COMPATIBILITY_DATE,
-  workersDev: false,
-  previewUrls: false,
-} as const;
+/** What a static site's config names. */
+export type Site = {
+  name: string;
+  domains: string[];
+  assets: {
+    /** The folder to upload, from the repository's root. */
+    directory: string;
+    notFoundHandling?: "404-page" | "single-page-application" | "none";
+    htmlHandling?: "auto-trailing-slash" | "force-trailing-slash" | "drop-trailing-slash" | "none";
+  };
+};
 
-type Set = { compatibilityDate: string; workersDev: false; previewUrls: false };
+/** What `site()` adds. */
+export type Set = { compatibilityDate: string; workersDev: false; previewUrls: false };
 
-/** A Worker's config, with the date and addresses the rules set. */
-export function worker(own: Omit<WorkerConfig, keyof Set>): WorkerConfig & Set {
-  const config = own as Record<string, unknown>;
-  const set = Object.keys(SET).filter((key) => key in config);
-  const flags = Array.isArray(config["compatibilityFlags"]) ? config["compatibilityFlags"] : [];
-  if (flags.some((flag) => String(flag).startsWith("nodejs_"))) set.push("a Node.js flag");
-  if (set.length) {
-    throw new Error(`worker() sets ${set.join(", ")}, so cloudflare.config.ts can't`);
-  }
+const SET: Set = { compatibilityDate: COMPATIBILITY_DATE, workersDev: false, previewUrls: false };
+
+/** A static site's Worker, with the date and addresses the rules set. */
+export function site(own: Site): Site & Set {
+  const set = Object.keys(SET).filter((key) => key in own);
+  if (set.length) throw new Error(`site() sets ${set.join(", ")}, so cloudflare.config.ts can't`);
   return { ...own, ...SET };
 }

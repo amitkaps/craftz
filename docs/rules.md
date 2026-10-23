@@ -18,7 +18,7 @@ What a repository must have follows from four axes. Each is read from where it a
 | repository | public or private    | GitHub                                                |
 
 - **Publish.** A package is published to npm, so its audience there is public. A private npm package would be a fifth value, and none is needed yet.
-- **Deploy.** A site deploys to a Cloudflare Worker. One whose config names code to run, cf's `entrypoint` or wrangler's `main`, is an [app](#an-app). One without is static, whatever builds its files, like [a prose site](#a-static-site) or a Vite page.
+- **Deploy.** A site deploys to a Cloudflare Worker. One whose config names code to run, wrangler's `main`, is an [app](#an-app). One without is static, whatever builds its files, like [a prose site](#a-static-site) or a Vite page.
 - **Audience.** A site is internal when Cloudflare Access covers its domain, as [Internal sites](#internal-sites) says. Audience applies only to a site.
 - **Repository.** Whether the code is public is separate from whether the site is. A private repository can have a public site, and a public repository an internal one.
 
@@ -87,7 +87,7 @@ A target only rewrites syntax, like CSS nesting or a regular expression's flags.
 ```
 
 - [`versions-pnpm`]{#versions-pnpm}: pnpm is pinned exactly, with `onFail: download`. Whatever pnpm is installed globally, pnpm fetches and runs the pinned one, so a new pnpm release never breaks a checkout. CI reads `packageManager`, so keep the two equal.
-- [`versions-node`]{#versions-node}: `devEngines` asks for the reference's Node with `onFail: error`, and `engines` asks for the same. The wrong Node stops loudly. A package supports the Node it's built and tested on, and nothing older, so CI runs on one Node. Node 26 is the LTS release from October 2026, and the floor is 26.12.1, its October security release, which cf's beta needs too. When the next LTS arrives, every repository moves to it at once, and for a package that's a breaking release.
+- [`versions-node`]{#versions-node}: `devEngines` asks for the reference's Node with `onFail: error`, and `engines` asks for the same. The wrong Node stops loudly. A package supports the Node it's built and tested on, and nothing older, so CI runs on one Node. Node 26 is the LTS release from October 2026, and the floor is 26.12.1, its October security release, which cf's beta needs too, where craftz works out the compatibility date. When the next LTS arrives, every repository moves to it at once, and for a package that's a breaking release.
 
 Bump deliberately, everywhere at once. Being on the latest pnpm doesn't matter. Being on the same one does.
 
@@ -101,9 +101,8 @@ The tools every repository shares are on one version, written the same way, so m
 - [`versions-prose`]{#versions-prose}: `@amitkaps/prose` is an exact version, at least the reference's, where a repository has it.
 - [`versions-markz`]{#versions-markz}: `@amitkaps/markz` is an exact version, at least the reference's, where a repository has it.
 - [`versions-craftz`]{#versions-craftz}: `@amitkaps/craftz` is at craftz's own version, exactly, so the rules a repository names are the rules it's checked against, and a release of craftz is what moves every repository to them.
-- [`versions-cf`]{#versions-cf}: `cf` is the reference's, where a repository deploys with it.
-- [`versions-cf-vite-plugin`]{#versions-cf-vite-plugin}: `@cloudflare/vite-plugin` is the reference's, where a repository deploys with cf, at the build that goes with `cf`.
-- [`versions-beta`]{#versions-beta}: only `cf` and `@cloudflare/vite-plugin` are on a pre-release, each pinned to an exact build.
+- [`versions-cf`]{#versions-cf}: `cf` is the reference's, where a repository has it. Only craftz does, to work out the compatibility date and write the Workers' settings.
+- [`versions-beta`]{#versions-beta}: only `cf` is on a pre-release, pinned to an exact build.
 - [`versions-wrangler`]{#versions-wrangler}: `wrangler` is the reference's, while a repository is still on it.
 - [`versions-publint`]{#versions-publint}: `publint` is the reference's, where a package has it.
 
@@ -111,7 +110,7 @@ A beta's tags don't say which build goes with which, so it's moved by hand. `ali
 
 A repository's own libraries, like svelte or micromark, are its own to choose. `align` moves them within their major version, and lists a new major in its pull request for review.
 
-`pnpm-workspace.yaml` is a settings file, not a workspace. Every repository has the same three settings: the cooldown, `allowBuilds` and the Vite+ override. `allowBuilds` lets esbuild and workerd run their install scripts, when wrangler or the Cloudflare plugin is installed, and does nothing where neither is.
+`pnpm-workspace.yaml` is a settings file, not a workspace. Every repository has the same three settings: the cooldown, `allowBuilds` and the Vite+ override. `allowBuilds` lets esbuild and workerd run their install scripts, where wrangler or cf is installed, and does nothing where neither is.
 
 - [`versions-workspace`]{#versions-workspace}: `pnpm-workspace.yaml` is [the reference's](../reference/pnpm-workspace.yaml), word for word, with the override at the repository's own `vite-plus`. The fix writes it whole. A setting a repository wants for itself is a change to these rules.
 
@@ -162,7 +161,7 @@ Every repository uses these names, and runs them with `pnpm run …` in anything
 - [`scripts-pr`]{#scripts-pr}: `pr` is `craftz pr`, and there's no `scripts/pr.ts`. `pnpm pr "<title>"` starts a branch when it's on `main`, or on a branch whose pull request merged. On a branch whose pull request is open, it adds to it only when given the same title. It commits, runs `verify`, pushes, opens the pull request and turns on auto-merge. A package's pull request takes `--label <label>`, and stops without one, before anything is committed. `--wait` waits for the merge, updating the branch when another merge leaves it behind `main`, then switches to `main` and pulls. craftz's own repository runs it from source.
 - [`scripts-gone`]{#scripts-gone}: `gone` is `craftz gone`, and there's no `scripts/gone.ts`. It deletes each local branch whose branch on GitHub is gone, which is each one that merged, and works where no git alias is set, like an agent's machine. craftz's own repository runs it from source.
 - [`scripts-craftz`]{#scripts-craftz}: `craftz` is exactly `craftz`, so `pnpm craftz rules`, `pnpm craftz check` and the rest work, as `pnpm prose` does for prose. craftz's own repository runs it from source.
-- [`scripts-ship`]{#scripts-ship}: a site's `ship` is `craftz deploy`, which runs `cf deploy --prebuilt` for a `cloudflare.config.ts`, or `wrangler deploy` for a `wrangler.toml`. The Worker's deploy command is `pnpm run ship`, so how a site deploys moves with craftz, not with each repository. craftz's own repository runs it from source.
+- [`scripts-ship`]{#scripts-ship}: a site's `ship` is `craftz deploy`, which uploads the folder a `cloudflare.config.ts` names itself, or runs `wrangler deploy` for a `wrangler.toml`. The Worker's deploy command is `pnpm run ship`, so how a site deploys moves with craftz, not with each repository. craftz's own repository runs it from source.
 - [`scripts-pnpm-names`]{#scripts-pnpm-names}: no script is named `deploy`, `publish`, `audit`, `ci`, `pipeline` or `pack`. Those are pnpm's own commands, and `pnpm <name>` skips a script by one of those names.
 
 Text the repository didn't write, like a test corpus or a fixture that's wrong on purpose, is marked `linguist-vendored` in `.gitattributes`, and `prose check` skips it. Any other script is the repository's own, like a package's `size` or `fuzz`.
@@ -175,9 +174,9 @@ A lifecycle script, one pnpm runs on its own like `prepare` on install or `prepa
 
 A repository with a site deploys it to a Cloudflare Worker with static assets.
 
-- [`cloudflare-config`]{#cloudflare-config}: a site deploys with `cloudflare.config.ts`, cf's typed config. It holds the Worker's name, domain and asset handling, and `worker()` adds the rest.
-- [`cloudflare-worker`]{#cloudflare-worker}: a site's config takes its Worker from `worker()`, which `@amitkaps/craftz/cloudflare` exports, as `vite.config.ts` uses `craftz()`. `worker()` sets the compatibility date to the build date of the workerd that craftz's cf installs, so dev and tests run what production does, and a site moves to a newer date with craftz. It turns off `workers.dev` and preview URLs, so the site answers only on its domain. Nothing uses the other addresses, and each would serve the site outside anything that covers the domain, like Access. A config that sets any of them, or a Node.js compatibility flag, fails, since from 2026-08-04 the date turns on Node.js compatibility itself.
-- **Deploys:** the Worker's Git integration (Workers Builds) builds and deploys `main`. There's no deploy step in GitHub Actions, and no API token or secret.
+- [`cloudflare-config`]{#cloudflare-config}: a site deploys with `cloudflare.config.ts`. It holds the Worker's name, domain and the folder it serves, and `site()` adds the rest.
+- [`cloudflare-site`]{#cloudflare-site}: a static site's config is `site()`, which `@amitkaps/craftz/cloudflare` exports, as `vite.config.ts` uses `craftz()`. `site()` sets the compatibility date to the build date of the workerd that craftz's cf installs, so a site moves to a newer date with craftz. It turns off `workers.dev` and preview URLs, so the site answers only on its domain. Nothing uses the other addresses, and each would serve the site outside anything that covers the domain, like Access. A config that sets any of them fails.
+- **Deploys:** the Worker's Git integration (Workers Builds) builds and deploys `main`. There's no deploy step in GitHub Actions, and no API token or secret: `craftz deploy` uses the API token the Worker's build settings name, which Workers Builds sets for the deploy command. The same token is on every Worker.
 - **The Worker's settings** are the same on every Worker. Cloudflare's config has no field for them, so `align` writes them with `cf`, and `craftz settings --check` reads them. Only connecting the Worker to its repository is left to Cloudflare's dashboard.
 
 ```text
@@ -189,43 +188,36 @@ Build cache        on
 Previews           off
 ```
 
-`verify` fails on a failing check, so a merge that breaks one doesn't deploy. Previews stay off because CI already checks every pull request. If a public repository turns them on, it sets the preview deploy command too: `pnpm exec wrangler versions upload`, or `pnpm exec cf workers versions create --prebuilt`.
+`verify` fails on a failing check, so a merge that breaks one doesn't deploy. Previews stay off because CI already checks every pull request. If a public repository turns them on, it sets the preview deploy command too, which for a static site is a change to `craftz deploy`, and for an app `pnpm exec wrangler versions upload`.
 
 ### A static site
 
-A static site is one folder, however it's built: by Vite from an `index.html`, by a plugin like Sitez or Pagez, or by `prose build`. cf deploys it through Vite, since cf's config has no field for an assets folder. A site that serves a folder names it as Vite's `publicDir`, and the Cloudflare plugin with `assetsOnly` hands it on. A site with an `index.html` is Vite's own build, so it names no folder. `craftz()` never guesses the folder. A prose site's is `.prose`:
+A static site is one folder, however it's built: by Vite from an `index.html`, by a plugin like Sitez or Pagez, or by `prose build`. `cloudflare.config.ts` names the folder as `assets.directory`, and `craftz deploy` uploads it, with Cloudflare's API, as `cf deploy` would. Nothing from Cloudflare is installed: cf, Cloudflare's plugin and wrangler bring workerd, which is most of a site's install, and a static site runs no code of its own for it to run. A prose site's config is:
 
 ```ts
-export default defineConfig({
-  publicDir: ".prose",
-  plugins: [
-    craftz(),
-    lazyPlugins(async () => {
-      const { cloudflare } = await import("@cloudflare/vite-plugin");
-      return [cloudflare({ assetsOnly: true })];
-    }),
-  ],
+import { site } from "@amitkaps/craftz/cloudflare";
+
+export default site({
+  name: "prose",
+  domains: ["prose.amitkaps.com"],
+  assets: { directory: ".prose" },
 });
 ```
 
-- [`cloudflare-plugin`]{#cloudflare-plugin}: a site's `vite.config.ts` imports Cloudflare's plugin inside Vite+'s `lazyPlugins()`, not at the top. Vite+ loads the config for the format, lint and type checks too, and there the plugin and the workerd it brings took half of `vp check`. `lazyPlugins()` skips it there, and Vite still loads it to build, serve and test.
+- [`cloudflare-static`]{#cloudflare-static}: a static site depends on none of cf, `@cloudflare/vite-plugin` and wrangler, its `vite.config.ts` doesn't load Cloudflare's plugin, and a site with no `index.html` doesn't run `vp build`, since Vite has nothing to build. The fix removes them, and the ` && vp build` that ends `verify` or `build`.
 
-A site built in several steps, each writing into the same folder, ends with a build of its own that only deploys: the plugin, and the folder as its `publicDir`. With no `index.html`, the plugin builds an empty entry and deletes it, so only the folder's files are deployed.
-
-- [`cloudflare-prose-site`]{#cloudflare-prose-site}: a prose site names `.prose` as Vite's `publicDir` and serves it through the Cloudflare plugin with `assetsOnly`, `verify` builds it after `prose build`, and `.gitignore` leaves out `.cloudflare` and `.wrangler`. The Cloudflare plugin leaves its temporary files in `.wrangler`.
-
-In a site, the build after `prose build` is `pnpm build`, which is `vp build`. In a package, `build` is `vp pack`, so `verify` ends with `vp build` itself. Anything that adds to the site, like markz's Quality page, runs before it. `ship` is `craftz deploy`, which runs `cf deploy --prebuilt` to upload `.cloudflare/output/`.
+A site with an `index.html` is Vite's own build, and serves `dist`. A prose site's `verify` ends with `pnpm prose build`, and anything that adds to the site, like markz's Quality page, runs after it. `ship` is `craftz deploy`.
 
 ### An app
 
-A site that needs code on the server starts from base: SvelteKit with `adapter-cloudflare`, which writes a Worker as well as the files. It's kept for when one is needed. cf can't deploy what the adapter writes yet, so base stays on `wrangler.toml` and `wrangler deploy`, held, and its `check` runs `wrangler types` for the Worker's types.
+A site that needs code on the server starts from base: SvelteKit with `adapter-cloudflare`, which writes a Worker as well as the files. It's kept for when one is needed. `craftz deploy` uploads only files, so base stays on `wrangler.toml` and `wrangler deploy`, held, and its `check` runs `wrangler types` for the Worker's types.
 
 ### Internal sites
 
 Any site can be public or internal, in a public repository or a private one. An internal site is one that Cloudflare Access covers, and it's deployed like any other.
 
 - **Access covers its domain.** A Cloudflare Access application on the site's domain, with a policy that lets in only who it's for. Access is turned on once per account, in the Zero Trust dashboard.
-- **Its other addresses are off,** as on every site, by `cloudflare-worker`. Access covers the domain, not the Worker, so `workers.dev` or a preview URL would serve the site without a login.
+- **Its other addresses are off,** as on every site, by `cloudflare-site`. Access covers the domain, not the Worker, so `workers.dev` or a preview URL would serve the site without a login.
 
 The config says so in its `@prose` comment. With `cf` logged in, `craftz status` looks up Access for the site's domain and says whether it's public or internal, so a site meant to be internal doesn't go public unseen. An application with no policy is marked, since it lets nobody in.
 

@@ -75,7 +75,6 @@ export const TOOLS = [
   "@amitkaps/prose",
   "@amitkaps/markz",
   "cf",
-  "@cloudflare/vite-plugin",
   "wrangler",
   "publint",
   "@amitkaps/craftz",

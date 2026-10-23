@@ -12,9 +12,10 @@
  * the page links to it under the repository's name.
  *
  * So is whether it turns off `workers.dev` and preview URLs, each on unless the config says
- * otherwise. A config that uses `worker()` has both off, since `worker()` sets them. Otherwise
- * cf's config names them `workersDev` and `previewUrls`, and wrangler's `workers_dev` and
- * `preview_urls`.
+ * otherwise. A config that uses `site()` has both off, since `site()` sets them. Otherwise
+ * wrangler's config names them `workers_dev` and `preview_urls`.
+ *
+ * So is the folder a static site serves, its `assets.directory`, or wrangler's `directory`.
  *
  * And what it deploys, the deploy axis in [the rules](../docs/rules.md#axes). A Worker with code
  * of its own, cf's `entrypoint` or wrangler's `main`, is an app, and one without is a static
@@ -30,17 +31,18 @@ export type Worker = {
   domain?: string;
   workersDev: boolean;
   previewUrls: boolean;
+  directory?: string;
   deploys: "static" | "app";
 };
 
 /** The Worker configs, cf's first, then wrangler's. */
 export const CONFIGS = ["cloudflare.config.ts", "wrangler.jsonc", "wrangler.toml"];
 
-/** Whether a Worker's config takes its date and addresses from `worker()`. */
-export const USES_WORKER = /\bworker:\s*worker\(/;
+/** Whether a Worker's config takes its date and addresses from `site()`. */
+export const USES_SITE = /^export default site\(/m;
 
 const off = (text: string, key: string): boolean =>
-  USES_WORKER.test(text) || new RegExp(`"?${key}"?\\s*[:=]\\s*false`).test(text);
+  USES_SITE.test(text) || new RegExp(`"?${key}"?\\s*[:=]\\s*false`).test(text);
 
 /** The Worker the config files state, by name, or none. */
 export function worker(files: Record<string, string | undefined>): Worker | undefined {
@@ -50,8 +52,9 @@ export function worker(files: Record<string, string | undefined>): Worker | unde
     const domain = /(?:domains"?\s*:\s*\[\s*|"?pattern"?\s*[:=]\s*)"([^"]+)"/.exec(text)?.[1];
     const workersDev = !off(text, "workersDev") && !off(text, "workers_dev");
     const previewUrls = !off(text, "previewUrls") && !off(text, "preview_urls");
+    const directory = /"?directory"?\s*[:=]\s*"([^"]+)"/.exec(text)?.[1];
     const deploys = /^\s*"?(?:entrypoint|main)"?\s*[:=]/m.test(text) ? "app" : "static";
-    if (name) return { file, name, domain, workersDev, previewUrls, deploys };
+    if (name) return { file, name, domain, workersDev, previewUrls, directory, deploys };
   }
   return undefined;
 }

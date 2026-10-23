@@ -38,7 +38,7 @@
     "build": "vp pack",
     "check": "vp check",
     "test": "vp test --run",
-    "verify": "pnpm check && pnpm prose check && pnpm craftz check && pnpm test && pnpm build && pnpm prose build && vp build",
+    "verify": "pnpm check && pnpm prose check && pnpm craftz check && pnpm test && pnpm build && pnpm prose build",
     "ship": "node src/cli.ts deploy",
     "fix": "vp check --fix",
     "prose": "prose",
@@ -52,7 +52,6 @@
   },
   "devDependencies": {
     "@amitkaps/prose": "0.8.0",
-    "@cloudflare/vite-plugin": "2.0.0-beta.v.3",
     "@mdn/browser-compat-data": "^8.1.7",
     "@types/node": "26.6.5",
     "cf": "1.0.0-beta.20",

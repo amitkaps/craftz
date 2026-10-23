@@ -47,20 +47,21 @@ export default defineConfig({
 
 `craftz()` sets the `fmt` and `lint` blocks the rules ask for, so `vite.config.ts` holds only what's the repository's own. It never overrides the config. A key the config leaves unset is filled in, and one it sets differently fails `vp` with the key named, so take that key out. `pnpm craftz rules toolchain-lint` and `toolchain-wrap` say what it sets.
 
-A static site, read from its Worker config, also gets `build.target`, the rules' browsers. The site names its own folder as `publicDir`, since `craftz()` doesn't guess one: `.prose` for a prose site, and none for a site with an `index.html`, which Vite builds. The Cloudflare plugin stays in the config, since it's the repository's own dependency.
+A static site, read from its Worker config, also gets `build.target`, the rules' browsers.
+
+## A site's Worker
 
 ```ts
-import { cloudflare } from "@cloudflare/vite-plugin";
-import { craftz } from "@amitkaps/craftz";
-import { defineConfig } from "vite-plus";
+import { site } from "@amitkaps/craftz/cloudflare";
 
-export default defineConfig({
-  plugins: [craftz(), cloudflare({ assetsOnly: true })],
-
-  // The site is the folder `prose build` writes.
-  publicDir: ".prose",
+export default site({
+  name: "prose",
+  domains: ["prose.amitkaps.com"],
+  assets: { directory: ".prose" },
 });
 ```
+
+A static site's `cloudflare.config.ts` names its Worker, its domains and the folder it serves, as `assets.directory`: `.prose` for a prose site, and `dist` for one with an `index.html`, which Vite builds. `site()` adds the compatibility date and turns `workers.dev` and preview URLs off. A site installs nothing from Cloudflare, since `craftz deploy` uploads the folder itself.
 
 ## Moving to a new craftz
 
@@ -76,7 +77,7 @@ A new craftz brings its rules, and the versions of the tools it was tested with.
 pnpm craftz deploy
 ```
 
-`craftz deploy` deploys the site the folder has built, and a site's `ship` script runs it, which is the Worker's deploy command. The Worker config's file picks the tool, since each reads only its own. `cloudflare.config.ts` uploads the Build Output with `cf deploy --prebuilt`, and `wrangler.toml` runs `wrangler deploy`, which an app is on until cf can deploy one. To see what would go up without uploading it, run `pnpm exec cf deploy --prebuilt --dry-run` after the build.
+`craftz deploy` deploys the site the folder has built, and a site's `ship` script runs it, which is the Worker's deploy command. For a `cloudflare.config.ts`, it uploads the folder the config names, sending only the files Cloudflare doesn't have, then writes the Worker's domains and turns its other addresses off. It needs `CLOUDFLARE_API_TOKEN`, which Workers Builds sets, and `CLOUDFLARE_ACCOUNT_ID` where the token reaches more than one account. A `wrangler.toml` runs `wrangler deploy`, which an app is on.
 
 ## Pull requests
 
@@ -144,11 +145,16 @@ These are scripts in a checkout of craftz, not commands of the package, after `p
 pnpm align                 # every repository, to the latest craftz
 pnpm align markz           # one repository, to the latest craftz
 pnpm align markz --local   # the same, but nothing leaves the laptop, and settings are only read
+pnpm align --candidate     # every repository, to this checkout, packed, before it's released
 ```
 
 align clones each repository's `main` into a temporary folder and installs it, runs `craftz upgrade`'s steps, writes the lockfile afresh, then runs `verify`. A fresh lockfile drops what nothing installs any more, and moves the nested packages within pnpm's wait, as the tools move. It opens a pull request with auto-merge on, writes the GitHub and Worker settings, and waits for the merges. A repository whose files and lockfile are already in line gets no pull request, and a failed one keeps its clone and log for a look. Run it after each release.
 
 `--local` stops before the push, so a clone can be read or compared with another run. It reads each repository's settings and lists what has drifted, without writing them.
+
+A step that fails on what's left to do by hand, `fix` or `verify`, doesn't stop the run, so one run lists everything: craftz check's findings and the count of lint and type errors, for each repository.
+
+`--candidate` packs this checkout and moves every repository to it, locally, before a release. What each one leaves by hand is what the release's notes say to do. Run it before `craftz release`.
 
 ### Moving the reference
 

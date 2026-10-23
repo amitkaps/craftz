@@ -65,7 +65,7 @@ A repository isn't one type. It's four independent axes, as [the rules](rules.md
 | deploy: static | a Worker config with no code of its own | Cloudflare's plugin with `assetsOnly`, `cf deploy --prebuilt` |
 | deploy: app | a Worker config with an `entrypoint` or `main` | the adapter, `wrangler types`, and wrangler's deploy while it's held |
 | audience: internal | an Access application on the site's domain | its other addresses off, and Access's policy checked |
-| repository: private | GitHub | no `LICENSE`, and off craftz's list |
+| repository: private | GitHub | no `LICENSE`, and never named in craftz |
 
 A static site's files can come from anywhere, like `.prose` as `publicDir` or Vite's own pages, and nothing about the deploy changes. The axes don't overlap, so there's nothing to choose between. The deploy axis is the one that could, and the Worker config settles it, since code to run makes it an app. So no repository ever writes its type down.
 
@@ -78,14 +78,14 @@ When cf can deploy SvelteKit, only `craftz deploy` changes, and the app needs no
 A fix never edits a file by its lines. Regular expressions depend on how a file is laid out, and most fixes that missed a real repository missed there. Each file a rule reaches is one of three kinds, and none needs a line edit.
 
 - **Files craftz owns** are written whole, from [reference/](../reference/README.md) and the repository's axes, and checked for an exact match. They're the workflows, `.github/release.yml`, `.vscode/` and `pnpm-workspace.yaml`. What a package adds to CI, like publint or a size budget, goes in `verify`, so CI is the same everywhere.
-- **Code the repository writes** takes craftz's values through a call, and the check only looks for the call. `vite.config.ts` uses `craftz()` and `cloudflare.config.ts` uses `worker()`, so no value in either is read or edited.
+- **Code the repository writes** takes craftz's values through a call, and the check only looks for the call. `vite.config.ts` uses `craftz()` and `cloudflare.config.ts` uses `site()`, so no value in either is read or edited.
 - **JSON** is parsed. `package.json` holds the versions and the holds, and `tsconfig.json` extends the one craftz ships.
 
 Markdown is read by its headings, like `AGENTS.md`'s sections, since a heading is the structure. A fix that moved repositories off an old layout is deleted once every repository is past it, so the edits don't pile up.
 
 ## A thin plugin
 
-`vite.config.ts` and `cloudflare.config.ts` are code. So the values every config shares aren't in either file, but in a call to craftz, from the installed version. `craftz()` sets `fmt`, `lint`, and a package's publint, declarations and platform. A package packs for Node unless it says `craftz({ browser: true })`, its one option. A site's folder stays Vite's own `publicDir`. `worker()` sets a Worker's compatibility date and turns its other addresses off. Vite+ and cf hold a config to them each time they load it, and a new craftz changes them with no edit to the file.
+`vite.config.ts` and `cloudflare.config.ts` are code. So the values every config shares aren't in either file, but in a call to craftz, from the installed version. `craftz()` sets `fmt`, `lint`, and a package's publint, declarations and platform. A package packs for Node unless it says `craftz({ browser: true })`, its one option. A site names its folder in `cloudflare.config.ts`. `site()` sets a Worker's compatibility date and turns its other addresses off. Vite+ and `craftz deploy` hold a config to them each time they load it, and a new craftz changes them with no edit to the file.
 
 A fix edits a config only to add the call, once, when a repository first moves to craftz.
 
@@ -168,7 +168,7 @@ align works in a fresh clone of each `main`, never a checkout. Each repository h
 
 In each clone it takes `craftz upgrade`'s steps, so the new version's `craftz fix` runs, and the rules that apply are the ones the repository moves to. It only moves a repository to a released craftz, so a change in this repository reaches nobody until it's released.
 
-align holds no rules of its own. It finds the repositories by the GitHub topic `craftz`, which writing a repository's settings adds. So a new repository joins when its settings are written and leaves when it's archived, and no list in craftz needs a pull request. The list reads only public repositories, so craftz never names a private one.
+align holds no rules of its own. It finds the repositories by the GitHub topic `craftz`, which writing a repository's settings adds. So a new repository joins when its settings are written and leaves when it's archived, and no list in craftz needs a pull request. The list takes private repositories too, searching as the `gh` login align needs, and their names stay in the terminal and in each one's own pull request, so craftz never names a private one.
 
 ## No cycle
 

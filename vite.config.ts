@@ -8,27 +8,16 @@
  * [pinned.ts](src/pinned.ts) says. The packages they come from stay out of the bundle.
  *
  * `craftz()` sets the format and lint the rules ask for, from source, as a repository sets them
- * from the package. craftz's site is its docs, which `prose build` writes, so `craftz()` serves
- * them as `publicDir`, and `vp build` hands them to Cloudflare's plugin, assets only, for
- * `craftz deploy`. The plugin loads only when Vite runs, as `cloudflare-plugin` asks, so the
- * checks don't wait for it.
+ * from the package. craftz's site is its docs, the folder `prose build` writes, which
+ * [cloudflare.config.ts](cloudflare.config.ts) names, so Vite doesn't build it.
  */
-import { defineConfig, lazyPlugins } from "vite-plus";
+import { defineConfig } from "vite-plus";
 import { BROWSERS } from "./src/browsers.ts";
 import { COMPATIBILITY_DATE } from "./src/runtime.ts";
 import { craftz } from "./src/index.ts";
 
 export default defineConfig({
-  plugins: [
-    craftz(),
-    lazyPlugins(async () => {
-      const { cloudflare } = await import("@cloudflare/vite-plugin");
-      return [cloudflare({ assetsOnly: true })];
-    }),
-  ],
-
-  // The site is the folder `prose build` writes.
-  publicDir: ".prose",
+  plugins: [craftz()],
 
   pack: {
     entry: ["src/index.ts", "src/cloudflare.ts", "src/cli.ts"],
@@ -38,9 +27,7 @@ export default defineConfig({
     clean: true,
     fixedExtension: false,
     define: { __PINNED__: JSON.stringify({ browsers: BROWSERS, date: COMPATIBILITY_DATE }) },
-    // worker()'s types are cf's Worker, written into its .d.ts, since a site has cf but not the
-    // package cf takes them from.
-    deps: { neverBundle: ["@mdn/browser-compat-data", "cf"], onlyBundle: ["@cloudflare/config"] },
+    deps: { neverBundle: ["@mdn/browser-compat-data", "cf"] },
   },
 
   test: {

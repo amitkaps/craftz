@@ -10,11 +10,11 @@
  * holds the two to the same ids, so a rule can't be stated without a check, or checked without
  * being stated.
  *
- * A check returns `undefined` when its rule doesn't apply, like `scripts-preview` for a package.
- * A fix in `files` edits a clone to match [the reference](../reference/), and `pnpm align` puts it in the
- * repository's pull request. It changes nothing in a clone already in line, so it's safe to run
- * on every one. A fix in `github` is written directly, since there's no file to review. A rule
- * with no fix is fixed by hand, as the rules say.
+ * A check returns `undefined` when its rule doesn't apply, like `scripts-preview` for a package. A
+ * fix in `files` edits a clone to match [the reference](../reference/), and `pnpm align` puts it in
+ * the repository's pull request. It changes nothing in a clone already in line, so it's safe to run
+ * on every one. A fix in `github` is written directly, since there's no file to review. A rule with
+ * no fix is fixed by hand, as the rules say.
  */
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -29,12 +29,12 @@ import {
   standard,
   versionsIn,
 } from "./reference.ts";
-import { PLUGIN, withCraftz, withLazyCloudflare } from "./edit.ts";
+import { PLUGIN, withCraftz, withSite, withoutCloudflare } from "./edit.ts";
 import { rulesetFor, writeLabels, writeRuleset } from "./settings.ts";
 import { BROWSERS } from "./pinned.ts";
 import { stated } from "./stated.ts";
 import type { BranchRule, Finding, Repo } from "./survey.ts";
-import { USES_WORKER, type Worker, workerIn } from "./worker.ts";
+import { USES_SITE, type Worker, workerIn } from "./worker.ts";
 
 export type Fix =
   | { in: "files"; apply: (dir: string, std: string) => void }
@@ -217,10 +217,10 @@ const vitePlus = VERSIONS["vite-plus"];
 /** @prose
  * # The toolchain
  *
- * A repository's `tsconfig.json` extends the one craftz ships, [tsconfig.base.json](../tsconfig.base.json),
- * and says only what to include, so every option is craftz's. It's parsed, with the comments and
- * trailing commas a tsconfig allows taken out. The fix keeps `include` and writes the rest, so a
- * repository's own options and comments go.
+ * A repository's `tsconfig.json` extends the one craftz ships,
+ * [tsconfig.base.json](../tsconfig.base.json), and says only what to include, so every option is
+ * craftz's. It's parsed, with the comments and trailing commas a tsconfig allows taken out. The fix
+ * keeps `include` and writes the rest, so a repository's own options and comments go.
  *
  * The lint block is found by a regular expression, since `vite.config.ts` is code, and has no fix.
  */
@@ -387,9 +387,9 @@ const agents = read(join(here, "AGENTS.md"));
  * Only the files are checked, and that each is in the `nav` of `docs/README.md`, not what's in
  * them. The fix writes a first version of each one that's missing, and adds it to the `nav`.
  *
- * That first version says what goes in each section rather than leaving it empty. A doc already there is left
- * alone, since it's written, not copied. `pnpm new` starts every doc this way. A README that
- * doesn't link to `docs/` is fixed by hand.
+ * That first version says what goes in each section rather than leaving it empty. A doc already
+ * there is left alone, since it's written, not copied. `pnpm new` starts every doc this way. A
+ * README that doesn't link to `docs/` is fixed by hand.
  */
 export type Shape = { package: boolean; site: boolean };
 
@@ -536,9 +536,9 @@ const nav = (text: string): string[] =>
 /** @prose
  * # Releases
  *
- * A package releases the way every package does, with the files in [package/](../reference/package/README.md)
- * copied in unchanged: the release workflow, the notes' config, and the `label` workflow that
- * checks a pull request has one.
+ * A package releases the way every package does, with the files in
+ * [package/](../reference/package/README.md) copied in unchanged: the release workflow, the notes'
+ * config, and the `label` workflow that checks a pull request has one.
  */
 const RELEASE_FILES = [
   ".github/workflows/release.yml",
@@ -611,6 +611,20 @@ const commandScript = (id: string, name: string): Rule => ({
     },
   },
 });
+
+// What deployed a static site through Cloudflare's plugin.
+const CLOUDFLARE_TOOLS = ["cf", "@cloudflare/vite-plugin", "wrangler"];
+const kept = (pkg: Pkg, name: string): boolean => ownCraftz(pkg) && name === "cf";
+
+// The folder a static site serves: Vite's own build, which copies in its publicDir, or the
+// publicDir alone, or prose's.
+function folderOf(dir: string): string | undefined {
+  if (existsSync(join(dir, "index.html"))) return "dist";
+  const vite = read(join(dir, "vite.config.ts")) ?? "";
+  const named = /^\s*publicDir:\s*"([^"]+)"/m.exec(vite)?.[1];
+  if (named) return named;
+  return /pnpm prose build/.test(readPkg(dir).scripts?.verify ?? "") ? ".prose" : undefined;
+}
 
 export const RULES: Rule[] = [
   {
@@ -689,7 +703,6 @@ export const RULES: Rule[] = [
   // No tool keeps a repository from craftz, so its version can't be held.
   version("versions-craftz", CRAFTZ, false),
   version("versions-cf", "cf"),
-  version("versions-cf-vite-plugin", "@cloudflare/vite-plugin"),
   {
     id: "versions-beta",
     check: ({ deps }) => {
@@ -782,7 +795,7 @@ export const RULES: Rule[] = [
         ]);
       }
       // A site Vite bundles from source, unlike one that serves a folder `prose build` wrote.
-      const bundled = Boolean(site) && !/publicDir:\s*"\.prose"/.test(vite);
+      const bundled = Boolean(site) && site?.directory !== ".prose";
       if (!bundled) return undefined;
       const have = targetsIn(vite);
       const where = "build.target";
@@ -928,90 +941,80 @@ export const RULES: Rule[] = [
     },
   },
   /** @prose
-   * # Cloudflare's plugin
+   * # A static site's Worker
    *
-   * A config that names Cloudflare's plugin imports it inside `lazyPlugins()`, so the check is
-   * for a top-level import. The fix is edit.ts's.
+   * `cloudflare.config.ts` is code, so the check only looks for `site()`, which sets the date and
+   * the addresses, and fails a config that sets them too.
+   *
+   * The fix is edit.ts's, which rewrites the Worker a cf config has. The folder it serves is the
+   * one Vite served as `publicDir`, or Vite's own `dist` for a site with an `index.html`, or
+   * `.prose` for a prose site. Any other site is moved by hand.
+   *
+   * A site on wrangler, like base, is left out. It's held on wrangler, so it moves when it moves
+   * to `cloudflare.config.ts`.
    */
   {
-    id: "cloudflare-plugin",
-    check: ({ files }) => {
-      const vite = files["vite.config.ts"] ?? "";
-      if (!vite.includes('"@cloudflare/vite-plugin"')) return undefined;
-      return drifted(
-        /^import .* from "@cloudflare\/vite-plugin";$/m.test(vite)
-          ? ["vite.config.ts imports Cloudflare's plugin at the top, not in lazyPlugins()"]
-          : [],
-      );
-    },
-    fix: { in: "files", apply: (dir) => editFile(join(dir, "vite.config.ts"), withLazyCloudflare) },
-  },
-  /** @prose
-   * # A prose site on cf
-   *
-   * A site is a prose site when cf deploys it and `verify` runs `pnpm prose build`.
-   *
-   * The Vite config is code, so it's read with regular expressions. Its fix adds the folders
-   * `.gitignore` leaves out. The rest is fixed by hand. `build` after
-   * `prose build` is `pnpm build` in a site, where it's `vp build`, and `vp build` in a
-   * package, where `build` is `vp pack`.
-   */
-  {
-    id: "cloudflare-prose-site",
-    check: ({ files, pkg, worker: site }) => {
-      const verify = pkg.scripts?.verify ?? "";
-      if (site?.file !== "cloudflare.config.ts" || !/pnpm prose build/.test(verify)) {
-        return undefined;
-      }
-      const vite = files["vite.config.ts"] ?? "";
-      const drift: string[] = [];
-      if (!/publicDir:\s*"\.prose"/.test(vite)) drift.push("vite.config.ts doesn't serve .prose");
-      if (!/cloudflare\(\{\s*assetsOnly:\s*true\s*\}\)/.test(vite)) {
-        drift.push("vite.config.ts doesn't use the Cloudflare plugin with assetsOnly");
-      }
-      const after = verify.slice(verify.indexOf("pnpm prose build"));
-      const build = pkg.scripts?.build === "vp build" ? /&& (pnpm build|vp build)/ : /&& vp build/;
-      if (!build.test(after)) drift.push("verify doesn't run vp build after pnpm prose build");
-      for (const folder of [".cloudflare", ".wrangler"]) {
-        if (!new RegExp(`^/?\\${folder}/?$`, "m").test(files[".gitignore"] ?? "")) {
-          drift.push(`.gitignore doesn't ignore ${folder}`);
-        }
-      }
-      return { value: "prose", drift };
+    id: "cloudflare-site",
+    check: ({ files, worker: site }) => {
+      if (site?.file !== "cloudflare.config.ts") return undefined;
+      return drifted(USES_SITE.test(files[site.file] ?? "") ? [] : [`${site.file} has no site()`]);
     },
     fix: {
       in: "files",
       apply: (dir) => {
-        const ignore = join(dir, ".gitignore");
-        const ignored = read(ignore) ?? "";
-        const missing = [".cloudflare", ".wrangler"].filter(
-          (folder) => !new RegExp(`^/?\\${folder}/?$`, "m").test(ignored),
-        );
-        if (!missing.length) return;
-        const end = ignored && !ignored.endsWith("\n") ? "\n" : "";
-        writeFileSync(ignore, `${ignored}${end}${missing.join("\n")}\n`);
+        const directory = folderOf(dir);
+        if (!directory) return;
+        editFile(join(dir, "cloudflare.config.ts"), (text) => withSite(text, directory));
       },
     },
   },
   /** @prose
-   * # A Worker's config
+   * # Nothing of Cloudflare's in a static site
    *
-   * `cloudflare.config.ts` is code, so the check only looks for `worker()`, which sets the date and
-   * the addresses.
+   * A static site's dependencies, Vite config and scripts are read for what deployed it through
+   * Cloudflare's plugin. craftz's own repository keeps cf, which works out the date `site()` sets.
    *
-   * `worker()` fails a config that sets them too. There's no fix: `craftz new` writes the call,
-   * and a config without it is written by hand.
-   *
-   * A site on wrangler, like base, is left out. It's held on wrangler, so it moves when it moves
-   * to cf.
+   * The fix removes the dependencies, takes the plugin out of the Vite config, as edit.ts does,
+   * and drops ` && vp build` from the scripts of a site with no `index.html`. A script that runs
+   * `vp build` another way is left to fix by hand.
    */
   {
-    id: "cloudflare-worker",
-    check: ({ files, worker: site }) => {
-      if (site?.file !== "cloudflare.config.ts") return undefined;
-      return drifted(
-        USES_WORKER.test(files[site.file] ?? "") ? [] : [`${site.file} has no worker()`],
+    id: "cloudflare-static",
+    check: ({ files, deps, pkg, worker: site }) => {
+      if (site?.file !== "cloudflare.config.ts" || site.deploys !== "static") return undefined;
+      const drift = CLOUDFLARE_TOOLS.filter((name) => deps[name] && !kept(pkg, name)).map(
+        (name) => `depends on ${name}, which a static site doesn't use`,
       );
+      if (files["vite.config.ts"]?.includes("@cloudflare/vite-plugin")) {
+        drift.push("vite.config.ts loads Cloudflare's plugin");
+      }
+      if (!files["index.html"]) {
+        for (const name of ["verify", "build"]) {
+          if (/\bvp build\b/.test(pkg.scripts?.[name] ?? "")) {
+            drift.push(`${name} runs vp build, with no index.html to build`);
+          }
+        }
+      }
+      return { value: site.directory, drift };
+    },
+    fix: {
+      in: "files",
+      apply: (dir) => {
+        if (workerIn(dir)?.deploys !== "static") return;
+        const builds = existsSync(join(dir, "index.html"));
+        const pkg = readPkg(dir);
+        for (const field of ["dependencies", "devDependencies"] as const) {
+          for (const name of CLOUDFLARE_TOOLS) {
+            if (pkg[field]?.[name] && !kept(pkg, name)) delete pkg[field][name];
+          }
+        }
+        for (const name of builds ? [] : ["verify", "build"]) {
+          const script = pkg.scripts?.[name];
+          if (script) pkg.scripts = { ...pkg.scripts, [name]: script.replace(/ && vp build$/, "") };
+        }
+        writePkg(dir, pkg);
+        editFile(join(dir, "vite.config.ts"), (vite) => withoutCloudflare(vite, builds));
+      },
     },
   },
   {

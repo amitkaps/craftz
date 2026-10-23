@@ -20,11 +20,9 @@
  * ## A site's config
  *
  * A static site's config follows from [the deploy axis](../docs/rules.md#axes), read from the
- * Worker config beside `vite.config.ts`. A static site is one folder, and it names that folder
- * itself, as `publicDir`: `.prose` for a prose site, `public` for one Sitez builds. A site with
- * an `index.html` is Vite's own build, so it needs no folder. craftz() never guesses the folder,
- * since a site built another way would get the wrong one. What it sets is `build.target`, the
- * rules' [browsers](../docs/rules.md#toolchain-browsers), for whatever Vite bundles. An app's
+ * Worker config beside `vite.config.ts`. A static site is one folder, and its
+ * `cloudflare.config.ts` names it, so `craftz()` sets no folder. What it sets is `build.target`,
+ * the rules' [browsers](../docs/rules.md#toolchain-browsers), for whatever Vite bundles. An app's
  * config is its framework's, so it gets neither.
  *
  * ## A package's config
@@ -34,9 +32,7 @@
  * from Oxc. A package runs in Node, so it packs for `platform: "node"`. One that runs in browsers
  * too, like markz, says `craftz({ browser: true })`, and packs for `"neutral"`, targeting the
  * rules' browsers and the Node its `engines` asks for. The package names its entries and the rest.
- *
- * The Cloudflare plugin stays in the repository's config. It's the repository's dependency, at
- * the version the rules check, and craftz would otherwise need it as a peer.
+
  */
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";

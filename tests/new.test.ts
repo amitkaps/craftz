@@ -52,6 +52,17 @@ for (const [what, start] of starts) {
       promisify(execFile)("pnpm", args, { cwd: dir, maxBuffer: 64 * 1024 * 1024 });
     await run("install");
     restore();
+    // A prose site builds from a commit, so new commits before verify, as here, under a name of
+    // its own where CI has none.
+    const as = {
+      ...process.env,
+      GIT_AUTHOR_NAME: "craftz",
+      GIT_AUTHOR_EMAIL: "craftz@example.com",
+    };
+    const env = { ...as, GIT_COMMITTER_NAME: "craftz", GIT_COMMITTER_EMAIL: "craftz@example.com" };
+    const git = (...args: string[]) => promisify(execFile)("git", args, { cwd: dir, env });
+    await git("add", "-A");
+    await git("commit", "-q", "-m", "Start");
     await run("run", "verify");
   });
 }
