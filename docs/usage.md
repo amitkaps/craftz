@@ -11,7 +11,7 @@ pnpm add -D @amitkaps/craftz
 pnpm exec craftz fix
 ```
 
-It needs Node 26 or newer, the Node it's built and tested on. The first fix writes the `craftz` script, among the rest, so every command after it is `pnpm craftz <command>`, as `pnpm prose` runs prose.
+It needs Node 26.12.1 or newer, the Node it's built and tested on. The first fix writes the `craftz` script, among the rest, so every command after it is `pnpm craftz <command>`, as `pnpm prose` runs prose.
 
 ## Reading the rules
 

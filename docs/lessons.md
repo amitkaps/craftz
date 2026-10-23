@@ -212,3 +212,5 @@ Most were learned before craftz, when one repository kept the rules and copied t
 **A file craftz writes whole can't be edited to set up a test.** The tests installed the packed craftz by adding an override to the new repository's `pnpm-workspace.yaml`. Once that file had to be the reference's word for word, `craftz check` failed on the test's own edit. The test now puts the file back after the install, since pnpm only reads it then.
 
 **A plugin can set what `vp pack` reads.** Each package wrote out the same `publint`, `dts` and `platform` in its pack block. `vp pack` reads the `pack` a plugin's `config` hook returns, so `craftz()` sets them, and a probe showed both a banner and the types taking effect. Try a plugin's hook against the tool before writing a fix that edits every config instead.
+
+**A dependency can ask for more Node than the floor.** cf beta.20 needs Node 26.12.0, while the floor was `>=26`, so moving cf alone would have let a repository say it runs on a Node cf refuses. Read a new version's `engines` when moving it, and move the floor with it.
