@@ -31,7 +31,6 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { COMPATIBILITY_DATE } from "./pinned.ts";
 import { type Shape, fixFiles, listed, shipping } from "./rules.ts";
 import { CRAFTZ, OWNER, VERSIONS, here, root } from "./reference.ts";
 import { writeSettings } from "./apply.ts";
@@ -277,21 +276,19 @@ function cloudflareConfig(name: string, internal: boolean): string {
   return `/** @prose
  * # The Worker
  *
- * What Cloudflare runs: its name, compatibility date, domain and how it serves the files. Keep
- * the name equal to the Worker connected to this repository in the dashboard. The build and
- * deploy commands are set on the Worker, as craftz's rules list. The site answers only on its
- * domain, so \`workers.dev\` and preview URLs are off.${why}
+ * What Cloudflare runs: its name, domain and how it serves the files. \`worker()\` sets the
+ * compatibility date and turns off \`workers.dev\` and preview URLs, so the site answers only on
+ * its domain. Keep the name equal to the Worker connected to this repository in the dashboard.
+ * The build and deploy commands are set on the Worker, as craftz's rules list.${why}
  */
 import { defineConfig } from "cf/config";
+import { worker } from "${CRAFTZ}/cloudflare";
 
 export default defineConfig({
-  worker: {
+  worker: worker({
     name: "${name}",
-    compatibilityDate: "${COMPATIBILITY_DATE}",
     domains: ["${name}.amitkaps.com"],
-    workersDev: false,
-    previewUrls: false,
-  },
+  }),
 });
 `;
 }

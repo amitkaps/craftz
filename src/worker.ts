@@ -12,8 +12,9 @@
  * the page links to it under the repository's name.
  *
  * So is whether it turns off `workers.dev` and preview URLs, each on unless the config says
- * otherwise. cf's config names them `workersDev` and `previewUrls`, and wrangler's `workers_dev`
- * and `preview_urls`.
+ * otherwise. A config that uses `worker()` has both off, since `worker()` sets them. Otherwise
+ * cf's config names them `workersDev` and `previewUrls`, and wrangler's `workers_dev` and
+ * `preview_urls`.
  *
  * And what it deploys, the deploy axis in [the rules](../docs/rules.md#axes). A Worker with code
  * of its own, cf's `entrypoint` or wrangler's `main`, is an app, and one without is a static
@@ -35,8 +36,11 @@ export type Worker = {
 /** The Worker configs, cf's first, then wrangler's. */
 export const CONFIGS = ["cloudflare.config.ts", "wrangler.jsonc", "wrangler.toml"];
 
+/** Whether a Worker's config takes its date and addresses from `worker()`. */
+export const USES_WORKER = /\bworker:\s*worker\(/;
+
 const off = (text: string, key: string): boolean =>
-  new RegExp(`"?${key}"?\\s*[:=]\\s*false`).test(text);
+  USES_WORKER.test(text) || new RegExp(`"?${key}"?\\s*[:=]\\s*false`).test(text);
 
 /** The Worker the config files state, by name, or none. */
 export function worker(files: Record<string, string | undefined>): Worker | undefined {

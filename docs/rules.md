@@ -127,7 +127,7 @@ When a tool a repository depends on keeps it from a rule, the repository holds t
 }
 ```
 
-Only a rule a tool can block can be held: a tool's version, other than craftz's own, and `cloudflare-config`. A hold on any other rule fails `craftz check`.
+Only a rule a tool can block can be held: a tool's version, other than craftz's own, `cloudflare-config` and `toolchain-types`. A hold on any other rule fails `craftz check`.
 
 A hold is for what a tool can't do, never for a preference. The point of one set of rules is that a choice like Vite+ is made once and paid for once, not argued again in each repository. A hold whose check stops drifting fails `craftz check` until it's removed, so none outlives its reason.
 
@@ -173,10 +173,8 @@ A lifecycle script, one pnpm runs on its own like `prepare` on install or `prepa
 
 A repository with a site deploys it to a Cloudflare Worker with static assets.
 
-- [`cloudflare-config`]{#cloudflare-config}: a site deploys with `cloudflare.config.ts`, cf's typed config. It holds the Worker's name, compatibility date, domain, addresses and asset handling.
-- [`cloudflare-addresses`]{#cloudflare-addresses}: a site's config turns off `workers.dev` and preview URLs, so it answers only on its domain. Nothing uses the other addresses, and each would serve the site outside anything that covers the domain, like Access.
-- [`cloudflare-date`]{#cloudflare-date}: a site's `compatibilityDate` is the build date of the workerd that the reference's cf installs, and it sets no Node.js compatibility flag. That's the newest date the local runtime knows, so dev and tests run what production does, and from 2026-08-04 the date turns on Node.js compatibility itself.
-- [`cloudflare-wrangler`]{#cloudflare-wrangler}: an app cf can't build yet, like SvelteKit's, keeps `wrangler.toml`, never `wrangler.jsonc`. prose reads comments in TOML but not in JSONC. `cloudflare-addresses` and `cloudflare-date` read `cloudflare.config.ts`, so they apply once a site moves to it.
+- [`cloudflare-config`]{#cloudflare-config}: a site deploys with `cloudflare.config.ts`, cf's typed config. It holds the Worker's name, domain and asset handling, and `worker()` adds the rest.
+- [`cloudflare-worker`]{#cloudflare-worker}: a site's config takes its Worker from `worker()`, which `@amitkaps/craftz/cloudflare` exports, as `vite.config.ts` uses `craftz()`. `worker()` sets the compatibility date to the build date of the workerd that craftz's cf installs, so dev and tests run what production does, and a site moves to a newer date with craftz. It turns off `workers.dev` and preview URLs, so the site answers only on its domain. Nothing uses the other addresses, and each would serve the site outside anything that covers the domain, like Access. A config that sets any of them, or a Node.js compatibility flag, fails, since from 2026-08-04 the date turns on Node.js compatibility itself.
 - **Deploys:** the Worker's Git integration (Workers Builds) builds and deploys `main`. There's no deploy step in GitHub Actions, and no API token or secret.
 - **The Worker's settings** are the same on every Worker. Cloudflare's config has no field for them, so `align` writes them with `cf`, and `craftz settings --check` reads them. Only connecting the Worker to its repository is left to Cloudflare's dashboard.
 
@@ -217,7 +215,7 @@ A site that needs code on the server starts from base: SvelteKit with `adapter-c
 Any site can be public or internal, in a public repository or a private one. An internal site is one that Cloudflare Access covers, and it's deployed like any other.
 
 - **Access covers its domain.** A Cloudflare Access application on the site's domain, with a policy that lets in only who it's for. Access is turned on once per account, in the Zero Trust dashboard.
-- **Its other addresses are off,** as on every site, by `cloudflare-addresses`. Access covers the domain, not the Worker, so `workers.dev` or a preview URL would serve the site without a login.
+- **Its other addresses are off,** as on every site, by `cloudflare-worker`. Access covers the domain, not the Worker, so `workers.dev` or a preview URL would serve the site without a login.
 
 The config says so in its `@prose` comment. With `cf` logged in, `craftz status` looks up Access for the site's domain and says whether it's public or internal, so a site meant to be internal doesn't go public unseen. An application with no policy is marked, since it lets nobody in.
 

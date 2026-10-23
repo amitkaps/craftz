@@ -25,7 +25,7 @@ export default defineConfig({
   publicDir: ".prose",
 
   pack: {
-    entry: ["src/index.ts", "src/cli.ts"],
+    entry: ["src/index.ts", "src/cloudflare.ts", "src/cli.ts"],
     format: ["esm"],
     platform: "node",
     // Oxc writes the types, so there's no typescript dependency, and fails on an export
@@ -35,7 +35,9 @@ export default defineConfig({
     fixedExtension: false,
     publint: { strict: true },
     define: { __PINNED__: JSON.stringify({ browsers: BROWSERS, date: COMPATIBILITY_DATE }) },
-    deps: { neverBundle: ["@mdn/browser-compat-data", "cf"] },
+    // worker()'s types are cf's Worker, written into its .d.ts, since a site has cf but not the
+    // package cf takes them from.
+    deps: { neverBundle: ["@mdn/browser-compat-data", "cf"], onlyBundle: ["@cloudflare/config"] },
   },
 
   test: {

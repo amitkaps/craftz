@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { BROWSERS } from "../src/browsers.ts";
 import { COMPATIBILITY_DATE } from "../src/runtime.ts";
+import { worker as cloudflareWorker } from "../src/cloudflare.ts";
 import { BETA, RULES } from "../src/rules.ts";
 import { parts, stated } from "../src/stated.ts";
 import { CRAFTZ, type Pkg, VERSIONS, here, standard } from "../src/reference.ts";
@@ -335,42 +336,61 @@ test("the prose site's fix adds the folders .gitignore leaves out, once", () => 
   );
 });
 
-test("a Worker answers on its domain only, at the runtime's date, and the fixes write both", () => {
-  const config = `export default defineConfig({
+test("a Worker takes its date and addresses from worker(), and the fix wraps it", () => {
+  const config = `import { defineConfig } from "cf/config";
+
+export default defineConfig({
   worker: {
     name: "x",
     compatibilityDate: "2026-09-09",
     domains: ["x.amitkaps.com"],
-    previewUrls: true,
+    workersDev: false,
+    assets: { notFoundHandling: "404-page" },
   },
 });
 `;
   const drift = (text: string) => {
     const files = { "cloudflare.config.ts": text };
     const repo = { files, worker: worker(files) } as unknown as Repo;
-    return ["cloudflare-addresses", "cloudflare-date"].flatMap(
-      (id) => RULES.find((r) => r.id === id)?.check(repo)?.drift ?? [],
-    );
+    return RULES.find((r) => r.id === "cloudflare-worker")?.check(repo)?.drift;
   };
-  expect(drift(config)).toEqual([
-    "cloudflare.config.ts doesn't turn off workers.dev",
-    "cloudflare.config.ts doesn't turn off preview URLs",
-    `compatibilityDate is 2026-09-09, not ${COMPATIBILITY_DATE}`,
-  ]);
+  expect(drift(config)).toEqual(["cloudflare.config.ts has no worker()"]);
   const dir = mkdtempSync(join(tmpdir(), "craftz-worker-"));
+  writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "x" }));
   writeFileSync(join(dir, "cloudflare.config.ts"), config);
-  for (const r of RULES)
-    if (r.id.startsWith("cloudflare-") && r.fix?.in === "files") r.fix.apply(dir, dir);
+  const rule = RULES.find((r) => r.id === "cloudflare-worker");
+  for (let i = 0; i < 2; i++) if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
   const fixed = readFileSync(join(dir, "cloudflare.config.ts"), "utf8");
+  expect(fixed).toBe(`import { defineConfig } from "cf/config";
+import { worker } from "${CRAFTZ}/cloudflare";
+
+export default defineConfig({
+  worker: worker({
+    name: "x",
+    domains: ["x.amitkaps.com"],
+    assets: { notFoundHandling: "404-page" },
+  }),
+});
+`);
   expect(drift(fixed)).toEqual([]);
-  expect(fixed).toContain(
-    `domains: ["x.amitkaps.com"],\n    workersDev: false,\n    previewUrls: false,`,
-  );
-  expect(
-    drift(config.replace("previewUrls: true,", 'compatibilityFlags: ["nodejs_als"],')),
-  ).toContain("sets a Node.js compatibility flag");
+  expect(worker({ "cloudflare.config.ts": fixed })).toMatchObject({
+    workersDev: false,
+    previewUrls: false,
+  });
 });
 
+test("worker() sets the date and addresses, and fails a config that sets them", () => {
+  expect(cloudflareWorker({ name: "x" })).toEqual({
+    name: "x",
+    compatibilityDate: COMPATIBILITY_DATE,
+    workersDev: false,
+    previewUrls: false,
+  });
+  expect(() =>
+    // The types refuse it too, so it's cast, as a JavaScript config would pass it.
+    cloudflareWorker({ name: "x", workersDev: true, compatibilityFlags: ["nodejs_als"] } as never),
+  ).toThrow("worker() sets workersDev, a Node.js flag, so cloudflare.config.ts can't");
+});
 test("the agents' fix writes craftz over the Standard section it replaces", () => {
   const dir = mkdtempSync(join(tmpdir(), "craftz-agents-"));
   const old =
