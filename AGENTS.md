@@ -15,7 +15,7 @@ This repository follows [craftz's rules](https://craftz.amitkaps.com/docs/rules.
 
 ## Prose
 
-Explanations go in `@prose` comments. Run `pnpm prose rules` before writing prose. It prints the rules for the version this repository uses, each with the codes that check it, and `pnpm prose rules <code>` says what one warning asks for. The rules live in [prose's usage](https://prose.amitkaps.com/docs/usage.md#for-agents) and aren't copied here, so every repository writes to the same rules.
+Explanations go in `@prose` comments. Run `pnpm prose rules` before writing prose, or changing code a `@prose` comment explains. It prints the rules for the version this repository uses, each with the codes that check it, and `pnpm prose rules <code>` says what one warning asks for. The rules live in [prose's usage](https://prose.amitkaps.com/docs/usage.md#for-agents) and aren't copied here, so every repository writes to the same rules.
 
 After writing prose, run `pnpm prose style <files>` on the files you changed, and take its advice where it reads better. It always passes, so it's advice, not a check.
 
