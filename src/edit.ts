@@ -13,6 +13,7 @@
  * a config, like `fmt` and `lint`. It can't add a plugin, name a site's folder or change a file
  * Vite doesn't read, so those stay as edits.
  */
+import { USES_WORKER } from "./worker.ts";
 import { join } from "node:path";
 import { CRAFTZ, here, read } from "./reference.ts";
 import { type Config, RULED, written } from "./ruled.ts";
@@ -91,30 +92,36 @@ export function servingProse(vite: string): string {
 /** @prose
  * # A Worker's config
  *
- * `cloudflare.config.ts` is edited by its lines: the date's own line, and the two addresses go
- * after `domains`.
+ * A config from before `worker()` is wrapped in it. The edit takes out the lines `worker()` sets,
+ * finds the Worker's closing brace by counting, and imports the call after the config's last
+ * import. It goes once every repository uses `worker()`.
  */
 
-/** The compatibility date's line in a Worker's config, with the date. */
-export const DATE = /^\s*compatibilityDate:\s*"([^"]*)"/m;
-const DOMAINS = /^(\s*)domains:.*$/m;
+const SETS = /^[ \t]*(?:compatibilityDate|workersDev|previewUrls):.*\n/gm;
 
-/** A Worker's config with both of its other addresses off, after `domains` where it sets neither. */
-export function withAddressesOff(config: string): string {
-  let out = config;
-  for (const key of ["previewUrls", "workersDev"]) {
-    const on = new RegExp(`(${key}:\\s*)true`);
-    if (on.test(out)) out = out.replace(on, "$1false");
-    else if (!new RegExp(`${key}:`).test(out)) {
-      out = out.replace(DOMAINS, (line, indent: string) => `${line}\n${indent}${key}: false,`);
+/** A Worker's config wrapped in `worker()`, imported from `from`. */
+export function withWorker(config: string, from: string): string {
+  if (USES_WORKER.test(config)) return config;
+  const text = config.replace(SETS, "");
+  const open = /\bworker:\s*\{/.exec(text);
+  if (!open) return config;
+  let depth = 0;
+  let close = -1;
+  for (let i = open.index + open[0].length - 1; i < text.length; i++) {
+    if (text[i] === "{") depth++;
+    else if (text[i] === "}" && --depth === 0) {
+      close = i;
+      break;
     }
   }
-  return out;
+  if (close < 0) return config;
+  const wrapped = `${text.slice(0, open.index)}worker: worker({${text.slice(open.index + open[0].length, close + 1)})${text.slice(close + 1)}`;
+  const imports = [...wrapped.matchAll(/^import .*;$/gm)].at(-1);
+  const line = `import { worker } from "${from}";`;
+  if (!imports) return `${line}\n${wrapped}`;
+  const end = imports.index + imports[0].length;
+  return `${wrapped.slice(0, end)}\n${line}${wrapped.slice(end)}`;
 }
-
-/** A Worker's config at the compatibility date given. */
-export const withDate = (config: string, want: string): string =>
-  config.replace(DATE, (line, date: string) => line.replace(date, want));
 
 /** @prose
  * # CI

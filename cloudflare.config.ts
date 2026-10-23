@@ -1,8 +1,8 @@
 /** @prose
  * # The Worker
  *
- * What Cloudflare runs for craftz's site: its name, compatibility date, domain and how it serves
- * the files. The site is the docs, the folder `prose build` writes, so it's static, and
+ * What Cloudflare runs for craftz's site: its name, domain and how it serves the files, with the
+ * date and addresses `worker()` sets. The site is the docs, the folder `prose build` writes, so it's static, and
  * `craftz deploy` uploads it.
  *
  * Keep the name equal to the Worker connected to this repository in
@@ -11,17 +11,15 @@
  * `workers.dev` and preview URLs are off.
  */
 import { defineConfig } from "cf/config";
+import { worker } from "./src/cloudflare.ts";
 
 export default defineConfig({
-  worker: {
+  worker: worker({
     name: "craftz",
-    compatibilityDate: "2026-10-12",
     domains: ["craftz.amitkaps.com"],
-    workersDev: false,
-    previewUrls: false,
     assets: {
       // Serve the 404.html prose writes for any missing address.
       notFoundHandling: "404-page",
     },
-  },
+  }),
 });

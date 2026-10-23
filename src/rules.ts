@@ -31,23 +31,21 @@ import {
 } from "./reference.ts";
 import {
   CI,
-  DATE,
   EXCLUDE,
   PLUGIN,
   concurrency,
   servingProse,
-  withAddressesOff,
   withCooldown,
   withCraftz,
-  withDate,
+  withWorker,
   withOverride,
   withoutLabel,
 } from "./edit.ts";
 import { rulesetFor, writeLabels, writeRuleset } from "./settings.ts";
-import { BROWSERS, COMPATIBILITY_DATE } from "./pinned.ts";
+import { BROWSERS } from "./pinned.ts";
 import { stated } from "./stated.ts";
 import type { BranchRule, Finding, Repo } from "./survey.ts";
-import { type Worker, workerIn } from "./worker.ts";
+import { USES_WORKER, type Worker, workerIn } from "./worker.ts";
 
 export type Fix =
   | { in: "files"; apply: (dir: string, std: string) => void }
@@ -258,8 +256,6 @@ function editFile(file: string, edit: (text: string) => string): void {
   const edited = edit(text);
   if (edited !== text) writeFileSync(file, edited);
 }
-
-const NODE_FLAG = /compatibilityFlags:[^\]]*"nodejs_/;
 
 type Json = Record<string, unknown>;
 const readJson = (file: string): Json => JSON.parse(readFileSync(file, "utf8")) as Json;
@@ -930,14 +926,6 @@ export const RULES: Rule[] = [
       return { value: site.file, drift };
     },
   },
-  {
-    id: "cloudflare-wrangler",
-    check: ({ worker: site }) => {
-      if (!site || site.file === "cloudflare.config.ts") return undefined;
-      const drift = site.file === "wrangler.toml" ? [] : [`${site.file}, not wrangler.toml`];
-      return { value: site.file, drift };
-    },
-  },
   /** @prose
    * # A prose site on cf
    *
@@ -990,46 +978,30 @@ export const RULES: Rule[] = [
   /** @prose
    * # A Worker's config
    *
-   * `cloudflare.config.ts` is code, so it's read and fixed by its lines. The fixes anchor on the
-   * lines the rules ask for: the date's own line, and the two addresses go after `domains`.
-   * A config laid out otherwise is left alone, and its check still drifts.
+   * `cloudflare.config.ts` is code, so the check only looks for `worker()`, which sets the date and
+   * the addresses.
    *
-   * A site on wrangler, like base, is left out of both. It's held on wrangler, so it moves when
-   * it moves to cf.
+   * `worker()` fails a config that sets them too. The fix wraps the Worker in the call,
+   * takes out the three lines it sets and imports it, from source in craftz itself. That's for a
+   * config from before `worker()`, and it goes once every repository uses it.
+   *
+   * A site on wrangler, like base, is left out. It's held on wrangler, so it moves when it moves
+   * to cf.
    */
   {
-    id: "cloudflare-addresses",
-    check: ({ worker: site }) => {
-      if (site?.file !== "cloudflare.config.ts") return undefined;
-      const drift: string[] = [];
-      if (site.workersDev) drift.push(`${site.file} doesn't turn off workers.dev`);
-      if (site.previewUrls) drift.push(`${site.file} doesn't turn off preview URLs`);
-      return { value: "domain only", drift };
-    },
-    fix: {
-      in: "files",
-      apply: (dir) => editFile(join(dir, "cloudflare.config.ts"), withAddressesOff),
-    },
-  },
-  {
-    id: "cloudflare-date",
+    id: "cloudflare-worker",
     check: ({ files, worker: site }) => {
       if (site?.file !== "cloudflare.config.ts") return undefined;
-      const config = files[site.file] ?? "";
-      const date = DATE.exec(config)?.[1];
-      const drift: string[] = [];
-      if (date !== COMPATIBILITY_DATE) {
-        drift.push(`compatibilityDate is ${date ?? "unset"}, not ${COMPATIBILITY_DATE}`);
-      }
-      if (NODE_FLAG.test(config)) drift.push("sets a Node.js compatibility flag");
-      return { value: date ?? "unset", drift };
+      return drifted(
+        USES_WORKER.test(files[site.file] ?? "") ? [] : [`${site.file} has no worker()`],
+      );
     },
     fix: {
       in: "files",
-      apply: (dir) =>
-        editFile(join(dir, "cloudflare.config.ts"), (config) =>
-          withDate(config, COMPATIBILITY_DATE),
-        ),
+      apply: (dir) => {
+        const from = ownCraftz(readPkg(dir)) ? "./src/cloudflare.ts" : `${CRAFTZ}/cloudflare`;
+        editFile(join(dir, "cloudflare.config.ts"), (config) => withWorker(config, from));
+      },
     },
   },
   {
