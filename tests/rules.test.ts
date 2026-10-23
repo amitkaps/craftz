@@ -403,3 +403,42 @@ test("a package's ruleset requires label next to ci, and others only ci", () => 
   expect(contexts({ name: "x" })).toEqual(["ci", "label"]);
   expect(contexts({ private: true })).toEqual(["ci"]);
 });
+
+test("a tsconfig extends craftz's and sets none of its options, and the fix moves it there", () => {
+  const dir = mkdtempSync(join(tmpdir(), "craftz-tsconfig-"));
+  const file = join(dir, "tsconfig.json");
+  const rule = RULES.find((r) => r.id === "toolchain-types");
+  const drift = () =>
+    rule?.check({ files: { "tsconfig.json": readFileSync(file, "utf8") } } as unknown as Repo)
+      ?.drift;
+  const fix = () => {
+    for (let i = 0; i < 2; i++) if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
+  };
+  const shared = `${CRAFTZ}/tsconfig.json`;
+  writeFileSync(
+    file,
+    JSON.stringify({
+      extends: "./.svelte-kit/tsconfig.json",
+      compilerOptions: { strict: true, types: ["node"] },
+      include: ["src"],
+    }),
+  );
+  expect(drift()).toEqual([
+    `tsconfig.json doesn't extend ${shared}`,
+    `tsconfig.json sets strict, which ${shared} sets`,
+  ]);
+  fix();
+  expect(JSON.parse(readFileSync(file, "utf8"))).toEqual({
+    extends: ["./.svelte-kit/tsconfig.json", shared],
+    compilerOptions: { types: ["node"] },
+    include: ["src"],
+  });
+  expect(drift()).toEqual([]);
+
+  // A tsconfig's comments and trailing commas parse, and its fix is left to a person.
+  const commented = `{\n  // SvelteKit's\n  "extends": ["$app/tsconfig", "${shared}"],\n  "compilerOptions": { "strict": true, },\n}\n`;
+  writeFileSync(file, commented);
+  expect(drift()).toEqual([`tsconfig.json sets strict, which ${shared} sets`]);
+  fix();
+  expect(readFileSync(file, "utf8")).toBe(commented);
+});

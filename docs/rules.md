@@ -35,7 +35,7 @@ Formatting runs at oxfmt's defaults, but for one setting.
 - [`toolchain-wrap`]{#toolchain-wrap}: `fmt` sets `proseWrap: "never"`, so each Markdown paragraph is one line that the editor soft-wraps. Nobody hand-wraps, and a changed paragraph shows in a diff as one line with its changed words highlighted. `"always"` would reflow the rest of a paragraph when one word is added. `@prose` comments stay hand-wrapped at 100 characters, since no oxfmt setting wraps comment text.
 
 - [`toolchain-lint`]{#toolchain-lint}: lint is type-aware and type-checks too, so `check` covers types without a separate `tsc`.
-- [`toolchain-types`]{#toolchain-types}: every `tsconfig.json` turns on the same strict options: `strict`, `noUncheckedIndexedAccess`, `noImplicitOverride`, `noImplicitReturns`, `noFallthroughCasesInSwitch`, `verbatimModuleSyntax`, `isolatedModules` and `forceConsistentCasingInFileNames`. [The reference's tsconfig.json](../reference/tsconfig.json) is the example. The rest of a tsconfig, like `include` and `types`, is the repository's own.
+- [`toolchain-types`]{#toolchain-types}: every `tsconfig.json` extends `@amitkaps/craftz/tsconfig.json`, which turns on the same strict options: `strict`, `noUncheckedIndexedAccess`, `noImplicitOverride`, `noImplicitReturns`, `noFallthroughCasesInSwitch`, `verbatimModuleSyntax`, `isolatedModules` and `forceConsistentCasingInFileNames`. It sets none of them itself, so they're the same everywhere. `extends` can be a list, for a framework's own tsconfig. [The reference's tsconfig.json](../reference/tsconfig.json) is the example. The rest of a tsconfig, like `include` and `types`, is the repository's own.
 
 The lint block in `vite.config.ts`:
 

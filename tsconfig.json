@@ -1,18 +1,11 @@
 {
+  "extends": "@amitkaps/craftz/tsconfig.json",
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "lib": ["ESNext"],
     "types": ["node"],
-    "strict": true,
-    "noUncheckedIndexedAccess": true,
-    "noImplicitOverride": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "verbatimModuleSyntax": true,
-    "isolatedModules": true,
-    "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "noEmit": true,
     "allowImportingTsExtensions": true

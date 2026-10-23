@@ -24,6 +24,7 @@ import {
   type Pkg,
   VERSIONS,
   here,
+  root,
   origin,
   read,
   standard,
@@ -199,25 +200,53 @@ const vitePlus = VERSIONS["vite-plus"];
 /** @prose
  * # The toolchain
  *
- * A tsconfig's options and the lint block are found by regular expressions rather than by
- * parsing, since a tsconfig can hold comments, base's extends the one SvelteKit generates, and
- * `vite.config.ts` is code. Neither has a fix, since editing either means reading it. The
- * options this repository sets for itself, like `noEmit`, aren't checked.
+ * A repository's `tsconfig.json` extends the one craftz ships, [tsconfig.base.json](../tsconfig.base.json),
+ * which holds the strict options, so the file only points at them. It's parsed, with the comments
+ * and trailing commas a tsconfig allows taken out. `extends` can be a list, which is how base
+ * extends SvelteKit's too.
+ *
+ * The fix adds craftz's to `extends` and takes out the options it sets. It leaves a file with
+ * comments alone, since writing the parsed file would drop them, so that one is changed by hand.
+ *
+ * The lint block is found by a regular expression, since `vite.config.ts` is code, and has no fix.
  *
  * The editor settings are compared one key at a time, and only this repository's keys, since a
  * repository can add its own, like base's for Svelte. Its fix merges this repository's over the
  * repository's own, so an added setting stays.
  */
-const STRICT = [
-  "strict",
-  "noUncheckedIndexedAccess",
-  "noImplicitOverride",
-  "noImplicitReturns",
-  "noFallthroughCasesInSwitch",
-  "verbatimModuleSyntax",
-  "isolatedModules",
-  "forceConsistentCasingInFileNames",
-];
+const TSCONFIG = `${CRAFTZ}/tsconfig.json`;
+const STRICT = Object.keys(
+  (JSON.parse(read(join(root, "tsconfig.base.json"))) as { compilerOptions: Json }).compilerOptions,
+);
+
+// A tsconfig without its comments, and whether it had any. Strings are kept whole.
+function uncommented(text: string): { json: string; comments: boolean } {
+  const TOKEN = /("(?:[^"\\]|\\.)*")|\/\/[^\n]*|\/\*[\s\S]*?\*\//g;
+  let comments = false;
+  const json = text
+    .replace(TOKEN, (match, string?: string) => {
+      if (string) return string;
+      comments = true;
+      return "";
+    })
+    .replace(/("(?:[^"\\]|\\.)*")|,(\s*[}\]])/g, (match, string?: string, close?: string) =>
+      string ? string : (close ?? ""),
+    );
+  return { json, comments };
+}
+
+type Tsconfig = { extends?: string | string[]; compilerOptions?: Json };
+
+function tsconfigIn(text: string): Tsconfig | undefined {
+  try {
+    return JSON.parse(uncommented(text).json) as Tsconfig;
+  } catch {
+    return undefined;
+  }
+}
+
+const extending = (tsconfig: Tsconfig): string[] =>
+  tsconfig.extends === undefined ? [] : [tsconfig.extends].flat();
 
 const EDITOR = [".vscode/settings.json", ".vscode/extensions.json"];
 
@@ -663,11 +692,36 @@ export const RULES: Rule[] = [
     check: ({ files }) => {
       const tsconfig = files["tsconfig.json"];
       if (!tsconfig) return drifted(["no tsconfig.json"]);
-      return drifted(
-        STRICT.filter((flag) => !new RegExp(`"${flag}"\\s*:\\s*true`).test(tsconfig)).map(
-          (flag) => `tsconfig.json doesn't set ${flag}`,
-        ),
-      );
+      const parsed = tsconfigIn(tsconfig);
+      if (!parsed) return drifted(["tsconfig.json can't be parsed"]);
+      const drift = extending(parsed).includes(TSCONFIG)
+        ? []
+        : [`tsconfig.json doesn't extend ${TSCONFIG}`];
+      for (const option of STRICT) {
+        if (option in (parsed.compilerOptions ?? {})) {
+          drift.push(`tsconfig.json sets ${option}, which ${TSCONFIG} sets`);
+        }
+      }
+      return drifted(drift);
+    },
+    fix: {
+      in: "files",
+      apply: (dir) => {
+        const path = join(dir, "tsconfig.json");
+        const text = read(path);
+        const parsed = tsconfigIn(text);
+        if (!parsed || uncommented(text).comments) return;
+        const { extends: _, compilerOptions = {}, ...rest } = parsed;
+        const others = extending(parsed).filter((name) => name !== TSCONFIG);
+        const own = Object.fromEntries(
+          Object.entries(compilerOptions).filter(([option]) => !STRICT.includes(option)),
+        );
+        writeJson(path, {
+          extends: others.length ? [...others, TSCONFIG] : TSCONFIG,
+          compilerOptions: own,
+          ...rest,
+        });
+      },
     },
   },
   {
@@ -1192,7 +1246,7 @@ export const RULES: Rule[] = [
       if (!/dts:\s*\{[^}]*generator:\s*"oxc"/.test(files["vite.config.ts"] ?? "")) {
         drift.push('pack doesn\'t write types with generator: "oxc"');
       }
-      if (/"isolatedDeclarations"\s*:\s*true/.test(files["tsconfig.json"] ?? "")) {
+      if (tsconfigIn(files["tsconfig.json"] ?? "")?.compilerOptions?.["isolatedDeclarations"]) {
         drift.push("tsconfig.json sets isolatedDeclarations, which pack sets");
       }
       if (deps.typescript) drift.push("has typescript, which Oxc's types don't need");
