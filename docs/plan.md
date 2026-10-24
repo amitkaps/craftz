@@ -7,10 +7,11 @@ craftz 0.6.0 is on npm, and its docs are live at [craftz.amitkaps.com](https://c
 - [x] **craftz no longer installs cf.** cf brought workerd and miniflare, 343 MB of a 502 MB install, to read one version number. The Workers' date comes from npm into [src/workerd.json](../src/workerd.json), and cf's commands run a cf on the PATH at the reference's version, or pnpm's fetch of it.
 - [x] **`craftz deps`.** It says what a repository's install holds, by direct dependency, and what older installs left on disk.
 - [x] **`craftz help` reads usage.** Each command is stated once in [usage](usage.md), with an id, and a test holds cli.ts's commands to them.
-- [ ] **markz reads the commands.** `commands`, `help` and `helpOn` move from craftz into `@amitkaps/markz/rules`, beside `readRules`, so every tool's help is read the same way. markz states its own commands in its usage with ids, and a test holds its CLI to them.
+- [x] **markz reads the commands.** `commands`, `help` and `helpOn` move from craftz into `@amitkaps/markz/rules`, beside `readRules`, so every tool's help is read the same way. markz states its own commands in its usage with ids, and a test holds its CLI to them.
 - [ ] **prose and pagez state their commands.** Each states its commands in its usage with ids, prints `help` with markz's reader, and tests its CLI against the ids.
-- [ ] **craftz checks a tool's commands.** craftz reads its commands with markz's reader. A rule checks that a package with a `bin` states each command in its usage with an id and ships its usage, and the reference's `AGENTS.md` says `pnpm <tool> help <command>` says what one does.
-- [ ] **Release 0.7.0.** It carries `craftz deps`, `craftz help`, the commands rule and the install without cf. Then `pnpm align` moves every repository.
+- [x] **`pr` adds to an open pull request by its title.** From `main`, `pnpm pr "v0.9.0"` started a branch beside markz's release instead of adding to it. A title that's open now takes the change, from any branch.
+- [ ] **craftz reads its commands with markz.** craftz moves its help to markz's `readCommands` and `printHelp`, and the reference's `AGENTS.md` says `pnpm <tool> help <command>` says what one does. No rule checks a tool's commands, since prose's anchors and each tool's own test already hold them.
+- [ ] **Release 0.7.0.** It carries `craftz deps`, `craftz help`, `pr` by title and the install without cf. Then `pnpm align` moves every repository.
 
 ## Where it is
 
