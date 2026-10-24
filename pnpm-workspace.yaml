@@ -7,11 +7,13 @@
 
 # @prose
 # pnpm holds back a version for a day after it's published, so a hijacked release can be
-# pulled before it's installed. The risk is in the hundreds of libraries and nested packages
-# that move without anyone reading them, and a hijack is usually caught within hours. Any wait
-# of hours covers that, so pnpm's default is kept rather than a number of our own. Our own
-# packages skip the wait, since each reaches npm only after the owner approves it with 2FA. The
-# scope, not a version, is named, so a release needs no change here.
+# pulled before it's installed. Our own packages skip the wait.
+#
+# The risk is in the hundreds of libraries and nested packages that move without anyone reading
+# them, and a hijack is usually caught within hours. Any wait of hours covers that, so pnpm's
+# default is kept rather than a number of our own. Our own skip it, since each reaches npm only
+# after the owner approves it with 2FA. The scope, not a version, is named, so a release needs
+# no change here.
 minimumReleaseAgeExclude:
   - "@amitkaps/*"
 
