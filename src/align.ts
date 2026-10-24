@@ -215,7 +215,7 @@ async function alignTo(dir: string, repo: string, log: string[], byHand: Run): P
  * The repositories clone and install side by side, but `verify` runs one at a time. markz's
  * timing tests failed when five ran at once, since they measured a busy machine, not the code.
  */
-type State = Row & { dir: string; log: string[]; before: Deps };
+type State = Row & { dir: string; log: string[]; before: Deps; updates?: number };
 
 const PACKAGE_FILES = ["package.json", "pnpm-lock.yaml", "reference/package.json"];
 
@@ -465,13 +465,13 @@ let failed = states.some((state) => state.status !== "verified" && state.status 
  *
  * It asks GitHub every ten seconds, as `pnpm pr --wait` does. A check counts by its latest run,
  * since adding a label starts a new run that cancels the old one. One that falls behind `main` has
- * its branch updated, as `pnpm pr --wait` does. A pull request that fails or
- * closes is reported and not waited for.
+ * its branch updated, as `pnpm pr --wait` does. The report after says so, since that update's CI
+ * is the wait that's left. A pull request that fails or closes is reported and not waited for.
  */
 type Check = { name?: string; conclusion?: string; startedAt?: string };
 const FAILED = ["FAILURE", "CANCELLED", "TIMED_OUT", "ACTION_REQUIRED"];
 
-async function merge(url: string): Promise<string | undefined> {
+async function merge(url: string, updated: () => void): Promise<string | undefined> {
   for (;;) {
     await new Promise((resolve) => setTimeout(resolve, 10_000));
     const { stdout } = await run("gh", [
@@ -491,7 +491,7 @@ async function merge(url: string): Promise<string | undefined> {
     if (pr.mergeStateStatus === "BEHIND") {
       // A pull request that's merging reads as behind its own merge for a moment, so a failed update
       // only means asking again.
-      await run("gh", ["pr", "update-branch", url]).catch(() => undefined);
+      await run("gh", ["pr", "update-branch", url]).then(updated, () => undefined);
       continue;
     }
     const latest = new Map<string, Check>();
@@ -505,17 +505,24 @@ async function merge(url: string): Promise<string | undefined> {
 }
 
 const opened = states.filter((state) => state.pr);
-await phase("merging", undefined, opened, async ({ pr = "" }) => {
-  const problem = await merge(pr);
+await phase("merging", undefined, opened, async (state) => {
+  const problem = await merge(state.pr ?? "", () => (state.updates = (state.updates ?? 0) + 1));
   if (problem) throw new Error(problem);
 });
 const problems = opened
   .filter((state) => state.status === "failed")
   .map(({ repo, failed }) => `✗ ${repo}: ${failed}`);
+const behind = opened
+  .filter((state) => state.updates)
+  .map(({ repo, updates = 0 }) => {
+    const times = updates > 1 ? `, ${updates} times` : "";
+    return `↻ ${repo} fell behind main, so CI ran again${times}`;
+  });
 if (opened.length) {
   console.log(
     [
       "",
+      ...behind,
       ...problems,
       `${problems.length ? "✗" : "✓"} ${opened.length - problems.length} merged`,
     ].join("\n"),

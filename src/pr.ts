@@ -135,6 +135,7 @@ export async function pr(args: string[]): Promise<void> {
   if (start.from === "merge" && found) {
     console.log(`Waiting for #${found.number}, "${found.title}", to merge first.`);
     await landed(branch, found.url);
+    console.log(`#${found.number} merged, so "${title}" starts from main.`);
     start = { from: "origin" };
   }
   if (start.from === "origin" && found) {
@@ -226,8 +227,8 @@ function mainElsewhere(): string | undefined {
  * a new run that cancels the old one.
  *
  * A pull request that falls behind `main`, because another merged first, has its branch updated,
- * so CI runs again on what it would merge. `main` requires a branch that's up to date, and
- * auto-merge doesn't update one.
+ * so CI runs again on what it would merge, and it says so, since that's why the wait is longer.
+ * `main` requires a branch that's up to date, and auto-merge doesn't update one.
  *
  * Once it merges, `--wait` switches to `main` and pulls. In a worktree, `main` is checked out in
  * another, so it switches to `origin/main` instead, detached, and the branch goes either way.
@@ -248,7 +249,8 @@ async function landed(branch: string, url: string): Promise<void> {
       // A pull request that's merging reads as behind its own merge for a moment, and then there's
       // nothing to update, so a failed update only means asking again.
       try {
-        run("gh", "pr", "update-branch", branch);
+        output("gh", "pr", "update-branch", branch);
+        console.log(`${url} fell behind main, so its branch is updated and CI runs again.`);
       } catch {}
       continue;
     }
