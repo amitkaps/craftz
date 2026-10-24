@@ -14,6 +14,7 @@
   "files": [
     "dist",
     "docs/rules.md",
+    "docs/usage.md",
     "reference",
     "tsconfig.base.json"
   ],

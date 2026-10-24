@@ -1,20 +1,25 @@
 /** @prose
- * # Where each rule is stated
+ * # Where each rule and command is stated
  *
  * A rule is a list item in [the rules](../docs/rules.md) that opens with its id as a span, like
  * ``- [`scripts-verify`]{#scripts-verify}: text``. Its part is the second-level heading it's
  * under, like Scripts. The doc is the one place a rule is worded, and the code holds only its
  * check and its fix, under the same id.
  *
+ * A command is stated the same way, in [usage](../docs/usage.md), with how it's run as the span,
+ * like ``- [`craftz deps [dir]`]{#deps}: text``. The id is the command's name. `craftz help`
+ * lists each one's span and text, and `craftz help <command>` prints the section it opens, so a
+ * command's help is its usage, from the installed version.
+ *
  * The doc is read with markz's reader, as every tool built on markz reads its rules, so no
  * pattern here knows its layout and an example in a code block can't state a rule. A link is
  * resolved against the site, so a rule printed outside the repository still leads somewhere.
- * This file reads only the doc, so `craftz rules` loads nothing else.
+ * This file reads only the docs, so `craftz rules` and `craftz help` load nothing else.
  */
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { headings, ids, parse, walk } from "@amitkaps/markz";
-import { readRules, type Rules } from "@amitkaps/markz/rules";
+import { type Rule, readRules, type Rules } from "@amitkaps/markz/rules";
 
 /** A rule as the doc states it, under its part. */
 export type Stated = { id: string; text: string; part: string };
@@ -26,6 +31,14 @@ export const RULES_DOC = fileURLToPath(new URL("../docs/rules.md", import.meta.u
 export const SITE = "https://craftz.amitkaps.com/docs/rules.md";
 
 const doc = (): string => readFileSync(RULES_DOC, "utf8");
+
+/** The usage doc, which the package ships beside its code. */
+export const USAGE_DOC = fileURLToPath(new URL("../docs/usage.md", import.meta.url));
+
+/** Where the usage doc is published, which its links resolve against. */
+export const USAGE_SITE = "https://craftz.amitkaps.com/docs/usage.md";
+
+const usage = (): string => readFileSync(USAGE_DOC, "utf8");
 
 /** craftz's rules, as markz's `printOne` prints them. A finding's code is its rule's id, so
  *  there are no codes of their own. */
@@ -55,7 +68,7 @@ export function parts(markdown = doc()): string[] {
 }
 
 /** The whole doc, as `craftz rules` prints it, with each link resolved against the site. */
-export function printed(markdown = doc()): string {
+export function printed(markdown = doc(), site = SITE): string {
   const tree = parse(markdown);
   let out = "";
   let at = 0;
@@ -65,7 +78,7 @@ export function printed(markdown = doc()): string {
       if (type !== "link" && type !== "image") return true;
       const { destination } = tree.data(node, type);
       const source = markdown.slice(tree.start(node), tree.end(node));
-      const resolved = new URL(destination, SITE).href;
+      const resolved = new URL(destination, site).href;
       out += markdown.slice(at, tree.start(node));
       out += source.replace(`](${destination}`, `](${resolved}`);
       at = tree.end(node);
@@ -73,4 +86,26 @@ export function printed(markdown = doc()): string {
     },
   });
   return out + markdown.slice(at);
+}
+
+/** Every command the usage doc states, in order. Its label is how it's run. */
+export const commands = (markdown = usage()): Rule[] => readRules(markdown, USAGE_SITE);
+
+/** The commands, as `craftz help` lists them. */
+export function help(markdown = usage()): string {
+  const lines = commands(markdown).map((c) => `  ${c.label}\n      ${c.text}`);
+  return `Usage: craftz <command>, and craftz help <command> says more\n\n${lines.join("\n")}\n`;
+}
+
+/** The section of the usage doc that states a command, with its links resolved, or `undefined`
+ *  when no command has that name. It runs from the heading above the command to the next one. */
+export function helpOn(name: string, markdown = usage()): string | undefined {
+  const command = commands(markdown).find((c) => c.id === name);
+  if (!command) return undefined;
+  const tree = parse(markdown);
+  const at = ids(tree).find(({ id }) => id === name);
+  const starts = headings(tree).map((h) => tree.start(h.node));
+  const from = starts.findLast((s) => s < tree.start(at?.node ?? 0)) ?? 0;
+  const to = starts.find((s) => s > from) ?? markdown.length;
+  return `${printed(markdown.slice(from, to).trimEnd(), USAGE_SITE)}\n\n${command.url}\n`;
 }

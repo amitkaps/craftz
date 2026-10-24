@@ -11,7 +11,8 @@
  * A hold in `package.json` makes a holdable rule's error a warning, and the check passes. A hold
  * on a rule that isn't holdable, or one with nothing to hold, fails it.
  *
- * `craftz new` runs from the package too, so the files it writes from have to be in it.
+ * `craftz new` runs from the package too, so the files it writes from have to be in it, and
+ * `craftz help` reads usage from it.
  */
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
@@ -123,4 +124,11 @@ test("release asks for a version before it reads GitHub", () => {
   const released = craftz("release", "next");
   expect(released.status).toBe(1);
   expect(released.stderr).toContain("craftz release <X.Y.Z>");
+});
+
+test("help reads usage from the package", () => {
+  const one = craftz("help", "deps");
+  expect([one.status, one.stdout]).toEqual([0, expect.stringContaining("## What's installed")]);
+  const none = craftz("help", "nothing");
+  expect([none.status, none.stderr]).toEqual([1, expect.stringContaining("no command `nothing`")]);
 });

@@ -6,18 +6,14 @@
  * the installed package, so the version that checks a repository is the version it reads, and
  * nothing is fetched but what GitHub says about the repository.
  *
- * `craftz rules` prints [the rules](../docs/rules.md), or one by id, as `prose rules` does, so an
- * agent that knows one knows the other. `craftz check` runs them on a folder, and `craftz fix`
- * writes their fixes ([rules.ts](rules.ts)). `craftz upgrade` moves to the latest craftz
- * ([upgrade.ts](upgrade.ts)), and `craftz settings` sets GitHub and the Worker
- * ([apply.ts](apply.ts)). `craftz status` reads what's live ([status.ts](status.ts)), and
- * `craftz deploy` deploys a built site. `craftz deps` says what the install holds
- * ([deps.ts](deps.ts)). `craftz pr`, `craftz gone` and `craftz release` open and
- * clear pull requests ([pr.ts](pr.ts), [gone.ts](gone.ts), [release.ts](release.ts)), and
- * `craftz new` starts a repository ([new.ts](new.ts)).
+ * Each command is stated once, in [usage](../docs/usage.md), as the list item that opens its
+ * section. `craftz help` lists them from there, and `craftz help <command>` prints one's section,
+ * so the help can't drift from the docs. A test holds each command below to an id there.
  *
- * Each says how it works where it's written, and [usage](../docs/usage.md) how to run it. What
- * runs in this file has its own block below.
+ * `craftz rules` prints [the rules](../docs/rules.md), or one by id, as `prose rules` does, so an
+ * agent that knows one knows the other.
+ *
+ * Each says how it works where it's written. What runs in this file has its own block below.
  */
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
@@ -35,30 +31,10 @@ import { fixFiles } from "./rules.ts";
 import { cloudflareLogin, githubLogin, hasClassic } from "./settings.ts";
 import { upgrade } from "./upgrade.ts";
 import { finding, printOne } from "@amitkaps/markz/rules";
-import { craftzRules, printed } from "./stated.ts";
+import { craftzRules, help, helpOn, printed } from "./stated.ts";
 import { notes } from "./notes.ts";
 import { type Finding, checkFolder, origin } from "./survey.ts";
 import { workerIn } from "./worker.ts";
-
-const HELP = `Usage: craftz <command>
-
-  rules [id]   prints every rule, or one
-  check [dir]  runs every rule on a folder, the current one by default
-  fix [dir]    writes every fix, then checks what's left
-  upgrade      moves the current folder to the latest craftz, and runs its fix
-  settings [dir] [--check] [--yes]
-               writes the settings on GitHub and Cloudflare, then reads them back
-  status [dir] [--log] [--notes] [--timing]
-               reads what's live: CI, pull requests, npm, the release, the site's build and addresses
-  deploy       deploys the site the current folder built, as its ship script
-  deps [dir]   says what the install holds: packages, size, and which dependency brings them
-  pr "<title>" [--label <label>] [--body <text>] [--wait]
-               opens a pull request that merges itself once CI passes
-  gone         deletes the local branches that merged
-  release <X.Y.Z> [--notes "<text>"]
-               opens the pull request that releases the current folder's package
-  new <name> [--package] [--site static] [--private] [--internal] --description "<text>" [--push]
-               starts a repository that follows the rules, in a folder of the current one`;
 
 const [command, arg, ...rest] = process.argv.slice(2);
 
@@ -264,7 +240,7 @@ if (command === "rules" && !rest.length) {
   const flags = [arg, ...rest].filter((it) => it?.startsWith("--"));
   const dirs = [arg, ...rest].filter((it) => it !== undefined && !it.startsWith("--"));
   if (dirs.length > 1 || flags.some((f) => f !== "--check" && f !== "--yes")) {
-    console.error(HELP);
+    console.error(help());
     process.exit(1);
   }
   const off = await settings(
@@ -277,7 +253,7 @@ if (command === "rules" && !rest.length) {
   const flags = [arg, ...rest].filter((it) => it?.startsWith("--"));
   const dirs = [arg, ...rest].filter((it) => it !== undefined && !it.startsWith("--"));
   if (dirs.length > 1 || flags.some((f) => !["--log", "--notes", "--timing"].includes(f ?? ""))) {
-    console.error(HELP);
+    console.error(help());
     process.exit(1);
   }
   const failed = await live(
@@ -305,9 +281,17 @@ if (command === "rules" && !rest.length) {
   // repository, as `pnpm dlx @amitkaps/craftz new`.
   const { start } = await import("./new.ts");
   await start([arg, ...rest].filter((it) => it !== undefined));
+} else if (command === "help" && !rest.length) {
+  const text = arg ? helpOn(arg) : help();
+  if (!text) {
+    const message = `no command \`${arg}\`, and \`craftz help\` lists every one`;
+    console.error(finding({ tool: "craftz", level: "error", message }));
+    process.exit(1);
+  }
+  process.stdout.write(text);
 } else if (command === "-h" || command === "--help") {
-  console.log(HELP);
+  process.stdout.write(help());
 } else {
-  console.error(HELP);
+  console.error(help());
   process.exit(1);
 }

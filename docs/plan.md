@@ -6,7 +6,8 @@ craftz 0.6.0 is on npm, and its docs are live at [craftz.amitkaps.com](https://c
 
 - [x] **craftz no longer installs cf.** cf brought workerd and miniflare, 343 MB of a 502 MB install, to read one version number. The Workers' date comes from npm into [src/workerd.json](../src/workerd.json), and cf's commands run a cf on the PATH at the reference's version, or pnpm's fetch of it.
 - [x] **`craftz deps`.** It says what a repository's install holds, by direct dependency, and what older installs left on disk.
-- [ ] **Release 0.7.0.** It carries `craftz deps` and the install without cf. Then `pnpm align` moves every repository.
+- [x] **`craftz help` reads usage.** Each command is stated once in [usage](usage.md), with an id, and a test holds cli.ts's commands to them.
+- [ ] **Release 0.7.0.** It carries `craftz deps`, `craftz help` and the install without cf. Then `pnpm align` moves every repository.
 
 ## Where it is
 
@@ -19,6 +20,7 @@ craftz 0.6.0 is on npm, and its docs are live at [craftz.amitkaps.com](https://c
 - **Files craftz owns.** CI, pnpm's settings, the editor's and a package's release files are checked word for word against [reference/](../reference/README.md) and written whole, so what a repository adds goes in `verify`. An app adds Svelte's editor settings.
 - **Pull requests.** `pnpm pr` and `pnpm gone` run craftz's commands, in place of the scripts every repository copied. `pr` starts where the title says, and stops when the branch has nothing new for `main`. It returns once it's pushed, and a new title waits for the branch's open pull request to merge first. `--wait` merges once the checks pass, updating a branch that fell behind, and says how long CI and the merge took. A package's label is checked by `label.yml`, so a pull request runs `verify` once. `gone` removes a merged branch's worktree, finds a merged branch GitHub kept or never had, and `pr` runs it first.
 - **What's installed.** `craftz deps` weighs a repository's install, by direct dependency.
+- **The commands, stated once.** Each command opens its section of [usage](usage.md) with an id, and `craftz help` prints from there. A test fails if cli.ts runs a command usage doesn't state, or the other way, and the README links each one.
 - **What's live.** `craftz status` reads CI on `main`, the open pull requests, npm's version against `package.json` on `main`, the latest release, and a site's build, addresses and audience, on cf or wrangler. `--timing` says what the last pull requests took, and why slow ones were slow.
 - **Releases.** The release workflow stages a version on npm and tags it once approved, and each release's notes say what to change when a repository moves. `pnpm bump` moves the reference's versions before a release. After it, `pnpm align` runs `craftz upgrade` in a clone of each repository, so a change reaches the others only once it's released. `craftz new` starts a repository that passes the rules, from any folder with `pnpm dlx`. `craftz release` opens a package's release from its own folder. align and bump are this repository's own scripts, for whoever keeps the repositories, and the package doesn't ship them.
 - **The repositories.** The public ones carry the topic `craftz`, which is how align finds them. The one that kept the rules before craftz is deleted, with its site, since craftz holds its rules and lessons.
