@@ -16,8 +16,10 @@
  * It first deletes the other local branches that merged, as `craftz gone` does ([gone.ts](gone.ts)).
  *
  * `--body <text>` is the description. `--wait` waits for the merge, then switches to `main`,
- * pulls, and deletes the branch. It stops before pushing a branch that has nothing new for
- * `main`, as [Nothing new](#nothing-new) says.
+ * pulls, and deletes the branch. Without it, `pr` returns once the pull request is open, so the
+ * next change can start while CI runs. A session's last change takes `--wait`, to end on `main`.
+ * It stops before pushing a branch that has nothing new for `main`, as
+ * [Nothing new](#nothing-new) says.
  */
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
@@ -55,7 +57,9 @@ export const branchOf = (title: string): string =>
  * branch's pull request decides.
  *
  * - **Open, with the same title:** the change goes into it.
- * - **Open, with another title:** it stops, since the change would merge under that title.
+ * - **Open, with another title:** it waits for that pull request to merge, then starts as on a
+ *   merged one. Adding the change would merge it under that title. So the next change waits only
+ *   when it's ready before the last one merged, and a failed check stops it, with the change kept.
  * - **Merged:** it starts a new branch from `origin/main`, carrying the working tree, so the
  *   merged commits stay behind. A squash merge leaves them looking unmerged, and a new pull
  *   request would carry them again. It stops if the branch has commits made after the merge.
@@ -63,7 +67,7 @@ export const branchOf = (title: string): string =>
  * - **None:** the branch was made by hand, and the change goes on it.
  */
 export type BranchPr = { number: number; title: string; state: string };
-export type Start = { from: "here" | "main" | "origin" } | { stop: string };
+export type Start = { from: "here" | "main" | "origin" | "merge" } | { stop: string };
 
 export function startOn(branch: string, title: string, pr?: BranchPr): Start {
   if (branch === "main") return { from: "main" };
@@ -72,7 +76,7 @@ export function startOn(branch: string, title: string, pr?: BranchPr): Start {
   if (pr.state === "MERGED") return { from: "origin" };
   if (pr.state === "CLOSED") return { stop: `${it}, closed without merging. Switch to main.` };
   if (pr.title === title) return { from: "here" };
-  return { stop: `${it}, still open. Give its title to add to it, or switch to main.` };
+  return { from: "merge" };
 }
 
 /** The arguments with each value joined to its option, as `--body=<text>`, so a body can open with a dash. */
@@ -118,16 +122,21 @@ export async function pr(args: string[]): Promise<void> {
   // The branches that merged go first, apart from this one, which the steps below decide on.
   gone({ others: true });
   let branch = output("git", "branch", "--show-current");
-  let found: (BranchPr & { headRefOid: string }) | undefined;
+  let found: (BranchPr & { headRefOid: string; url: string }) | undefined;
   if (branch !== "main") {
     try {
       found = JSON.parse(
-        output("gh", "pr", "view", branch, "--json", "number,title,state,headRefOid"),
-      ) as BranchPr & { headRefOid: string };
+        output("gh", "pr", "view", branch, "--json", "number,title,state,headRefOid,url"),
+      ) as BranchPr & { headRefOid: string; url: string };
     } catch {}
   }
-  const start = startOn(branch, title, found);
+  let start = startOn(branch, title, found);
   if ("stop" in start) fail(start.stop);
+  if (start.from === "merge" && found) {
+    console.log(`Waiting for #${found.number}, "${found.title}", to merge first.`);
+    await landed(branch, found.url);
+    start = { from: "origin" };
+  }
   if (start.from === "origin" && found) {
     let after = "0";
     try {
@@ -209,7 +218,10 @@ function mainElsewhere(): string | undefined {
 /** @prose
  * # Waiting for the merge
  *
- * Asks GitHub every ten seconds, and stops at the first check that fails, with the pull request
+ * `--wait` waits this way for the merge, and so does a new title on a branch whose pull request is
+ * open.
+ *
+ * It asks GitHub every ten seconds, and stops at the first check that fails, with the pull request
  * left open to fix and run again. A check counts by its latest run, since adding a label starts
  * a new run that cancels the old one.
  *
@@ -217,14 +229,14 @@ function mainElsewhere(): string | undefined {
  * so CI runs again on what it would merge. `main` requires a branch that's up to date, and
  * auto-merge doesn't update one.
  *
- * Once it merges, it switches to `main` and pulls. In a worktree, `main` is checked out in
+ * Once it merges, `--wait` switches to `main` and pulls. In a worktree, `main` is checked out in
  * another, so it switches to `origin/main` instead, detached, and the branch goes either way.
  */
 type Check = { name?: string; conclusion?: string; startedAt?: string };
 type State = { state: string; mergeStateStatus: string; statusCheckRollup: Check[] };
 const FAILED = ["FAILURE", "CANCELLED", "TIMED_OUT", "ACTION_REQUIRED"];
 
-async function merged(branch: string, url: string): Promise<void> {
+async function landed(branch: string, url: string): Promise<void> {
   for (;;) {
     await new Promise((resolve) => setTimeout(resolve, 10_000));
     const pr = JSON.parse(
@@ -248,6 +260,10 @@ async function merged(branch: string, url: string): Promise<void> {
     const failed = [...latest.values()].find((check) => FAILED.includes(check.conclusion ?? ""));
     if (failed) fail(`${failed.name ?? "A check"} failed on ${url}.`);
   }
+}
+
+async function merged(branch: string, url: string): Promise<void> {
+  await landed(branch, url);
   const elsewhere = mainElsewhere();
   if (elsewhere) {
     run("git", "fetch", "--quiet", "--prune", "origin", "main");
