@@ -22,7 +22,7 @@
     "cf": "1.0.0-beta.20",
     "publint": "0.3.25",
     "typescript": "7.0.2",
-    "vite-plus": "1.3.0",
+    "vite-plus": "1.4.0",
     "wrangler": "4.152.0"
   },
   "devEngines": {
