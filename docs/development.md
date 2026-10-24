@@ -34,4 +34,4 @@ Two values come from dev dependencies, the browsers from browser-compat-data and
 
 The packages still on a beta are the ones [`versions-beta`](rules.md#versions-beta) names, and `package.json` has their builds. align leaves them alone, since their tags don't say which build goes with which. One is listed once npm's latest for it is a release at the beta's major or later.
 
-To move one, pin the release in `package.json` and take it out of `versions-beta`. Then run `pnpm run verify` and a deploy from the Git-connected Worker before you rely on it.
+A newer beta is moved by hand too. Pin it in `package.json` and the reference's at once, after reading its `engines` and the miniflare build it depends on, whose date is the Workers' compatibility date. To move one to its release, pin the release in `package.json` and take it out of `versions-beta`. Then run `pnpm run verify` and a deploy from the Git-connected Worker before you rely on it.
