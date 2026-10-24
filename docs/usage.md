@@ -153,7 +153,7 @@ align clones each repository's `main` into a temporary folder and installs it, r
 
 `--local` stops before the push, so a clone can be read or compared with another run. It reads each repository's settings and lists what has drifted, without writing them.
 
-A step that fails on what's left to do by hand, `fix` or `verify`, doesn't stop the run, so one run lists everything: craftz check's findings and the count of lint and type errors, for each repository.
+A step that fails on what's left to do by hand, `fix` or `verify`, doesn't stop the run. So one run lists craftz check's findings and the count of lint and type errors for every repository.
 
 `--candidate` packs this checkout and moves every repository to it, locally, before a release. What each one leaves by hand is what the release's notes say to do. Run it before `craftz release`.
 
