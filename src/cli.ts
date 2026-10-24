@@ -27,7 +27,7 @@ import { deploy as upload } from "./deploy.ts";
 import { gone } from "./gone.ts";
 import { pr } from "./pr.ts";
 import { release } from "./release.ts";
-import { buildLog, status } from "./status.ts";
+import { buildLog, status, timing } from "./status.ts";
 import { CRAFTZ, OWNER, type Pkg, here, read } from "./reference.ts";
 import { fixFiles } from "./rules.ts";
 import { cloudflareLogin, githubLogin, hasClassic } from "./settings.ts";
@@ -46,7 +46,7 @@ const HELP = `Usage: craftz <command>
   upgrade      moves the current folder to the latest craftz, and runs its fix
   settings [dir] [--check] [--yes]
                writes the settings on GitHub and Cloudflare, then reads them back
-  status [dir] [--log] [--notes]
+  status [dir] [--log] [--notes] [--timing]
                reads what's live: CI, pull requests, npm, the release, the site's build and addresses
   deploy       deploys the site the current folder built, as its ship script
   pr "<title>" [--label <label>] [--body <text>] [--wait]
@@ -146,7 +146,7 @@ async function deploy(dir: string): Promise<number> {
 }
 
 // Prints what's live for a repository, and returns whether anything has failed.
-async function live(dir: string, log: boolean, notes: boolean): Promise<boolean> {
+async function live(dir: string, log: boolean, notes: boolean, timed: boolean): Promise<boolean> {
   const { repo, pkg, site } = target(dir);
   const { lines, build, release, summary } = await status(repo, pkg, site);
   const failed = lines.some((line) => !line.ok);
@@ -158,6 +158,7 @@ async function live(dir: string, log: boolean, notes: boolean): Promise<boolean>
   if (notes && release) console.log(`\n${release.body.trim()}`);
   else if (summary) console.log(`\n${summary}`);
   if (log && build) console.log(`\n${buildLog(build).join("\n")}`);
+  if (timed) console.log(`\n${timing(repo).join("\n")}`);
   return failed;
 }
 
@@ -272,7 +273,7 @@ if (command === "rules" && !rest.length) {
 } else if (command === "status") {
   const flags = [arg, ...rest].filter((it) => it?.startsWith("--"));
   const dirs = [arg, ...rest].filter((it) => it !== undefined && !it.startsWith("--"));
-  if (dirs.length > 1 || flags.some((f) => f !== "--log" && f !== "--notes")) {
+  if (dirs.length > 1 || flags.some((f) => !["--log", "--notes", "--timing"].includes(f ?? ""))) {
     console.error(HELP);
     process.exit(1);
   }
@@ -280,6 +281,7 @@ if (command === "rules" && !rest.length) {
     resolve(dirs[0] ?? "."),
     flags.includes("--log"),
     flags.includes("--notes"),
+    flags.includes("--timing"),
   );
   process.exitCode = failed ? 1 : 0;
 } else if (command === "deploy" && !arg) {

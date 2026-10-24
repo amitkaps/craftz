@@ -6,7 +6,7 @@
  * Cloudflare is left to running it.
  */
 import { expect, test } from "vite-plus/test";
-import { buildIn, npmIn, releaseIn, runsIn } from "../src/status.ts";
+import { buildIn, npmIn, releaseIn, runsIn, timingIn } from "../src/status.ts";
 
 const run = (workflowName: string, status: string, conclusion: string, headSha = "abcdef123") => ({
   workflowName,
@@ -73,4 +73,45 @@ test("a release's line is its tag, and its summary is the paragraph above GitHub
   });
   expect(releaseIn({ ...release, body: "## What's Changed\n* a" }).summary).toBeUndefined();
   expect(releaseIn(undefined).line.found).toBe("none yet");
+});
+
+test("timing gives the spread, and the first reason each slow pull request fits", () => {
+  const t = (minute: number) => new Date(Date.UTC(2026, 9, 24, 12, minute)).toISOString();
+  const pr = (number: number, open: number, merge: number, commits: [number, string][] = []) => ({
+    number,
+    createdAt: t(open),
+    mergedAt: t(merge),
+    headRefName: `b${number}`,
+    commits: [[open, "work"] as [number, string], ...commits].map(([m, messageHeadline]) => ({
+      committedDate: t(m),
+      messageHeadline,
+    })),
+  });
+  const run = (number: number, start: number, end: number, conclusion = "success") => ({
+    workflowName: "CI",
+    headBranch: `b${number}`,
+    conclusion,
+    startedAt: t(start),
+    updatedAt: t(end),
+  });
+  const lines = timingIn(
+    [
+      pr(1, 0, 2),
+      pr(2, 10, 20),
+      pr(3, 30, 40, [[35, "Merge branch 'main' into b3"]]),
+      pr(4, 50, 58, [[55, "more work"]]),
+      pr(5, 60, 70),
+      pr(6, 100, 400),
+    ],
+    [run(1, 0, 1), run(2, 10, 11, "failure"), run(5, 60, 61), run(6, 100, 399)],
+  );
+  expect(lines.slice(4)).toEqual([
+    "    over 5m         #2 10m 0s, a check failed",
+    "                    #3 10m 0s, fell behind main, and CI ran again",
+    "                    #4 8m 0s, work was added after it opened",
+    "                    #5 10m 0s, merged 9m 0s after its checks passed",
+    "                    #6 5h 0m, left open a while",
+  ]);
+  expect(lines[3]).toBe("    beside another  0 of 6");
+  expect(timingIn([], [])).toEqual(["No merged pull requests to time."]);
 });
