@@ -65,6 +65,11 @@ export const branchOf = (title: string): string =>
  *   request would carry them again. It stops if the branch has commits made after the merge.
  * - **Closed without merging:** it stops.
  * - **None:** the branch was made by hand, and the change goes on it.
+ *
+ * Before it starts a branch, or waits for another pull request, it looks for an open pull request
+ * with the same title, and the change goes into that one, on its branch. So a change for
+ * `craftz release`'s pull request, like markz's CDN link, goes in from `main` with the release's
+ * title, `vX.Y.Z`.
  */
 export type BranchPr = { number: number; title: string; state: string };
 export type Start = { from: "here" | "main" | "origin" | "merge" } | { stop: string };
@@ -78,6 +83,12 @@ export function startOn(branch: string, title: string, pr?: BranchPr): Start {
   if (pr.title === title) return { from: "here" };
   return { from: "merge" };
 }
+
+export type OpenPr = { title: string; headRefName: string };
+
+/** The open pull request with exactly this title, of those GitHub's search found. */
+export const titled = (prs: OpenPr[], title: string): OpenPr | undefined =>
+  prs.find((it) => it.title === title);
 
 /** The arguments with each value joined to its option, as `--body=<text>`, so a body can open with a dash. */
 export function joined(args: string[]): string[] {
@@ -132,6 +143,29 @@ export async function pr(args: string[]): Promise<void> {
   }
   let start = startOn(branch, title, found);
   if ("stop" in start) fail(start.stop);
+  if (start.from !== "here") {
+    const search = ["--state", "open", "--search", `"${title}" in:title`];
+    const into = titled(
+      JSON.parse(output("gh", "pr", "list", ...search, "--json", "title,headRefName")) as OpenPr[],
+      title,
+    );
+    if (into) {
+      branch = into.headRefName;
+      console.log(`"${title}" is open, so the change goes into ${branch}.`);
+      run("git", "fetch", "--quiet", "origin", branch);
+      let local = true;
+      try {
+        output("git", "rev-parse", "--verify", "--quiet", `refs/heads/${branch}`);
+      } catch {
+        local = false;
+      }
+      if (local) {
+        run("git", "switch", "--quiet", branch);
+        run("git", "merge", "--quiet", "--ff-only", `origin/${branch}`);
+      } else run("git", "switch", "--quiet", "--track", `origin/${branch}`);
+      start = { from: "here" };
+    }
+  }
   if (start.from === "merge" && found) {
     console.log(`Waiting for #${found.number}, "${found.title}", to merge first.`);
     const timing = await landed(branch, found.url);

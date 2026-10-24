@@ -9,7 +9,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "vite-plus/test";
 import { goneIn } from "../src/gone.ts";
-import { branchOf, joined, labelsIn, startOn, timingOf, took } from "../src/pr.ts";
+import { branchOf, joined, labelsIn, startOn, timingOf, titled, took } from "../src/pr.ts";
 import { here } from "../src/reference.ts";
 import { RULES } from "../src/rules.ts";
 
@@ -110,4 +110,13 @@ test("a merge says what CI took, the runs a fall behind added, and the wait afte
   expect(timingOf(pr)).toBe("CI took 45s, merged 12m 0s after it passed");
   expect(timingOf(pr, 1)).toBe("CI took 45s, ran 2 times, merged 12m 0s after it passed");
   expect(timingOf({ ...pr, mergedAt: undefined, statusCheckRollup: [] })).toBe("");
+});
+
+test("a change goes into the open pull request with its exact title", () => {
+  const open = [
+    { title: "v0.9.0 notes", headRefName: "notes" },
+    { title: "v0.9.0", headRefName: "release-0.9.0" },
+  ];
+  expect(titled(open, "v0.9.0")).toEqual({ title: "v0.9.0", headRefName: "release-0.9.0" });
+  expect(titled(open, "v0.9")).toBeUndefined();
 });
