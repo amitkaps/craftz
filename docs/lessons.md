@@ -22,6 +22,7 @@ The first sections are about the tools, what each does that its docs don't say. 
 - **Some script names never run.** `pnpm deploy`, `audit`, `publish` and `ci` are pnpm's own commands, so a script by one of those names is skipped. That's why the deploy script is `ship`.
 - **`npx` refuses to run where `devEngines` names pnpm.** Use `pnpm exec` for an installed tool, and `pnpm dlx` for one that isn't.
 - **`pnpm add` doesn't run a repository's `prepare`.** align began a fresh clone with `pnpm add` of the latest craftz, and a later `pnpm install` found nothing to do. So base's `prepare` never generated its Worker's types, and its `fix` failed on the missing file. The clone now installs first, as any fresh clone does.
+- **`node_modules` isn't the install.** craftz's read 952 MB, but its install was 502 MB. pnpm keeps each version in `node_modules/.pnpm` after nothing needs it, until a fresh install, so four builds of workerd sat there where one was used. And the lockfile's 234 packages counted builds for other platforms, where 120 were installed. `craftz deps` counts only what the tree reaches on disk, and lists the rest apart.
 - **Moving between toolchains needs a fresh lockfile.** A lockfile keeps the optional peers it already resolved, so remove `node_modules` and `pnpm-lock.yaml` before installing.
 
 ## Vite+ and TypeScript

@@ -11,7 +11,8 @@
  * writes their fixes ([rules.ts](rules.ts)). `craftz upgrade` moves to the latest craftz
  * ([upgrade.ts](upgrade.ts)), and `craftz settings` sets GitHub and the Worker
  * ([apply.ts](apply.ts)). `craftz status` reads what's live ([status.ts](status.ts)), and
- * `craftz deploy` deploys a built site. `craftz pr`, `craftz gone` and `craftz release` open and
+ * `craftz deploy` deploys a built site. `craftz deps` says what the install holds
+ * ([deps.ts](deps.ts)). `craftz pr`, `craftz gone` and `craftz release` open and
  * clear pull requests ([pr.ts](pr.ts), [gone.ts](gone.ts), [release.ts](release.ts)), and
  * `craftz new` starts a repository ([new.ts](new.ts)).
  *
@@ -24,6 +25,7 @@ import { join, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { type Target, checkSettings, writeSettings } from "./apply.ts";
 import { deploy as upload } from "./deploy.ts";
+import { deps } from "./deps.ts";
 import { gone } from "./gone.ts";
 import { pr } from "./pr.ts";
 import { release } from "./release.ts";
@@ -49,6 +51,7 @@ const HELP = `Usage: craftz <command>
   status [dir] [--log] [--notes] [--timing]
                reads what's live: CI, pull requests, npm, the release, the site's build and addresses
   deploy       deploys the site the current folder built, as its ship script
+  deps [dir]   says what the install holds: packages, size, and which dependency brings them
   pr "<title>" [--label <label>] [--body <text>] [--wait]
                opens a pull request that merges itself once CI passes
   gone         deletes the local branches that merged
@@ -284,6 +287,8 @@ if (command === "rules" && !rest.length) {
     flags.includes("--timing"),
   );
   process.exitCode = failed ? 1 : 0;
+} else if (command === "deps" && !rest.length) {
+  process.exitCode = deps(resolve(arg ?? "."));
 } else if (command === "deploy" && !arg) {
   process.exitCode = await deploy(process.cwd());
 } else if (command === "pr") {
