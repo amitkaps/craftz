@@ -13,7 +13,8 @@
  * are written directly and read back by [apply.ts](apply.ts), since there's no file to review. Its files
  * change in a pull request, from a fresh clone of `main` in a temporary folder, so a checkout on
  * a branch of its own is never touched. The pull request opens only when `verify` passes, with
- * auto-merge on, so CI merges it. One that fails leaves its clone and log for a look.
+ * auto-merge on, so CI merges it. One that fails leaves its clone and log for a look, and the
+ * rest are removed once they've merged.
  *
  * Running it twice changes nothing the second time, and a repository already in line gets no
  * pull request. A run ends by waiting for its pull requests to merge.
@@ -454,7 +455,7 @@ await phase("settings", undefined, settled, async (state) => {
 });
 for (const state of states) state.status ??= "verified";
 
-console.log(["", ...report(states), `clones and logs in ${work}`].join("\n"));
+console.log(["", ...report(states)].join("\n"));
 let failed = states.some((state) => state.status !== "verified" && state.status !== "in line");
 
 /** @prose
@@ -534,4 +535,21 @@ if (opened.length) {
   );
 }
 failed ||= problems.length > 0;
+
+/** @prose
+ * # The clones
+ *
+ * Each clone is a gigabyte or more with its `node_modules`, so a run removes the ones nobody needs to
+ * read: a repository whose pull request merged, or one already in line. A failed one keeps its clone
+ * and log, and `--local` keeps them all. The folder goes once it's empty, and is printed otherwise.
+ */
+if (!local) {
+  for (const state of states) {
+    if (state.status === "verified" || state.status === "in line") {
+      rmSync(state.dir, { recursive: true, force: true });
+    }
+  }
+}
+if (readdirSync(work).length) console.log(`\nclones and logs in ${work}`);
+else rmSync(work, { recursive: true });
 process.exitCode = failed ? 1 : 0;
