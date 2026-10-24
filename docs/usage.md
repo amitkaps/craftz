@@ -2,7 +2,7 @@
 
 craftz is used through its commands and its plugin.
 
-Any repository has `craftz rules`, `craftz check`, `craftz fix`, `craftz upgrade`, `craftz settings`, `craftz status`, `craftz deploy`, `craftz pr`, `craftz gone`, `craftz release` and the `craftz()` plugin, and `craftz new` starts one. The last part, [Keeping every repository](#keeping-every-repository), is for whoever keeps them all, from a checkout of craftz.
+Each command is stated once, here, as the list item that opens its section, with how it's run and what it does. `craftz help` lists them from the installed version, and `craftz help <command>` prints its section, so the help is this page. Any repository has every command, and `craftz new` starts one. The last part, [Keeping every repository](#keeping-every-repository), is for whoever keeps them all, from a checkout of craftz.
 
 ## Install
 
@@ -13,7 +13,20 @@ pnpm exec craftz fix
 
 It needs Node 26.12.1 or newer, the Node it's built and tested on. The first fix writes the `craftz` script, among the rest, so every command after it is `pnpm craftz <command>`, as `pnpm prose` runs prose.
 
+## Reading the commands
+
+- [`craftz help [command]`]{#help}: lists the commands, or prints what one does.
+
+```sh
+pnpm craftz help       # every command, with how it's run
+pnpm craftz help deps  # what one does, from this page
+```
+
+`craftz help` reads this page from the installed version, as `craftz rules` reads the rules. `craftz --help` lists the commands too.
+
 ## Reading the rules
+
+- [`craftz rules [id]`]{#rules}: prints every rule, or one by its id, from the installed version.
 
 ```sh
 pnpm craftz rules                 # every rule
@@ -23,6 +36,9 @@ pnpm craftz rules scripts-verify  # one rule, with its address
 `craftz rules` prints [the rules](rules.md) from the installed version, so a repository reads the rules it's checked against, and nothing is fetched. Its links lead to the site, so they work outside the repository. A finding names its rule by id, so `craftz rules <id>` prints the rule it drifted from.
 
 ## Checking one repository
+
+- [`craftz check [dir]`]{#check}: runs every rule on a folder, the current one by default.
+- [`craftz fix [dir]`]{#fix}: writes every fix that can be automated, then checks what's left.
 
 ```sh
 pnpm craftz check          # this folder
@@ -65,6 +81,8 @@ A static site's `cloudflare.config.ts` names its Worker, its domains and the fol
 
 ## Moving to a new craftz
 
+- [`craftz upgrade`]{#upgrade}: moves the folder to the latest craftz, and runs its fix.
+
 ```sh
 pnpm craftz upgrade
 ```
@@ -73,6 +91,8 @@ A new craftz brings its rules, and the versions of the tools it was tested with.
 
 ## Deploying a site
 
+- [`craftz deploy`]{#deploy}: deploys the site the folder built, as its `ship` script.
+
 ```sh
 pnpm craftz deploy
 ```
@@ -80,6 +100,9 @@ pnpm craftz deploy
 `craftz deploy` deploys the site the folder has built, and a site's `ship` script runs it, which is the Worker's deploy command. For a `cloudflare.config.ts`, it uploads the folder the config names, sending only the files Cloudflare doesn't have, then writes the Worker's domains and turns its other addresses off. It needs `CLOUDFLARE_API_TOKEN`, which Workers Builds sets, and `CLOUDFLARE_ACCOUNT_ID` where the token reaches more than one account. A `wrangler.toml` runs `wrangler deploy`, which an app is on.
 
 ## Pull requests
+
+- [`craftz pr "<title>" [--label <label>] [--body <text>] [--wait]`]{#pr}: opens a pull request that merges itself once CI passes.
+- [`craftz gone`]{#gone}: deletes the local branches that merged.
 
 ```sh
 pnpm pr "<title>" --label added   # commit, verify, push, and merge once CI passes
@@ -91,6 +114,8 @@ A repository's `pr` and `gone` scripts run `craftz pr` and `craftz gone`, and ev
 
 ## Releasing a package
 
+- [`craftz release <X.Y.Z> [--notes "<text>"]`]{#release}: opens the pull request that releases the folder's package.
+
 ```sh
 pnpm craftz release 0.5.0 --notes "What this release is about."
 ```
@@ -98,6 +123,8 @@ pnpm craftz release 0.5.0 --notes "What this release is about."
 `craftz release` opens the `v0.5.0` pull request for the package the folder's `origin` names, with `version` set and auto-merge on. It works on GitHub, so it releases what's on `main`, whatever the folder has changed. Without `--notes` it opens your editor for the summary. Once it merges, approve the staged version on npmjs.com. It needs `gh` logged in.
 
 ## Writing the settings
+
+- [`craftz settings [dir] [--check] [--yes]`]{#settings}: writes the settings on GitHub and Cloudflare that drifted, then reads them back.
 
 ```sh
 pnpm craftz settings --check  # read them, and write nothing
@@ -109,6 +136,8 @@ pnpm craftz settings          # write what has drifted, then read it back
 It needs `gh` logged in as the owner, and `cf` for a site's Worker. Classic branch protection on `main` isn't craftz's, so it asks before removing it. Where there's no one to ask, like in a script, `--yes` removes it.
 
 ## What's live
+
+- [`craftz status [dir] [--log] [--notes] [--timing]`]{#status}: reads what's live: CI, pull requests, npm, the release, and a site's build and addresses.
 
 ```sh
 pnpm craftz status          # CI, pull requests, npm, the release, and the site's build, addresses and audience
@@ -123,6 +152,8 @@ Use it after a merge or a release, to see that CI, the deploy and npm went throu
 
 ## What's installed
 
+- [`craftz deps [dir]`]{#deps}: says what the install holds: packages, size, and which direct dependency brings them.
+
 ```sh
 pnpm craftz deps  # packages, size, and which direct dependency brings them
 ```
@@ -130,6 +161,8 @@ pnpm craftz deps  # packages, size, and which direct dependency brings them
 `craftz deps` weighs what `pnpm install` put on disk in the repository. It prints the total, then a line for each direct dependency, with its packages, their size and its three biggest. A package two of them bring is counted once, as shared, so the lines add up. It also lists the versions pnpm kept from older installs, which are on disk but not in the install, and a fresh install removes them. It's a report, so it never fails on a size. Run it before adding a dependency and after, to see what it costs.
 
 ## Starting a repository
+
+- [`craftz new <name> [--package] [--site static] [--private] [--internal] --description "<text>" [--push]`]{#new}: starts a repository that follows the rules, in a folder of the current one.
 
 ```sh
 pnpm dlx @amitkaps/craftz new example --package --description "What it is, in a sentence."

@@ -8,15 +8,20 @@ Every repository makes the same choices, like its toolchain, versions, workflows
 
 | Command | Does |
 | --- | --- |
-| `craftz check` | checks the repository against every rule, as part of its `verify` |
-| `craftz fix` | writes every fix that can be automated |
-| `craftz settings` | checks and writes what lives outside the files, on GitHub and Cloudflare |
-| `craftz status` | reads what's live: CI, pull requests, npm, and a site's latest build and addresses |
-| `craftz deploy` | deploys a site the way its Worker config says |
-| `craftz pr`, `craftz gone` | open a pull request that merges itself once CI passes, and delete the branches that merged |
-| `craftz rules [id]` | prints the rules, or one rule, from the installed version |
-| `craftz new` | starts a repository that already follows the rules |
-| `craftz()` | a Vite plugin that sets `fmt`, `lint` and a site's config, and never overrides the repository's |
+| [`craftz check`](docs/usage.md#check) | checks the repository against every rule, as part of its `verify` |
+| [`craftz fix`](docs/usage.md#fix) | writes every fix that can be automated |
+| [`craftz upgrade`](docs/usage.md#upgrade) | moves the repository to the latest craftz, and runs its fix |
+| [`craftz settings`](docs/usage.md#settings) | checks and writes what lives outside the files, on GitHub and Cloudflare |
+| [`craftz status`](docs/usage.md#status) | reads what's live: CI, pull requests, npm, and a site's latest build and addresses |
+| [`craftz deploy`](docs/usage.md#deploy) | deploys a site the way its Worker config says |
+| [`craftz pr`](docs/usage.md#pr) | opens a pull request that merges itself once CI passes |
+| [`craftz gone`](docs/usage.md#gone) | deletes the local branches that merged |
+| [`craftz release`](docs/usage.md#release) | opens the pull request that releases a package |
+| [`craftz deps`](docs/usage.md#deps) | says what the install holds, and which dependency brings it |
+| [`craftz rules`](docs/usage.md#rules) | prints the rules, or one rule, from the installed version |
+| [`craftz help`](docs/usage.md#help) | lists the commands, or prints what one does |
+| [`craftz new`](docs/usage.md#new) | starts a repository that already follows the rules |
+| [`craftz()`](docs/usage.md#the-plugin) | a Vite plugin that sets `fmt`, `lint` and a site's config, and never overrides the repository's |
 
 An agent reads the rules with `craftz rules`, from the version the repository installed, so it never works from a fetched page or an older copy.
 

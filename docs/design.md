@@ -37,19 +37,7 @@ craftz owns a repository's conventions and its lifecycle commands. Vite+ and eac
 
 ## The commands
 
-| Command | Does |
-| --- | --- |
-| `craftz rules [id]` | prints the rules, or one rule, from the installed version |
-| `craftz check` | runs every rule in the repository, in its own `verify` |
-| `craftz fix` | writes every fix that can be automated |
-| `craftz upgrade` | moves the repository to the latest craftz, and runs its fix |
-| `craftz settings` | writes the GitHub and Cloudflare settings, with your login |
-| `craftz status` | reads what's live: CI, pull requests, npm, and a site's build and addresses |
-| `craftz pr`, `craftz gone` | open a pull request that merges itself, and delete merged branches |
-| `craftz release` | opens the pull request that releases a package |
-| `craftz deploy` | deploys the way the repository's deploy axis says, run by the `ship` script |
-| `craftz new` | starts a repository that already follows the rules |
-| `craftz()` | a Vite plugin that sets `fmt`, `lint` and a site's config for what it deploys |
+Each command is stated once, in [usage](usage.md), as the list item that opens its section, and `craftz help` prints them from there. A test fails if src/cli.ts runs a command usage doesn't state, or usage states one it doesn't run, so the list can't drift. The README links each one.
 
 Each command acts on one repository, the one it's installed in, except `new`, which starts one. What acts on every repository at once isn't in the package, as [Every repository at once](#every-repository-at-once) says.
 
