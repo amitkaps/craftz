@@ -85,7 +85,12 @@ test("a body or label is read as given, even one that opens with a dash", () => 
 });
 
 test("a merge says what CI took, the runs a fall behind added, and the wait after it passed", () => {
-  expect([took(41_400), took(60_000), took(662_000)]).toEqual(["41s", "1m 0s", "11m 2s"]);
+  expect([took(41_400), took(60_000), took(662_000), took(59_100_000)]).toEqual([
+    "41s",
+    "1m 0s",
+    "11m 2s",
+    "16h 25m",
+  ]);
   const check = (name: string, startedAt: string, completedAt: string, conclusion = "SUCCESS") => ({
     name,
     conclusion,

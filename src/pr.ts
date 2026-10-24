@@ -260,10 +260,12 @@ export type State = {
 };
 const FAILED = ["FAILURE", "CANCELLED", "TIMED_OUT", "ACTION_REQUIRED"];
 
-/** How long a span of time took, in seconds or in minutes and seconds. */
+/** How long a span of time took, in seconds, minutes and seconds, or hours and minutes. */
 export function took(ms: number): string {
   const s = Math.round(ms / 1000);
-  return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`;
+  if (s < 60) return `${s}s`;
+  if (s < 3600) return `${Math.floor(s / 60)}m ${s % 60}s`;
+  return `${Math.floor(s / 3600)}h ${Math.floor(s / 60) % 60}m`;
 }
 
 /** What a merge took: the `ci` check's last run, the runs a fall behind added, and the wait after. */

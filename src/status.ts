@@ -23,7 +23,8 @@
  *   internal doesn't go public unseen. An Access application with no policy is marked.
  *
  * `--log` prints the latest build's log after, which is where a failed deploy says why, and
- * `--notes` prints the latest release's notes in full.
+ * `--notes` prints the latest release's notes in full. `--timing` prints what the last pull
+ * requests took, as [Timing](#timing) says.
  *
  * It needs `gh` logged in, and cf logged in for a site. A site with no cf of its own, like an app
  * on wrangler, has its builds read by the reference's cf, which pnpm fetches. What can't be read
@@ -31,6 +32,7 @@
  */
 import { execFileSync } from "node:child_process";
 import { accessDrift, cf, cloudflareLogin, workerTag } from "./settings.ts";
+import { took } from "./pr.ts";
 import { OWNER, type Pkg } from "./reference.ts";
 import type { Worker } from "./worker.ts";
 
@@ -262,4 +264,127 @@ function latestRelease(repo: string): Release | undefined {
 export function buildLog(uuid: string): string[] {
   const log = cf("builds", "logs", "get", uuid) as { lines: [number, string][] };
   return log.lines.map(([, text]) => text);
+}
+
+/** @prose
+ * # Timing
+ *
+ * `--timing` answers "why is this slow?" from the last 30 merged pull requests, rather than from
+ * memory. It gives the median and slowest tenth of a CI run and of a pull request from open to
+ * merge, and how many were open beside another. That's when one falls behind `main` and runs CI
+ * again.
+ *
+ * Each that took over five minutes is listed with the first reason that fits. A check failed, it
+ * fell behind, work was added after it opened, or the merge came minutes after the checks passed,
+ * which is GitHub's auto-merge. Otherwise it was left open a while.
+ */
+/** A merged pull request, as `gh pr list` gives it. */
+export type Merged = {
+  number: number;
+  createdAt: string;
+  mergedAt: string;
+  headRefName: string;
+  commits: { committedDate: string; messageHeadline: string }[];
+};
+/** A workflow run on a pull request, as `gh run list` gives it. */
+export type PrRun = {
+  workflowName: string;
+  headBranch: string;
+  conclusion: string;
+  startedAt: string;
+  updatedAt: string;
+};
+
+const SLOW = 5 * 60_000;
+const at = (iso: string): number => Date.parse(iso);
+const quantile = (sorted: number[], f: number): number =>
+  sorted[Math.min(sorted.length - 1, Math.floor(f * sorted.length))] ?? 0;
+const spread = (spans: number[]): string => {
+  const sorted = [...spans].sort((a, b) => a - b);
+  return `median ${took(quantile(sorted, 0.5))}, slowest tenth ${took(quantile(sorted, 0.9))}`;
+};
+
+/** What the pull requests took, as lines to print, and why each slow one was slow. */
+export function timingIn(prs: Merged[], runs: PrRun[]): string[] {
+  if (!prs.length) return ["No merged pull requests to time."];
+  const ci = runs
+    .filter((run) => run.workflowName === "CI" && run.conclusion === "success")
+    .map((run) => at(run.updatedAt) - at(run.startedAt));
+  const open = (pr: Merged) => at(pr.mergedAt) - at(pr.createdAt);
+  const beside = (pr: Merged) =>
+    prs.some(
+      (other) =>
+        other !== pr &&
+        at(other.createdAt) < at(pr.mergedAt) &&
+        at(other.mergedAt) > at(pr.createdAt),
+    );
+  const overlapped = prs.filter(beside).length;
+  const slow = prs
+    .filter((pr) => open(pr) > SLOW)
+    .map((pr) => {
+      // A run is the pull request's when it's on its branch while it was open.
+      const own = runs.filter(
+        (run) =>
+          run.headBranch === pr.headRefName &&
+          at(run.startedAt) >= at(pr.createdAt) - 60_000 &&
+          at(run.startedAt) <= at(pr.mergedAt),
+      );
+      const later = pr.commits.filter((commit) => at(commit.committedDate) > at(pr.createdAt));
+      // An update from main is GitHub's merge commit, not work.
+      const updated = later.some((commit) => commit.messageHeadline.startsWith("Merge branch"));
+      const passed = Math.max(0, ...own.map((run) => at(run.updatedAt)));
+      const why = own.some((run) => run.conclusion === "failure")
+        ? "a check failed"
+        : updated
+          ? "fell behind main, and CI ran again"
+          : later.length
+            ? "work was added after it opened"
+            : passed && at(pr.mergedAt) - passed > 2 * 60_000
+              ? `merged ${took(at(pr.mergedAt) - passed)} after its checks passed`
+              : "left open a while";
+      return `#${pr.number} ${took(open(pr))}, ${why}`;
+    });
+  const rows: [string, string][] = [
+    ["CI run", ci.length ? spread(ci) : "no runs read"],
+    ["open to merge", spread(prs.map(open))],
+    ["beside another", `${overlapped} of ${prs.length}`],
+    ...slow.map((line, i): [string, string] => [i ? "" : "over 5m", line]),
+  ];
+  return [
+    `Timing, over the last ${prs.length} merged pull requests:`,
+    ...rows.map(([what, found]) => `    ${what.padEnd(14)}  ${found}`),
+  ];
+}
+
+/** Reads the last 30 merged pull requests and their runs, and times them. */
+export function timing(repo: string): string[] {
+  const prs = JSON.parse(
+    gh(
+      "pr",
+      "list",
+      "-R",
+      `${OWNER}/${repo}`,
+      "--state",
+      "merged",
+      "--limit",
+      "30",
+      "--json",
+      "number,createdAt,mergedAt,headRefName,commits",
+    ),
+  ) as Merged[];
+  const runs = JSON.parse(
+    gh(
+      "run",
+      "list",
+      "-R",
+      `${OWNER}/${repo}`,
+      "--event",
+      "pull_request",
+      "--limit",
+      "200",
+      "--json",
+      "workflowName,headBranch,conclusion,startedAt,updatedAt",
+    ),
+  ) as PrRun[];
+  return timingIn(prs, runs);
 }
