@@ -134,8 +134,10 @@ export async function pr(args: string[]): Promise<void> {
   if ("stop" in start) fail(start.stop);
   if (start.from === "merge" && found) {
     console.log(`Waiting for #${found.number}, "${found.title}", to merge first.`);
-    await landed(branch, found.url);
-    console.log(`#${found.number} merged, so "${title}" starts from main.`);
+    const timing = await landed(branch, found.url);
+    console.log(
+      `#${found.number} merged${timing && `, ${timing},`} so "${title}" starts from main.`,
+    );
     start = { from: "origin" };
   }
   if (start.from === "origin" && found) {
@@ -159,7 +161,9 @@ export async function pr(args: string[]): Promise<void> {
   run("git", "fetch", "--quiet", "origin", "main");
   if (!newOnMain()) fail(`${branch} has nothing that isn't on main.`);
 
+  const verifying = Date.now();
   run("pnpm", "run", "verify");
+  const verified = took(Date.now() - verifying);
   run("git", "push", "--quiet", "--set-upstream", "origin", branch);
 
   const open = (): string => {
@@ -184,7 +188,7 @@ export async function pr(args: string[]): Promise<void> {
     url = output("gh", "pr", "create", "--title", title, "--body", values.body, ...labels);
   }
   run("gh", "pr", "merge", branch, "--auto", "--squash");
-  console.log(url);
+  console.log(`${url}, after verify took ${verified}`);
   if (values.wait) await merged(branch, url);
 }
 
@@ -230,26 +234,76 @@ function mainElsewhere(): string | undefined {
  * so CI runs again on what it would merge, and it says so, since that's why the wait is longer.
  * `main` requires a branch that's up to date, and auto-merge doesn't update one.
  *
- * Once it merges, `--wait` switches to `main` and pulls. In a worktree, `main` is checked out in
+ * Once it merges, it says how long CI took, how many times it ran, and how long the merge came
+ * after it passed. That last can be minutes, since GitHub's auto-merge is sometimes slow to act.
+ *
+ * Then `--wait` switches to `main` and pulls. In a worktree, `main` is checked out in
  * another, so it switches to `origin/main` instead, detached, and the branch goes either way.
  */
-type Check = { name?: string; conclusion?: string; startedAt?: string };
-type State = { state: string; mergeStateStatus: string; statusCheckRollup: Check[] };
+/** A check on a pull request's head commit, as `gh pr view` lists it. */
+export type Check = {
+  name?: string;
+  conclusion?: string;
+  startedAt?: string;
+  completedAt?: string;
+};
+/** What the wait reads of a pull request. */
+export type State = {
+  state: string;
+  mergeStateStatus: string;
+  mergedAt?: string;
+  statusCheckRollup: Check[];
+};
 const FAILED = ["FAILURE", "CANCELLED", "TIMED_OUT", "ACTION_REQUIRED"];
 
-async function landed(branch: string, url: string): Promise<void> {
+/** How long a span of time took, in seconds or in minutes and seconds. */
+export function took(ms: number): string {
+  const s = Math.round(ms / 1000);
+  return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`;
+}
+
+/** What a merge took: the `ci` check's last run, the runs a fall behind added, and the wait after. */
+export function timingOf(pr: State, updates = 0): string {
+  const runs = pr.statusCheckRollup.filter((check) => check.name === "ci");
+  const last = runs.reduce<Check | undefined>(
+    (a, b) => ((b.startedAt ?? "") >= (a?.startedAt ?? "") ? b : a),
+    undefined,
+  );
+  const at = (time?: string) => (time ? Date.parse(time) : NaN);
+  const ci = at(last?.completedAt) - at(last?.startedAt);
+  const passed = Math.max(...pr.statusCheckRollup.map((check) => at(check.completedAt) || 0));
+  const after = at(pr.mergedAt) - passed;
+  return [
+    Number.isNaN(ci) ? "" : `CI took ${took(ci)}`,
+    updates ? `ran ${updates + 1} times` : "",
+    Number.isNaN(after) || after < 0 ? "" : `merged ${took(after)} after it passed`,
+  ]
+    .filter(Boolean)
+    .join(", ");
+}
+
+async function landed(branch: string, url: string): Promise<string> {
+  let updates = 0;
   for (;;) {
     await new Promise((resolve) => setTimeout(resolve, 10_000));
     const pr = JSON.parse(
-      output("gh", "pr", "view", branch, "--json", "state,mergeStateStatus,statusCheckRollup"),
+      output(
+        "gh",
+        "pr",
+        "view",
+        branch,
+        "--json",
+        "state,mergeStateStatus,mergedAt,statusCheckRollup",
+      ),
     ) as State;
-    if (pr.state === "MERGED") break;
+    if (pr.state === "MERGED") return timingOf(pr, updates);
     if (pr.state === "CLOSED") fail(`${url} was closed without merging.`);
     if (pr.mergeStateStatus === "BEHIND") {
       // A pull request that's merging reads as behind its own merge for a moment, and then there's
       // nothing to update, so a failed update only means asking again.
       try {
         output("gh", "pr", "update-branch", branch);
+        updates++;
         console.log(`${url} fell behind main, so its branch is updated and CI runs again.`);
       } catch {}
       continue;
@@ -265,7 +319,8 @@ async function landed(branch: string, url: string): Promise<void> {
 }
 
 async function merged(branch: string, url: string): Promise<void> {
-  await landed(branch, url);
+  const timing = await landed(branch, url);
+  console.log(timing ? `Merged, ${timing}.` : "Merged.");
   const elsewhere = mainElsewhere();
   if (elsewhere) {
     run("git", "fetch", "--quiet", "--prune", "origin", "main");
