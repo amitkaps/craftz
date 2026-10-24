@@ -52,7 +52,7 @@
     "new": "node src/cli.ts new"
   },
   "devDependencies": {
-    "@amitkaps/markz": "0.8.0",
+    "@amitkaps/markz": "0.9.0",
     "@amitkaps/prose": "0.9.0",
     "@mdn/browser-compat-data": "^8.1.7",
     "@types/node": "26.6.5",

@@ -11,7 +11,7 @@ import { expect, test } from "vite-plus/test";
 import { commands, help, helpOn } from "../src/stated.ts";
 
 const read = (path: string): string => readFileSync(new URL(path, import.meta.url), "utf8");
-const stated = commands().map((c) => c.id);
+const stated = commands().commands.map((c) => c.id);
 
 test("cli.ts runs each command usage states, and no other", () => {
   const run = [...read("../src/cli.ts").matchAll(/command === "([a-z]+)"/g)].map((m) => m[1]);
@@ -24,7 +24,7 @@ test("the README links each command", () => {
 });
 
 test("help lists each command, and prints one's section", () => {
-  for (const c of commands()) expect(help()).toContain(c.label);
+  for (const c of commands().commands) expect(help()).toContain(c.label);
   expect(helpOn("deps")).toMatch(/^## What's installed\n/);
   expect(helpOn("deps")).toContain("https://craftz.amitkaps.com/docs/usage.md#deps");
   expect(helpOn("nothing")).toBeUndefined();

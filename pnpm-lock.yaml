@@ -170,8 +170,8 @@ importers:
   .:
     devDependencies:
       '@amitkaps/markz':
-        specifier: 0.8.0
-        version: 0.8.0
+        specifier: 0.9.0
+        version: 0.9.0
       '@amitkaps/prose':
         specifier: 0.9.0
         version: 0.9.0
@@ -190,8 +190,8 @@ importers:
 
 packages:
 
-  '@amitkaps/markz@0.8.0':
-    resolution: {integrity: sha512-r9pQlJa/ztHz05jBfFcAWUCzk1e/wGd2JQ6a5tb5MQnlL4zJdyiWWzVEfbvjREtnilaFcc2Ny6bimi7CFxdB5A==}
+  '@amitkaps/markz@0.9.0':
+    resolution: {integrity: sha512-TIVbJHZrfF3ltPomIzdDbVkQaGz981AZvmNv4LKA32o7XEyi3B+bqb2qtHfHzuewORLyEAmYDkIFlI/UHh0PZQ==}
     engines: {node: '>=26.12.1'}
     hasBin: true
 
@@ -1129,7 +1129,7 @@ packages:
 
 snapshots:
 
-  '@amitkaps/markz@0.8.0': {}
+  '@amitkaps/markz@0.9.0': {}
 
   '@amitkaps/prose@0.9.0': {}
 
