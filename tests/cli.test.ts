@@ -109,7 +109,8 @@ test("a hold lets a holdable rule's warning pass, with its reason", () => {
   } finally {
     writeFileSync(file, original);
   }
-});
+  // Three checks in a row, beside new's verify runs, can pass five seconds.
+}, 30_000);
 
 test("upgrade leaves craftz itself to pnpm bump", () => {
   const root = join(import.meta.dirname, "..");
