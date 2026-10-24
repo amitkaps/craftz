@@ -9,7 +9,8 @@
  * A command is stated the same way, in [usage](../docs/usage.md), with how it's run as the span,
  * like ``- [`craftz deps [dir]`]{#deps}: text``. The id is the command's name. `craftz help`
  * lists each one's span and text, and `craftz help <command>` prints the section it opens, so a
- * command's help is its usage, from the installed version.
+ * command's help is its usage, from the installed version. markz prints both, as it does for
+ * every tool that states its commands this way.
  *
  * The doc is read with markz's reader, as every tool built on markz reads its rules, so no
  * pattern here knows its layout and an example in a code block can't state a rule. A link is
@@ -19,7 +20,13 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { headings, ids, parse, walk } from "@amitkaps/markz";
-import { type Rule, readRules, type Rules } from "@amitkaps/markz/rules";
+import {
+  type Commands,
+  printHelp,
+  readCommands,
+  readRules,
+  type Rules,
+} from "@amitkaps/markz/rules";
 
 /** A rule as the doc states it, under its part. */
 export type Stated = { id: string; text: string; part: string };
@@ -88,24 +95,14 @@ export function printed(markdown = doc(), site = SITE): string {
   return out + markdown.slice(at);
 }
 
-/** Every command the usage doc states, in order. Its label is how it's run. */
-export const commands = (markdown = usage()): Rule[] => readRules(markdown, USAGE_SITE);
+/** craftz's commands, each stated in the usage doc, as markz's `printHelp` prints them. */
+export const commands = (markdown = usage()): Commands =>
+  readCommands("craftz", markdown, USAGE_SITE);
 
 /** The commands, as `craftz help` lists them. */
-export function help(markdown = usage()): string {
-  const lines = commands(markdown).map((c) => `  ${c.label}\n      ${c.text}`);
-  return `Usage: craftz <command>, and craftz help <command> says more\n\n${lines.join("\n")}\n`;
-}
+export const help = (markdown = usage()): string => printHelp(commands(markdown))!;
 
 /** The section of the usage doc that states a command, with its links resolved, or `undefined`
- *  when no command has that name. It runs from the heading above the command to the next one. */
-export function helpOn(name: string, markdown = usage()): string | undefined {
-  const command = commands(markdown).find((c) => c.id === name);
-  if (!command) return undefined;
-  const tree = parse(markdown);
-  const at = ids(tree).find(({ id }) => id === name);
-  const starts = headings(tree).map((h) => tree.start(h.node));
-  const from = starts.findLast((s) => s < tree.start(at?.node ?? 0)) ?? 0;
-  const to = starts.find((s) => s > from) ?? markdown.length;
-  return `${printed(markdown.slice(from, to).trimEnd(), USAGE_SITE)}\n\n${command.url}\n`;
-}
+ *  when no command has that name. */
+export const helpOn = (name: string, markdown = usage()): string | undefined =>
+  printHelp(commands(markdown), name);

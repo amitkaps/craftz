@@ -11,6 +11,7 @@ This repository follows [craftz's rules](https://craftz.amitkaps.com/docs/rules.
 - To see what's live, run `pnpm craftz status`: CI, pull requests, the release and the site. `--notes` adds the release's notes, and `--log` the build's log. Use it rather than reading GitHub, npm or Cloudflare another way.
 - In a package, give it one label for the release notes, `pnpm pr "<title>" --label <label>`: `breaking`, `added`, `fixed`, `improved`, `docs`, or `internal` for tests, tooling, site and lessons. CI fails without one.
 - Run tools through `pnpm run …` and `pnpm exec`, not global installs.
+- `pnpm <tool> help` lists a tool's commands, and `pnpm <tool> help <command>` says what one does, for the version installed.
 - A held check is a tool's limit, not a choice. The rules give its reason, so leave it until the reason goes away.
 
 ## Prose
