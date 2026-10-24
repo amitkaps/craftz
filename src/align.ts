@@ -465,7 +465,7 @@ let failed = states.some((state) => state.status !== "verified" && state.status 
  *
  * It asks GitHub every ten seconds, as `pnpm pr --wait` does. A check counts by its latest run,
  * since adding a label starts a new run that cancels the old one. One that falls behind `main` has
- * its branch updated, as `pnpm pr --wait` does. The report after says so, since that update's CI
+ * its branch updated, and one that's ready is merged, as `pnpm pr --wait` does. The report after says so, since that update's CI
  * is the wait that's left. A pull request that fails or closes is reported and not waited for.
  */
 type Check = { name?: string; conclusion?: string; startedAt?: string };
@@ -492,6 +492,11 @@ async function merge(url: string, updated: () => void): Promise<string | undefin
       // A pull request that's merging reads as behind its own merge for a moment, so a failed update
       // only means asking again.
       await run("gh", ["pr", "update-branch", url]).then(updated, () => undefined);
+      continue;
+    }
+    if (pr.mergeStateStatus === "CLEAN") {
+      // As in `pnpm pr --wait`, it merges a pull request that's ready rather than wait on auto-merge.
+      await run("gh", ["pr", "merge", url, "--squash"]).catch(() => undefined);
       continue;
     }
     const latest = new Map<string, Check>();
