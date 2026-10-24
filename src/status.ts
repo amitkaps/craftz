@@ -26,9 +26,9 @@
  * `--notes` prints the latest release's notes in full. `--timing` prints what the last pull
  * requests took, as [Timing](#timing) says.
  *
- * It needs `gh` logged in, and cf logged in for a site. A site with no cf of its own, like an app
- * on wrangler, has its builds read by the reference's cf, which pnpm fetches. What can't be read
- * is said, and marked `✗`, rather than taken as fine.
+ * It needs `gh` logged in, and cf logged in for a site, the version
+ * [Which cf runs](settings.ts#which-cf-runs) says. What can't be read is said, and marked `✗`,
+ * rather than taken as fine.
  */
 import { execFileSync } from "node:child_process";
 import { accessDrift, cf, cloudflareLogin, workerTag } from "./settings.ts";

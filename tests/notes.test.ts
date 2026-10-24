@@ -7,7 +7,7 @@
  */
 import { expect, test } from "vite-plus/test";
 import { type Latest, notes } from "../src/notes.ts";
-import { CRAFTZ } from "../src/reference.ts";
+import { CRAFTZ, VERSIONS } from "../src/reference.ts";
 
 const npm =
   (versions: Record<string, string>): Latest =>
@@ -29,14 +29,11 @@ test("no answer from npm is no note", async () => {
   );
 });
 
-test("a graduated beta is noted only in craftz", async () => {
-  const deps = { cf: "1.0.0-beta.20" };
+test("the reference's graduated beta is noted only in craftz", async () => {
   const graduated = npm({ cf: "1.0.0" });
-  expect(await notes({ name: CRAFTZ, devDependencies: deps }, graduated)).toEqual([
-    "cf 1.0.0 is a release of the beta 1.0.0-beta.20, so it can leave versions-beta",
+  expect(await notes({ name: CRAFTZ }, graduated)).toEqual([
+    `cf 1.0.0 is a release of the beta ${VERSIONS["cf"]}, so it can leave versions-beta`,
   ]);
-  expect(await notes({ name: "example", devDependencies: deps }, graduated)).toEqual([]);
-  expect(
-    await notes({ name: CRAFTZ, devDependencies: deps }, npm({ cf: "1.0.0-beta.21" })),
-  ).toEqual([]);
+  expect(await notes({ name: "example" }, graduated)).toEqual([]);
+  expect(await notes({ name: CRAFTZ }, npm({ cf: VERSIONS["cf"] ?? "" }))).toEqual([]);
 });

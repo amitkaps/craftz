@@ -101,7 +101,7 @@ The tools every repository shares are on one version, written the same way, so m
 - [`versions-prose`]{#versions-prose}: `@amitkaps/prose` is an exact version, at least the reference's, where a repository has it.
 - [`versions-markz`]{#versions-markz}: `@amitkaps/markz` is an exact version, at least the reference's, where a repository has it.
 - [`versions-craftz`]{#versions-craftz}: `@amitkaps/craftz` is at craftz's own version, exactly, so the rules a repository names are the rules it's checked against, and a release of craftz is what moves every repository to them.
-- [`versions-cf`]{#versions-cf}: `cf` is the reference's, where a repository has it. Only craftz does, to work out the compatibility date and write the Workers' settings.
+- [`versions-cf`]{#versions-cf}: `cf` is the reference's, where a repository has it. None does, craftz included. craftz runs the reference's version to write the Workers' settings, and reads the compatibility date from the workerd it depends on.
 - [`versions-beta`]{#versions-beta}: only `cf` is on a pre-release, pinned to an exact build.
 - [`versions-wrangler`]{#versions-wrangler}: `wrangler` is the reference's, while a repository is still on it.
 - [`versions-publint`]{#versions-publint}: `publint` is the reference's, where a package has it.
@@ -175,7 +175,7 @@ A lifecycle script, one pnpm runs on its own like `prepare` on install or `prepa
 A repository with a site deploys it to a Cloudflare Worker with static assets.
 
 - [`cloudflare-config`]{#cloudflare-config}: a site deploys with `cloudflare.config.ts`. It holds the Worker's name, domain and the folder it serves, and `site()` adds the rest.
-- [`cloudflare-site`]{#cloudflare-site}: a static site's config is `site()`, which `@amitkaps/craftz/cloudflare` exports, as `vite.config.ts` uses `craftz()`. `site()` sets the compatibility date to the build date of the workerd that craftz's cf installs, so a site moves to a newer date with craftz. It turns off `workers.dev` and preview URLs, so the site answers only on its domain. Nothing uses the other addresses, and each would serve the site outside anything that covers the domain, like Access. A config that sets any of them fails.
+- [`cloudflare-site`]{#cloudflare-site}: a static site's config is `site()`, which `@amitkaps/craftz/cloudflare` exports, as `vite.config.ts` uses `craftz()`. `site()` sets the compatibility date to the build date of the workerd that the reference's cf depends on, so a site moves to a newer date with craftz. It turns off `workers.dev` and preview URLs, so the site answers only on its domain. Nothing uses the other addresses, and each would serve the site outside anything that covers the domain, like Access. A config that sets any of them fails.
 - **Deploys:** the Worker's Git integration (Workers Builds) builds and deploys `main`. There's no deploy step in GitHub Actions, and no API token or secret: `craftz deploy` uses the API token the Worker's build settings name, which Workers Builds sets for the deploy command. The same token is on every Worker.
 - **The Worker's settings** are the same on every Worker. Cloudflare's config has no field for them, so `align` writes them with `cf`, and `craftz settings --check` reads them. Only connecting the Worker to its repository is left to Cloudflare's dashboard.
 

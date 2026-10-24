@@ -614,7 +614,6 @@ const commandScript = (id: string, name: string): Rule => ({
 
 // What deployed a static site through Cloudflare's plugin.
 const CLOUDFLARE_TOOLS = ["cf", "@cloudflare/vite-plugin", "wrangler"];
-const kept = (pkg: Pkg, name: string): boolean => ownCraftz(pkg) && name === "cf";
 
 // The folder a static site serves: Vite's own build, which copies in its publicDir, or the
 // publicDir alone, or prose's.
@@ -972,7 +971,7 @@ export const RULES: Rule[] = [
    * # Nothing of Cloudflare's in a static site
    *
    * A static site's dependencies, Vite config and scripts are read for what deployed it through
-   * Cloudflare's plugin. craftz's own repository keeps cf, which works out the date `site()` sets.
+   * Cloudflare's plugin.
    *
    * The fix removes the dependencies, takes the plugin out of the Vite config, as edit.ts does,
    * and drops ` && vp build` from the scripts of a site with no `index.html`. A script that runs
@@ -982,7 +981,7 @@ export const RULES: Rule[] = [
     id: "cloudflare-static",
     check: ({ files, deps, pkg, worker: site }) => {
       if (site?.file !== "cloudflare.config.ts" || site.deploys !== "static") return undefined;
-      const drift = CLOUDFLARE_TOOLS.filter((name) => deps[name] && !kept(pkg, name)).map(
+      const drift = CLOUDFLARE_TOOLS.filter((name) => deps[name]).map(
         (name) => `depends on ${name}, which a static site doesn't use`,
       );
       if (files["vite.config.ts"]?.includes("@cloudflare/vite-plugin")) {
@@ -1005,7 +1004,7 @@ export const RULES: Rule[] = [
         const pkg = readPkg(dir);
         for (const field of ["dependencies", "devDependencies"] as const) {
           for (const name of CLOUDFLARE_TOOLS) {
-            if (pkg[field]?.[name] && !kept(pkg, name)) delete pkg[field][name];
+            if (pkg[field]?.[name]) delete pkg[field][name];
           }
         }
         for (const name of builds ? [] : ["verify", "build"]) {

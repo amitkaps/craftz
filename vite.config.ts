@@ -5,7 +5,8 @@
  * runs publint, which fails the build on a package npm would serve badly.
  *
  * The browsers and the Workers' date are worked out here and written in, as
- * [pinned.ts](src/pinned.ts) says. The packages they come from stay out of the bundle.
+ * [pinned.ts](src/pinned.ts) says. browser-compat-data, where the browsers come from, stays out
+ * of the bundle.
  *
  * `craftz()` sets the format and lint the rules ask for, from source, as a repository sets them
  * from the package. craftz's site is its docs, the folder `prose build` writes, which
@@ -27,7 +28,7 @@ export default defineConfig({
     clean: true,
     fixedExtension: false,
     define: { __PINNED__: JSON.stringify({ browsers: BROWSERS, date: COMPATIBILITY_DATE }) },
-    deps: { neverBundle: ["@mdn/browser-compat-data", "cf"] },
+    deps: { neverBundle: ["@mdn/browser-compat-data"] },
   },
 
   test: {

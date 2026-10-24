@@ -119,7 +119,7 @@ pnpm craftz status --timing # and what the last pull requests took, and why slow
 
 `craftz status` reads what the repository has out in the world, where `check` reads its files and `settings` its setup. It lists the latest run on `main` of each workflow, the open pull requests, and for a package the version npm serves next to the one in `package.json`, and its latest release on GitHub. The summary that opens the release's notes prints after the lines. For a site, it lists the Worker's latest build, with its outcome, commit and deploy command, whether the domain answers and `workers.dev` doesn't, and whether the site is public or internal, behind Access. Each line is marked `✓` or `✗`, and it exits 1 when any is `✗`. `--timing` adds what the last 30 merged pull requests took, from CI's runs and the pull requests, and why each slow one was slow. A run or build still going isn't a failure, and neither is a version waiting to be released.
 
-Use it after a merge or a release, to see that CI, the deploy and npm went through. `--notes` prints the release's notes in full. `--log` prints the build's log, which is where a failed deploy says why. It needs `gh` logged in, and cf logged in for a site. A site with no cf of its own, like an app on wrangler, has its builds read by the reference's cf, which pnpm fetches.
+Use it after a merge or a release, to see that CI, the deploy and npm went through. `--notes` prints the release's notes in full. `--log` prints the build's log, which is where a failed deploy says why. It needs `gh` logged in, and cf logged in for a site. No repository installs cf, so craftz runs a `cf` on the PATH when it's the reference's version, and otherwise has pnpm fetch that version.
 
 ## Starting a repository
 
@@ -134,7 +134,7 @@ pnpm dlx @amitkaps/craftz new example --site static --internal --description "�
 
 The commands use the logins `gh` and `cf` already have, so there's no token to keep. `check`, `fix` and `rules` need neither. `settings`, `status`, `pr` and `new --push` need `gh`, and a site's settings and status need `cf`.
 
-`gh auth login` logs in to GitHub, as the owner. `pnpm exec cf auth login` logs in to Cloudflare, for the Workers' build settings. When the login sees more than one account, craftz uses the one named like the GitHub owner, and `CLOUDFLARE_ACCOUNT_ID` overrides it. A `pnpm ship` by hand picks none, so set the variable there.
+`gh auth login` logs in to GitHub, as the owner. `cf auth login` logs in to Cloudflare, for the Workers' build settings. When the login sees more than one account, craftz uses the one named like the GitHub owner, and `CLOUDFLARE_ACCOUNT_ID` overrides it. A `pnpm ship` by hand picks none, so set the variable there.
 
 ## Keeping every repository
 
