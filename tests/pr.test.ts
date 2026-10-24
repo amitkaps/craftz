@@ -69,9 +69,7 @@ test("a branch's pull request decides where a change goes", () => {
   expect(startOn("main", "Fix")).toEqual({ from: "main" });
   expect(startOn("by-hand", "Fix")).toEqual({ from: "here" });
   expect(startOn("plan", "Plan", pr("OPEN"))).toEqual({ from: "here" });
-  expect(startOn("plan", "Fix", pr("OPEN"))).toEqual({
-    stop: 'plan is #55, "Plan", still open. Give its title to add to it, or switch to main.',
-  });
+  expect(startOn("plan", "Fix", pr("OPEN"))).toEqual({ from: "merge" });
   expect(startOn("plan", "Fix", pr("MERGED"))).toEqual({ from: "origin" });
   expect(startOn("plan", "Fix", pr("CLOSED"))).toHaveProperty("stop");
 });
