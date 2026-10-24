@@ -9,7 +9,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "vite-plus/test";
 import { goneIn } from "../src/gone.ts";
-import { branchOf, joined, labelsIn, startOn } from "../src/pr.ts";
+import { branchOf, joined, labelsIn, startOn, timingOf, took } from "../src/pr.ts";
 import { here } from "../src/reference.ts";
 import { RULES } from "../src/rules.ts";
 
@@ -82,4 +82,27 @@ test("a body or label is read as given, even one that opens with a dash", () => 
     "--wait",
   ]);
   expect(joined(["t", "--body=-x", "--body"])).toEqual(["t", "--body=-x", "--body"]);
+});
+
+test("a merge says what CI took, the runs a fall behind added, and the wait after it passed", () => {
+  expect([took(41_400), took(60_000), took(662_000)]).toEqual(["41s", "1m 0s", "11m 2s"]);
+  const check = (name: string, startedAt: string, completedAt: string, conclusion = "SUCCESS") => ({
+    name,
+    conclusion,
+    startedAt: `2026-10-24T12:${startedAt}Z`,
+    completedAt: `2026-10-24T12:${completedAt}Z`,
+  });
+  const pr = {
+    state: "MERGED",
+    mergeStateStatus: "UNKNOWN",
+    mergedAt: "2026-10-24T12:13:00Z",
+    statusCheckRollup: [
+      check("ci", "00:00", "00:02", "CANCELLED"),
+      check("ci", "00:05", "00:50"),
+      check("label", "00:05", "01:00"),
+    ],
+  };
+  expect(timingOf(pr)).toBe("CI took 45s, merged 12m 0s after it passed");
+  expect(timingOf(pr, 1)).toBe("CI took 45s, ran 2 times, merged 12m 0s after it passed");
+  expect(timingOf({ ...pr, mergedAt: undefined, statusCheckRollup: [] })).toBe("");
 });
