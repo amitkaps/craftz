@@ -234,6 +234,10 @@ function mainElsewhere(): string | undefined {
  * so CI runs again on what it would merge, and it says so, since that's why the wait is longer.
  * `main` requires a branch that's up to date, and auto-merge doesn't update one.
  *
+ * A pull request whose checks passed on an up-to-date branch is merged by the wait itself. GitHub's
+ * auto-merge took up to twelve minutes after the checks passed, and the rules still decide what
+ * merges, so merging it here loosens nothing. Auto-merge stays on for a pull request nobody waits for.
+ *
  * Once it merges, it says how long CI took, how many times it ran, and how long the merge came
  * after it passed. That last can be minutes, since GitHub's auto-merge is sometimes slow to act.
  *
@@ -305,6 +309,13 @@ async function landed(branch: string, url: string): Promise<string> {
         output("gh", "pr", "update-branch", branch);
         updates++;
         console.log(`${url} fell behind main, so its branch is updated and CI runs again.`);
+      } catch {}
+      continue;
+    }
+    if (pr.mergeStateStatus === "CLEAN") {
+      // Auto-merge can wait minutes after the checks pass. A merge that loses a race only means asking again.
+      try {
+        output("gh", "pr", "merge", branch, "--squash");
       } catch {}
       continue;
     }
