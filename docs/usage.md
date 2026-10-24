@@ -121,6 +121,14 @@ pnpm craftz status --timing # and what the last pull requests took, and why slow
 
 Use it after a merge or a release, to see that CI, the deploy and npm went through. `--notes` prints the release's notes in full. `--log` prints the build's log, which is where a failed deploy says why. It needs `gh` logged in, and cf logged in for a site. No repository installs cf, so craftz runs a `cf` on the PATH when it's the reference's version, and otherwise has pnpm fetch that version.
 
+## What's installed
+
+```sh
+pnpm craftz deps  # packages, size, and which direct dependency brings them
+```
+
+`craftz deps` weighs what `pnpm install` put on disk in the repository. It prints the total, then a line for each direct dependency, with its packages, their size and its three biggest. A package two of them bring is counted once, as shared, so the lines add up. It also lists the versions pnpm kept from older installs, which are on disk but not in the install, and a fresh install removes them. It's a report, so it never fails on a size. Run it before adding a dependency and after, to see what it costs.
+
 ## Starting a repository
 
 ```sh
