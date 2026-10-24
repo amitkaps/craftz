@@ -8,7 +8,7 @@
  * Both read npm. When npm can't be reached in a few seconds, there's no note, so CI never fails
  * because npm is down.
  */
-import { CRAFTZ, type Pkg } from "./reference.ts";
+import { CRAFTZ, type Pkg, VERSIONS } from "./reference.ts";
 import { BETA } from "./rules.ts";
 
 /** npm's latest version of a package, or `undefined` when npm doesn't answer. */
@@ -45,8 +45,8 @@ function later(a: string, b: string): boolean {
  * # A graduated beta
  *
  * A beta that `versions-beta` names has graduated once npm's latest is a release at its major or
- * later. Only craftz's own repository hears of it, since its reference moves the betas, and every
- * other repository follows.
+ * later. The beta is the reference's, and only craftz's own repository hears of it, since its
+ * reference moves the betas, and every other repository follows.
  */
 export async function notes(pkg: Pkg, latest: Latest = fromNpm): Promise<string[]> {
   const deps = { ...pkg.dependencies, ...pkg.devDependencies };
@@ -60,7 +60,7 @@ export async function notes(pkg: Pkg, latest: Latest = fromNpm): Promise<string[
   }
   if (pkg.name === CRAFTZ) {
     for (const name of BETA) {
-      const beta = deps[name];
+      const beta = VERSIONS[name];
       if (!beta?.includes("-")) continue;
       const newest = await latest(name);
       if (newest && !newest.includes("-") && (numbers(newest)[0] ?? 0) >= (numbers(beta)[0] ?? 0)) {

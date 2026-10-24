@@ -4,9 +4,9 @@
  * The browsers and the Workers' date, as the rules use them, written in when the package is
  * built.
  *
- * From source, they're worked out from browser-compat-data and cf, as [browsers.ts](browsers.ts)
- * and [runtime.ts](runtime.ts) do. The package can't carry those, since browser-compat-data alone is megabytes and cf is a dev
- * dependency. So `vp pack` works them out once and writes them in as `__PINNED__`, and the
+ * From source, they're worked out from browser-compat-data and the reference's cf, as
+ * [browsers.ts](browsers.ts) and [runtime.ts](runtime.ts) do. The package can't carry
+ * browser-compat-data, which alone is megabytes, or read npm each time it runs. So `vp pack` works them out once and writes them in as `__PINNED__`, and the
  * published command uses the values it was built with.
  *
  * That's what the rules want anyway. Both move only when `pnpm bump` moves their packages, so a

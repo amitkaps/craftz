@@ -5,7 +5,7 @@
  * `vite.config.ts`. The config names its Worker, its domains and the folder it serves, with how
  * it serves it, and `site()` adds the rest:
  *
- * - the compatibility date, which is the build date of the workerd craftz's cf installs, so a
+ * - the compatibility date, which is the build date of the workerd the reference's cf brings, so a
  *   repository moves to a newer date by moving to a newer craftz.
  * - `workersDev` and `previewUrls` off, so the site answers only on its domain.
  *

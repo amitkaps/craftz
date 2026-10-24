@@ -4,16 +4,15 @@
  * What the rules set outside the repositories, where no file in one can hold it: each
  * repository's merge settings, branch rules and labels on GitHub, and each Worker's build settings
  * on Cloudflare. [apply.ts](apply.ts) reads and writes them for `craftz settings`, `align` and
- * `new --push`. Both go through the logins `gh` and `cf` already
- * have, so there's no token to keep.
+ * `new --push`. Both go through the logins `gh` and `cf` already have, so there's no token to keep.
  *
  * A login that isn't there isn't drift. Each side says what it couldn't do, once, and the rest
  * goes on.
  */
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { OWNER, type Pkg, TOPIC, VERSIONS, here, nodeMajor, root } from "./reference.ts";
+import { OWNER, type Pkg, TOPIC, VERSIONS, here, nodeMajor } from "./reference.ts";
 import type { BranchRule, Worker } from "./survey.ts";
 
 const json = (file: string): unknown => JSON.parse(readFileSync(join(here, file), "utf8"));
@@ -188,15 +187,27 @@ export function cloudflareLogin(): string | undefined {
   return undefined;
 }
 
-// craftz's own cf, or, where craftz is installed without it, the repository's, which a site has.
-// An app on wrangler has neither.
-// The repository's cf, or craftz's, or the reference's version fetched by pnpm, since a site on
-// wrangler has no cf of its own and its builds are read the same way.
+/** @prose
+ * # Which cf runs
+ *
+ * No repository installs cf, craftz included, so any cf on the PATH is used, however it got there,
+ * as `gh` is. It has to be the reference's version, since cf is a beta and its output can change
+ * between builds. When it isn't, pnpm fetches that version once and keeps it in its cache.
+ */
+let command: [string, ...string[]] | undefined;
+
 function cfCommand(): [string, ...string[]] {
-  const bin = [root, process.cwd()]
-    .map((dir) => join(dir, "node_modules", ".bin", "cf"))
-    .find(existsSync);
-  return bin ? [bin] : ["pnpm", "dlx", `cf@${VERSIONS["cf"]}`];
+  if (command) return command;
+  const want = VERSIONS["cf"] ?? "";
+  let found = "";
+  try {
+    found = execFileSync("cf", ["--version"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {}
+  command = found === want ? ["cf"] : ["pnpm", "dlx", `cf@${want}`];
+  return command;
 }
 
 export function cf(...args: string[]): unknown {

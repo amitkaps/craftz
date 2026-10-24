@@ -28,10 +28,10 @@ A change to how things are done starts here, in [the rules](rules.md) and in [th
 
 [src/cli.ts](../src/cli.ts) is the `craftz` command, built by `vp pack` into `dist/cli.js`, with the rules' checks and fixes bundled in. The package publishes `dist/`, `docs/rules.md`, which `craftz rules` prints, and `reference/`, which the checks compare with. It has no dependencies, and takes Vite+ as a peer, which only `new` loads.
 
-Two values come from dev dependencies, the browsers from browser-compat-data and the Workers' date from cf. `vp pack` works them out and writes them in, as [src/pinned.ts](../src/pinned.ts) says, and leaves both packages out of the bundle. `pnpm pack` and running `dist/cli.js` from the unpacked tarball shows what a user gets.
+Two values are worked out from source, the browsers from browser-compat-data and the Workers' date from the workerd the reference's cf depends on, kept in [src/workerd.json](../src/workerd.json). `vp pack` writes them in, as [src/pinned.ts](../src/pinned.ts) says, and leaves browser-compat-data out of the bundle. `pnpm pack` and running `dist/cli.js` from the unpacked tarball shows what a user gets.
 
 ## Beta packages
 
 The packages still on a beta are the ones [`versions-beta`](rules.md#versions-beta) names, and `package.json` has their builds. align leaves them alone, since their tags don't say which build goes with which. One is listed once npm's latest for it is a release at the beta's major or later.
 
-A newer beta is moved by hand too. Pin it in `package.json` and the reference's at once, after reading its `engines` and the miniflare build it depends on, whose date is the Workers' compatibility date. To move one to its release, pin the release in `package.json` and take it out of `versions-beta`. Then run `pnpm run verify` and a deploy from the Git-connected Worker before you rely on it.
+A newer beta is moved by hand too. Pin it in the reference's `package.json`, after reading its `engines`. The next run from source reads the workerd it brings from npm into [src/workerd.json](../src/workerd.json), whose date is the Workers' compatibility date, so commit that with it. To move one to its release, pin the release and take it out of `versions-beta`. Then run `pnpm run verify` and a deploy from the Git-connected Worker before you rely on it.
