@@ -10,6 +10,10 @@
  * direct dependency, which has its own line. Each line names its three biggest packages, which is
  * where a smaller install starts.
  *
+ * pnpm prints each package's dependencies once in its tree. Where it meets the package again, it
+ * marks it `deduped`, with none, so a deduped package's dependencies are read from where they were
+ * printed. That can be under another direct dependency, even for a direct dependency's own line.
+ *
  * pnpm keeps a version in `node_modules/.pnpm` after nothing needs it, until the next fresh
  * install. Those are listed apart, since they're on disk but not in the install. craftz read
  * 952 MB on disk when its install was 502 MB.
@@ -20,8 +24,14 @@ import { execFileSync } from "node:child_process";
 import { existsSync, lstatSync, readdirSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 
-/** A package in `pnpm ls --json`'s tree. */
-export type Node = { version?: string; path?: string; dependencies?: Record<string, Node> };
+/** A package in `pnpm ls --json`'s tree. A package already printed is `deduped`, without its
+ *  dependencies. */
+export type Node = {
+  version?: string;
+  path?: string;
+  deduped?: boolean;
+  dependencies?: Record<string, Node>;
+};
 
 type Part = { packages: number; bytes: number };
 
@@ -37,6 +47,17 @@ const folderOf = (path = ""): string | undefined =>
 
 /** Splits the folders on disk, with their sizes, among the direct dependencies that bring them. */
 export function weigh(direct: Record<string, Node>, sizes: Map<string, number>): Weight {
+  // pnpm prints a package's dependencies once, wherever it meets it first, which can be under
+  // another direct dependency, even for a direct dependency's own line.
+  const printed = new Map<string, Record<string, Node>>();
+  const gather = (nodes: Record<string, Node>): void => {
+    for (const node of Object.values(nodes)) {
+      if (node.deduped || !node.dependencies || !node.path) continue;
+      if (!printed.has(node.path)) printed.set(node.path, node.dependencies);
+      gather(node.dependencies);
+    }
+  };
+  gather(direct);
   const names = new Map<string, string>();
   const tops = new Map<string, string>();
   for (const [name, node] of Object.entries(direct)) {
@@ -54,7 +75,8 @@ export function weigh(direct: Record<string, Node>, sizes: Map<string, number>):
       if (seen.has(top)) return;
       owners.set(folder, seen.add(top));
       names.set(folder, name);
-      for (const [dep, child] of Object.entries(at.dependencies ?? {})) walk(dep, child);
+      const children = at.deduped ? printed.get(at.path ?? "") : at.dependencies;
+      for (const [dep, child] of Object.entries(children ?? {})) walk(dep, child);
     };
     walk(top, node);
   }

@@ -3,7 +3,8 @@
  *
  * `weigh` splits the folders on disk among the direct dependencies, so a made-up tree and its
  * sizes stand in for an install. Each folder counts once, a direct dependency keeps its own, and a
- * folder nothing reaches is left from an older install.
+ * folder nothing reaches is left from an older install. A deduped package's dependencies are found
+ * where pnpm printed them, as pnpm 12 prints a direct dependency's own under another.
  */
 import { expect, test } from "vite-plus/test";
 import { type Node, report, weigh } from "../src/deps.ts";
@@ -59,4 +60,25 @@ test("each folder counts once, under the dependency that brings it", () => {
     "  shared: 1 package, 1.0 MB",
     "  left from older installs: 1 package, 50 MB, which a fresh pnpm install removes",
   ]);
+});
+
+test("a deduped package's dependencies are read from where pnpm printed them", () => {
+  const tool = at("tool@1", "tool", { core: at("core@1", "core") });
+  const direct = {
+    plugin: at("plugin@1", "plugin", { tool }),
+    tool: { ...at("tool@1", "tool"), deduped: true },
+  };
+  const sizes = new Map(
+    [
+      ["plugin@1", 1],
+      ["tool@1", 2],
+      ["core@1", 40],
+    ].map(([folder, mb]) => [`${store}/${folder}`, (mb as number) * MB]),
+  );
+  const weight = weigh(direct, sizes);
+  expect(weight.direct.map((d) => [d.name, d.packages, d.bytes / MB])).toEqual([
+    ["tool", 2, 42],
+    ["plugin", 1, 1],
+  ]);
+  expect(weight.left.packages).toBe(0);
 });
