@@ -3,8 +3,10 @@
  *
  * `weigh` splits the folders on disk among the direct dependencies, so a made-up tree and its
  * sizes stand in for an install. Each folder counts once, a direct dependency keeps its own, and a
- * folder nothing reaches is left from an older install. A deduped package's dependencies are found
- * where pnpm printed them, as pnpm 12 prints a direct dependency's own under another.
+ * folder nothing reaches is left from an older install.
+ *
+ * A deduped package's dependencies are found where pnpm printed them, as pnpm 12 prints a direct
+ * dependency's own under another.
  */
 import { expect, test } from "vite-plus/test";
 import { type Node, report, weigh } from "../src/deps.ts";
