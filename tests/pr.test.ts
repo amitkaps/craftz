@@ -8,7 +8,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "vite-plus/test";
-import { goneIn } from "../src/gone.ts";
+import { goneIn, keptBecause } from "../src/gone.ts";
 import { branchOf, joined, labelsIn, startOn, timingOf, titled, took } from "../src/pr.ts";
 import { here } from "../src/reference.ts";
 import { RULES } from "../src/rules.ts";
@@ -119,4 +119,12 @@ test("a change goes into the open pull request with its exact title", () => {
   ];
   expect(titled(open, "v0.9.0")).toEqual({ title: "v0.9.0", headRefName: "release-0.9.0" });
   expect(titled(open, "v0.9")).toBeUndefined();
+});
+
+test("a checkout is caught up on main or a merged branch, and kept with changes or work of its own", () => {
+  const merged = [{ branch: "done" }];
+  expect(keptBecause("", "main", merged)).toBeUndefined();
+  expect(keptBecause("", "done", merged)).toBeUndefined();
+  expect(keptBecause(" M src/a.ts", "main", merged)).toBe("kept, with uncommitted changes");
+  expect(keptBecause("", "work", merged)).toBe("kept, on work, which hasn't merged");
 });
