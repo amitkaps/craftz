@@ -17,7 +17,8 @@
  * rest are removed once they've merged.
  *
  * Running it twice changes nothing the second time, and a repository already in line gets no
- * pull request. A run ends by waiting for its pull requests to merge.
+ * pull request. A run waits for its pull requests to merge, then brings each checkout beside
+ * craftz to `main`.
  *
  * `--local` stops each repository before anything leaves the laptop: no push, no pull request and
  * no settings written. Its clone keeps the changes, with `verify` run, so they can be read or
@@ -26,9 +27,10 @@
 import { execFile, execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 import { checkSettings, writeSettings } from "./apply.ts";
+import { catchUp } from "./gone.ts";
 import { fixFiles } from "./rules.ts";
 import { CRAFTZ, OWNER, TOOLS } from "./reference.ts";
 import { moveLine, report, row, type Row, type Step } from "./report.ts";
@@ -535,6 +537,34 @@ if (opened.length) {
   );
 }
 failed ||= problems.length > 0;
+
+/** @prose
+ * # The checkouts
+ *
+ * The clones are fresh, so the checkouts beside craftz are left on an old `main`, or on a branch
+ * that merged. Once the merges land, each one is brought to `main` and pulled, and its merged
+ * branches are deleted ([gone.ts](gone.ts)).
+ *
+ * One with uncommitted changes, or on a branch that hasn't merged, is kept as it is, and the
+ * report says so. `--local` merges nothing, so it leaves them alone.
+ */
+if (!local) {
+  const root = execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim();
+  const checkouts = targets
+    .map((repo) => ({ repo, dir: repo === SELF ? root : join(dirname(root), repo) }))
+    .filter(({ dir }) => existsSync(join(dir, ".git")));
+  const width = Math.max(0, ...checkouts.map(({ repo }) => repo.length));
+  const lines = checkouts.map(({ repo, dir }) => {
+    let said: string;
+    try {
+      said = catchUp(dir);
+    } catch (error) {
+      said = `kept, since ${(error as Error).message.split("\n")[0]}`;
+    }
+    return `  ${repo.padEnd(width)}  ${said}`;
+  });
+  if (lines.length) console.log(["", "Checkouts", ...lines].join("\n"));
+}
 
 /** @prose
  * # The clones

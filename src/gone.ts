@@ -21,14 +21,26 @@
  *
  * Git won't delete a branch that another worktree has checked out, so that worktree is removed
  * first. One git won't remove, such as one with changes, is kept with its branch, and `gone` goes on.
+ *
+ * # Catching up a checkout
+ *
+ * `pnpm align` merges in fresh clones, so the checkouts beside craftz are left on an old `main`,
+ * or on a branch that merged. Once its pull requests merge, `catchUp` brings each one to `main`,
+ * pulled, with its merged branches deleted. A checkout with uncommitted changes is kept as it is,
+ * as is one on a branch that hasn't merged, or a `main` with commits GitHub's lacks.
  */
 import { execFileSync } from "node:child_process";
 
 const run = (...args: string[]): void => {
   execFileSync("git", args, { stdio: "inherit" });
 };
-const output = (...args: string[]): string =>
-  execFileSync("git", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+const output = (...args: string[]): string => outputIn(".", ...args);
+const outputIn = (dir: string, ...args: string[]): string =>
+  execFileSync("git", args, {
+    cwd: dir,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  }).trim();
 
 /** A merged branch, and the worktree that has it checked out, if one does. */
 export interface Gone {
@@ -49,12 +61,12 @@ export const goneIn = (refs: string, merged: (commit: string) => boolean = () =>
     .map(([branch = "", , worktree]) => (worktree ? { branch, worktree } : { branch }));
 
 // The last commits of the merged pull requests, or none without `gh`.
-function mergedHeads(): Set<string> {
+function mergedHeads(dir = "."): Set<string> {
   try {
     const heads = execFileSync(
       "gh",
       ["pr", "list", "--state", "merged", "--limit", "1000", "--json", "headRefOid"],
-      { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+      { cwd: dir, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
     );
     return new Set((JSON.parse(heads) as { headRefOid: string }[]).map((pr) => pr.headRefOid));
   } catch {
@@ -62,29 +74,35 @@ function mergedHeads(): Set<string> {
   }
 }
 
-const onMain = (commit: string): boolean => {
+const onMain = (commit: string, dir = "."): boolean => {
   try {
-    output("merge-base", "--is-ancestor", commit, "origin/main");
+    outputIn(dir, "merge-base", "--is-ancestor", commit, "origin/main");
     return true;
   } catch {
     return false;
   }
 };
 
-/** Deletes each local branch that merged. With `others`, the branch you're on stays, and a
- *  run that deletes nothing prints nothing. */
-export function gone({ others = false } = {}): void {
-  run("fetch", "--quiet", "--prune");
-  const heads = mergedHeads();
-  const current = output("branch", "--show-current");
-  const branches = goneIn(
-    output(
+// The branches in `dir` that merged, after a fetch.
+function mergedIn(dir: string): Gone[] {
+  outputIn(dir, "fetch", "--quiet", "--prune");
+  const heads = mergedHeads(dir);
+  return goneIn(
+    outputIn(
+      dir,
       "for-each-ref",
       "--format=%(refname:short)%09%(upstream:track)%09%(worktreepath)%09%(objectname)",
       "refs/heads",
     ),
-    (commit) => heads.has(commit) || onMain(commit),
-  ).filter(({ branch }) => !(others && branch === current));
+    (commit) => heads.has(commit) || onMain(commit, dir),
+  );
+}
+
+/** Deletes each local branch that merged. With `others`, the branch you're on stays, and a
+ *  run that deletes nothing prints nothing. */
+export function gone({ others = false } = {}): void {
+  const current = output("branch", "--show-current");
+  const branches = mergedIn(".").filter(({ branch }) => !(others && branch === current));
   if (branches.some(({ branch }) => branch === current)) {
     run("switch", "--quiet", "main");
     run("pull", "--quiet", "--prune");
@@ -102,4 +120,42 @@ export function gone({ others = false } = {}): void {
     run("branch", "--delete", "--force", branch);
   }
   if (!branches.length && !others) console.log("No merged branches to delete.");
+}
+
+/** What `catchUp` does with a checkout: why it's kept as it is, or `undefined` to bring it to
+ *  `main`. */
+export function keptBecause(changes: string, current: string, merged: Gone[]): string | undefined {
+  if (changes) return "kept, with uncommitted changes";
+  if (current && current !== "main" && !merged.some(({ branch }) => branch === current)) {
+    return `kept, on ${current}, which hasn't merged`;
+  }
+  return undefined;
+}
+
+/** Brings the checkout in `dir` to `main`, pulled, with its merged branches deleted, unless
+ *  `keptBecause` keeps it. Says what it did, in a few words. */
+export function catchUp(dir: string): string {
+  const merged = mergedIn(dir);
+  const current = outputIn(dir, "branch", "--show-current");
+  const kept = keptBecause(outputIn(dir, "status", "--porcelain"), current, merged);
+  if (kept) return kept;
+  if (current !== "main") outputIn(dir, "switch", "--quiet", "main");
+  try {
+    outputIn(dir, "pull", "--quiet", "--ff-only", "--prune");
+  } catch {
+    return "kept, with commits on main that GitHub's lacks";
+  }
+  const top = outputIn(dir, "rev-parse", "--show-toplevel");
+  let deleted = 0;
+  for (const { branch, worktree } of merged) {
+    try {
+      if (worktree && worktree !== top) outputIn(dir, "worktree", "remove", worktree);
+      outputIn(dir, "branch", "--delete", "--force", branch);
+      deleted++;
+    } catch {
+      // A worktree with changes keeps its branch, as `gone` keeps it.
+    }
+  }
+  const branches = deleted === 1 ? "1 merged branch" : `${deleted} merged branches`;
+  return deleted ? `on main, pulled, ${branches} deleted` : "on main, pulled";
 }
