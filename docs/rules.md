@@ -269,12 +269,12 @@ The docs are published at `/docs/<file>.md`, so a link to one works on GitHub an
 
 ## Releases
 
-markz, prose, pagez and sitez are packages, published to npm. A package is any repository whose `package.json` isn't private, and every one releases the same way.
+markz, prose and pagez are packages, published to npm. A package is any repository whose `package.json` isn't private, and every one releases the same way.
 
 - [`releases-files`]{#releases-files}: The release files are [the reference's package/](../reference/package/README.md), copied into the package unchanged: the release workflow, `.github/release.yml`, which groups the notes, and the `label` workflow, which checks a pull request has one. They name no package, so the copies stay identical and the survey checks them word for word. The fix writes them whole.
 - [`releases-packing`]{#releases-packing}: A package packs `dist` with publint. `files` is `["dist"]`, followed only by what the package reads as it runs, like craftz's `docs/rules.md`. `prepack` is `pnpm run build`, and `publishConfig.access` is `public`. `craftz()` runs publint inside `vp pack`, strict, so `build` fails on a package npm would serve badly, and there's no separate publint step. The package has `publint` as a dev dependency.
 - [`releases-types`]{#releases-types}: Types come from Oxc. `craftz()` sets `dts: { generator: "oxc" }` for a package, so `vp pack` writes the `.d.ts` files without the TypeScript compiler, and fails on an export whose type isn't written out. It's set there, not as `isolatedDeclarations` in `tsconfig.json`, which the editor would apply to tests and config too. A package has no `typescript` dependency, like a site: `vp check` type-checks with tsgolint, which Vite+ installs.
-- [`releases-bundled`]{#releases-bundled}: Our own packages are bundled, not depended on. prose, sitez and craftz have markz as a dev dependency, and `vp pack` puts it inside `dist/`. So a package's users never install a second markz, and each package releases on its own, in any order. Picking up a new markz takes a release of the package that bundles it.
+- [`releases-bundled`]{#releases-bundled}: Our own packages are bundled, not depended on. prose, pagez and craftz have markz as a dev dependency, and `vp pack` puts it inside `dist/`. So a package's users never install a second markz, and each package releases on its own, in any order. Picking up a new markz takes a release of the package that bundles it.
 
 To release, run `craftz release` in the package with its new version.
 
