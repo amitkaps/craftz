@@ -351,6 +351,26 @@ test(".gitignore lists outline.md, and the fix adds it once", () => {
   expect(check()).toEqual([]);
 });
 
+test("each step in the plan's Next is a task, and the fix turns a numbered step into one", () => {
+  const dir = mkdtempSync(join(tmpdir(), "craftz-plan-"));
+  mkdirSync(join(dir, "docs"));
+  const file = join(dir, "docs", "plan.md");
+  writeFileSync(
+    file,
+    "# Plan\n\nSummary.\n\n## Next, in order\n\n1. **One.** First.\n   - a detail\n2. **Two.**\n- [x] **Done.**\n\n**On hold:** a note.\n\n## Where it is\n\n- **Started.**\n",
+  );
+  const rule = RULES.find((r) => r.id === "docs-plan");
+  const check = () =>
+    rule?.check({ files: { "docs/plan.md": readFileSync(file, "utf8") } } as unknown as Repo)
+      ?.drift;
+  expect(check()).toEqual(["docs/plan.md has 2 steps in Next that aren't - [ ] tasks"]);
+  for (let i = 0; i < 2; i++) if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
+  expect(readFileSync(file, "utf8")).toBe(
+    "# Plan\n\nSummary.\n\n## Next, in order\n\n- [ ] **One.** First.\n   - a detail\n- [ ] **Two.**\n- [x] **Done.**\n\n**On hold:** a note.\n\n## Where it is\n\n- **Started.**\n",
+  );
+  expect(check()).toEqual([]);
+});
+
 test("the site fix rewrites a cf config as site(), serving Vite's folder, once", () => {
   const dir = mkdtempSync(join(tmpdir(), "craftz-site-"));
   const file = join(dir, "cloudflare.config.ts");
