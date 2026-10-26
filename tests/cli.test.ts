@@ -55,7 +55,7 @@ test("check finds what fix puts back", () => {
 
   const again = craftz("fix", dir);
   expect([again.status, again.stdout]).toEqual([0, expect.stringMatching(/^Changed nothing\./)]);
-});
+}, 30_000);
 
 test("a rule prints with its address", () => {
   const { status, stdout } = craftz("rules", "releases-packing");

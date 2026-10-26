@@ -14,6 +14,12 @@
  * `--notes "…"` gives it, and without that the editor opens for it. Left empty, the release has
  * only the generated notes.
  *
+ * It reads `docs/plan.md` on `main` first, and stops unless the plan's summary names the version
+ * and no step in it is ticked. A step leaves Next in the pull request that finishes it
+ * ([rules](../docs/rules.md#docs-files)), so a plan that's current has nothing ticked, and it
+ * names the release it's ready for. Updating the plan after a release was a step nobody took, so
+ * it comes before.
+ *
  * The pull request is opened with your login, not by a workflow, since GitHub doesn't run CI on
  * a pull request that a workflow's token opens, and `ci` is required.
  */
@@ -23,6 +29,18 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { OWNER } from "./reference.ts";
 import { origin } from "./survey.ts";
+
+/** Why the plan isn't ready for this version, or undefined when it is. */
+export function unready(plan: string, version: string): string | undefined {
+  const body = plan.replace(/^---\n[\s\S]*?\n---\n/, "");
+  const summary = body
+    .split(/\n\s*\n/)
+    .map((it) => it.trim())
+    .find((it) => it && !it.startsWith("#"));
+  if (!summary?.includes(version)) return `its summary doesn't name ${version}`;
+  if (/^\s*- \[x\]/im.test(body)) return "it has a ticked step, which belongs in Where it is";
+  return undefined;
+}
 
 function fail(message: string): never {
   console.error(message);
@@ -64,6 +82,20 @@ export function release(dir: string, args: string[]): void {
   if (pkg.private) fail(`${repo} is private, so it isn't released`);
   if (pkg.version === version) fail(`${repo} is already at ${version}`);
   if (exists(`${api}/git/ref/tags/${tag}`)) fail(`${repo} already has ${tag}`);
+
+  let plan = "";
+  try {
+    plan = gh("api", `${api}/contents/docs/plan.md`, "-H", "Accept: application/vnd.github.raw");
+  } catch {
+    fail(`${repo} has no docs/plan.md on main.`);
+  }
+  const why = unready(plan, version);
+  if (why) {
+    fail(
+      `${repo}'s plan isn't ready for ${version}: ${why}.\n` +
+        `Bring docs/plan.md up to date with pnpm pr, then release once it merges.`,
+    );
+  }
 
   // Only the `version` line changes, so the file keeps its formatting.
   const bumped = text.replace(/("version":\s*")[^"]*(")/, `$1${version}$2`);
