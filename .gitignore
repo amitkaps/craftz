@@ -9,6 +9,7 @@ node_modules
 # Output
 dist
 .prose
+outline.md
 
 # OS
 .DS_Store

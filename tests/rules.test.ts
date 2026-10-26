@@ -303,7 +303,7 @@ test("the editor's settings are compared as JSON, and an app's add Svelte's", ()
   expect(rule?.check(repo(app, "app"))?.drift).toEqual([]);
 });
 
-test("verify runs craftz check after prose check, and the fix puts it there once", () => {
+test("verify runs prose outline and craftz check after prose check, and the fix puts them there once", () => {
   const dir = mkdtempSync(join(tmpdir(), "craftz-verify-"));
   const file = join(dir, "package.json");
   const verify = "pnpm check && pnpm prose check && pnpm test";
@@ -311,13 +311,44 @@ test("verify runs craftz check after prose check, and the fix puts it there once
   const rule = RULES.find((r) => r.id === "scripts-verify");
   const read = () => JSON.parse(readFileSync(file, "utf8")) as Pkg;
   expect(rule?.check({ pkg: read() } as Repo)?.drift).toEqual([
+    "verify doesn't run pnpm prose outline",
     "verify doesn't run pnpm craftz check",
   ]);
   for (let i = 0; i < 2; i++) if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
   expect(read().scripts?.["verify"]).toBe(
-    "pnpm check && pnpm prose check && pnpm craftz check && pnpm test",
+    "pnpm check && pnpm prose check && pnpm prose outline && pnpm craftz check && pnpm test",
   );
   expect(rule?.check({ pkg: read() } as Repo)?.drift).toEqual([]);
+});
+
+test("verify gains prose outline where it already runs craftz check", () => {
+  const dir = mkdtempSync(join(tmpdir(), "craftz-verify-"));
+  const file = join(dir, "package.json");
+  writeFileSync(
+    file,
+    JSON.stringify({ scripts: { verify: "pnpm prose check && pnpm craftz check" } }),
+  );
+  const rule = RULES.find((r) => r.id === "scripts-verify");
+  if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
+  const pkg = JSON.parse(readFileSync(file, "utf8")) as Pkg;
+  expect(pkg.scripts?.["verify"]).toBe(
+    "pnpm prose check && pnpm prose outline && pnpm craftz check",
+  );
+});
+
+test(".gitignore lists outline.md, and the fix adds it once", () => {
+  const dir = mkdtempSync(join(tmpdir(), "craftz-outline-"));
+  const file = join(dir, ".gitignore");
+  writeFileSync(file, "node_modules\n");
+  const rule = RULES.find((r) => r.id === "agents-outline");
+  const check = () =>
+    rule?.check({ files: { ".gitignore": readFileSync(file, "utf8") } } as unknown as Repo)?.drift;
+  expect(check()).toEqual([".gitignore doesn't list outline.md"]);
+  for (let i = 0; i < 2; i++) if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
+  expect(readFileSync(file, "utf8")).toBe(
+    "node_modules\n\n# Written by prose outline\noutline.md\n",
+  );
+  expect(check()).toEqual([]);
 });
 
 test("the site fix rewrites a cf config as site(), serving Vite's folder, once", () => {
