@@ -4,7 +4,6 @@ craftz 0.8.0 is on npm, and its docs are live at [craftz.amitkaps.com](https://c
 
 ## Next, in order
 
-- **`craftz release` checks the plan.** It refuses a version that the plan's summary doesn't name, or a plan with a ticked step, so each release starts from a current plan. The rules say a step leaves Next in the pull request that finishes it, so a plan needs no ticks.
 - **Release 0.9.0, once there's more to carry.** Then `pnpm align` moves every repository.
 
 ## Where it is
@@ -21,7 +20,7 @@ craftz 0.8.0 is on npm, and its docs are live at [craftz.amitkaps.com](https://c
 - **What's installed.** `craftz deps` weighs a repository's install, by direct dependency.
 - **The commands, stated once.** Each command opens its section of [usage](usage.md) with an id, and `craftz help` prints from there with markz's reader, as prose's and pagez's help do. A test fails if cli.ts runs a command usage doesn't state, or the other way, and the README links each one.
 - **What's live.** `craftz status` reads CI on `main`, the open pull requests, npm's version against `package.json` on `main`, the latest release, and a site's build, addresses and audience, on cf or wrangler. `--timing` says what the last pull requests took, and why slow ones were slow.
-- **Releases.** The release workflow stages a version on npm and tags it once approved, and each release's notes say what to change when a repository moves. `pnpm bump` moves the reference's versions before a release. After it, `pnpm align` runs `craftz upgrade` in a clone of each repository, so a change reaches the others only once it's released, and brings each checkout to `main` once its merges land. `craftz new` starts a repository that passes the rules, from any folder with `pnpm dlx`. `craftz release` opens a package's release from its own folder. align and bump are this repository's own scripts, for whoever keeps the repositories, and the package doesn't ship them.
+- **Releases.** The release workflow stages a version on npm and tags it once approved, and each release's notes say what to change when a repository moves. `pnpm bump` moves the reference's versions before a release. After it, `pnpm align` runs `craftz upgrade` in a clone of each repository, so a change reaches the others only once it's released, and brings each checkout to `main` once its merges land. `craftz new` starts a repository that passes the rules, from any folder with `pnpm dlx`. `craftz release` opens a package's release from its own folder, once the plan's summary names the version and no step is ticked. A step leaves Next in the pull request that finishes it. align and bump are this repository's own scripts, for whoever keeps the repositories, and the package doesn't ship them.
 - **The repositories.** The public ones carry the topic `craftz`, which is how align finds them. The one that kept the rules before craftz is deleted, with its site, since craftz holds its rules and lessons.
 
 ## Later
