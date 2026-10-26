@@ -369,11 +369,15 @@ const CI = ".github/workflows/ci.yml";
 /** @prose
  * # The agents' instructions
  *
- * A section runs from its `## ` heading to the next. The fix writes this repository's two
+ * A section runs from its `## ` heading to the next. The fix writes this repository's shared
  * sections over a repository's own, or puts them before its first section when they're
  * missing, and leaves the rest of the file alone.
  */
-const SECTIONS = ["craftz", "Prose"];
+const SECTIONS = ["craftz", "Prose", "Outline"];
+const OUTLINE = "outline.md";
+// Whether a .gitignore names a root file, as `name` or `/name`.
+const ignores = (text: string, name: string): boolean =>
+  text.split("\n").some((line) => [name, `/${name}`].includes(line.trim()));
 const sectionOf = (heading: string): RegExp =>
   new RegExp(`^## ${heading}\\n([\\s\\S]*?)(?=^## |(?![\\s\\S]))`, "m");
 const section = (text: string, heading: string): string | undefined =>
@@ -557,7 +561,7 @@ function setScript(dir: string, std: string, name: string, applies: (pkg: Pkg) =
   writePkg(dir, pkg);
 }
 // What every verify runs, as whole steps between `&&`.
-const VERIFIED = ["pnpm prose check", "pnpm craftz check"];
+const VERIFIED = ["pnpm prose check", "pnpm prose outline", "pnpm craftz check"];
 const runs = (verify: string, step: string): boolean =>
   verify.split("&&").some((it) => it.trim() === step);
 
@@ -860,18 +864,19 @@ export const RULES: Rule[] = [
     },
     fix: {
       in: "files",
-      // craftz check goes after prose check, and a verify without prose check is fixed by hand.
+      // Each missing step goes after the one before it in VERIFIED, and a verify without prose
+      // check is fixed by hand.
       apply: (dir) => {
         const pkg = readPkg(dir);
         const verify = pkg.scripts?.verify;
-        if (!verify || runs(verify, "pnpm craftz check") || !runs(verify, "pnpm prose check")) {
-          return;
+        if (!verify || !runs(verify, "pnpm prose check")) return;
+        const steps = verify.split("&&").map((it) => it.trim());
+        const missing = VERIFIED.filter((step) => !steps.includes(step));
+        if (missing.length === 0) return;
+        for (const step of missing) {
+          steps.splice(steps.indexOf(VERIFIED[VERIFIED.indexOf(step) - 1]!) + 1, 0, step);
         }
-        const fixed = verify.replace(
-          /(^|&& )pnpm prose check( &&|$)/,
-          "$1pnpm prose check && pnpm craftz check$2",
-        );
-        pkg.scripts = { ...pkg.scripts, verify: fixed };
+        pkg.scripts = { ...pkg.scripts, verify: steps.join(" && ") };
         writePkg(dir, pkg);
       },
     },
@@ -1068,6 +1073,25 @@ export const RULES: Rule[] = [
         }
         writeFileSync(path, `${text.trimEnd()}\n`);
         writeFileSync(join(dir, "CLAUDE.md"), "@AGENTS.md\n");
+      },
+    },
+  },
+  {
+    id: "agents-outline",
+    check: ({ files }) =>
+      drifted(
+        ignores(files[".gitignore"] ?? "", OUTLINE) ? [] : [`.gitignore doesn't list ${OUTLINE}`],
+      ),
+    fix: {
+      in: "files",
+      apply: (dir) => {
+        const path = join(dir, ".gitignore");
+        const text = read(path);
+        if (ignores(text, OUTLINE)) return;
+        writeFileSync(
+          path,
+          `${text.trimEnd()}\n\n# Written by prose outline\n${OUTLINE}\n`.trimStart(),
+        );
       },
     },
   },

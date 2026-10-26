@@ -144,18 +144,18 @@ Every repository uses these names, and runs them with `pnpm run …` in anything
 | `check` | format, lint and types: `vp check`, and a framework's own checker |
 | `fix` | writes the format and lint fixes: `vp check --fix` |
 | `test` | the tests, when there are any |
-| `verify` | `check`, `prose check`, `craftz check`, `test` and `build`, then the site if there is one |
+| `verify` | `check`, `prose check`, `prose outline`, `craftz check`, `test` and `build`, then the site if there is one |
 | `ship` | uploads what `verify` built: `craftz deploy` |
 | `prose` | reads the repository as a document: `prose`, so `pnpm prose build` works |
 | `pr` | opens a pull request that merges itself once CI passes |
 | `gone` | deletes the local branches that merged |
 | `craftz` | runs craftz, so `pnpm craftz rules` works |
 
-- [`scripts-required`]{#scripts-required}: `check`, `fix`, `verify` and `prose` are in every repository, `dev` and `build` in every site and package, and `ship` in every site. A tool has nothing to serve or build, so its `verify` is `check`, `prose check`, `craftz check` and `test`. `test` is there when there are tests.
+- [`scripts-required`]{#scripts-required}: `check`, `fix`, `verify` and `prose` are in every repository, `dev` and `build` in every site and package, and `ship` in every site. A tool has nothing to serve or build, so its `verify` is `check`, `prose check`, `prose outline`, `craftz check` and `test`. `test` is there when there are tests.
 - [`scripts-check`]{#scripts-check}: on Vite+, `check` runs `vp check`. A framework can add its own steps around it, like SvelteKit's `svelte-kit sync` before and `svelte-check` after.
 - [`scripts-fix`]{#scripts-fix}: on Vite+, `fix` is exactly `vp check --fix`.
 - [`scripts-one-checker`]{#scripts-one-checker}: on Vite+, there are no `lint` or `fmt` scripts. `check` and `fix` cover both, and a framework adds no second formatter or linter.
-- [`scripts-verify`]{#scripts-verify}: `verify` runs `pnpm prose check`, then `pnpm craftz check`. prose check fails on what the text gets wrong, which `prose build` only prints, so a mistake in a doc or a comment stops a merge the way a lint error does. craftz check fails on what has drifted from the rules of the craftz the repository installs, so a pull request can't drift, and one that moves craftz is checked against the release it moves to. Neither needs a login. The fix adds `pnpm craftz check` after `pnpm prose check`.
+- [`scripts-verify`]{#scripts-verify}: `verify` runs `pnpm prose check`, then `pnpm prose outline`, then `pnpm craftz check`. prose check fails on what the text gets wrong, which `prose build` only prints, so a mistake in a doc or a comment stops a merge the way a lint error does. craftz check fails on what has drifted from the rules of the craftz the repository installs, so a pull request can't drift, and one that moves craftz is checked against the release it moves to. prose outline writes `outline.md` for agents, so it's current wherever the work is checked ([agents-outline](#agents-outline)). None needs a login. The fix adds each missing step after the one before it.
 - [`scripts-prose`]{#scripts-prose}: `prose` is exactly `prose`, so `pnpm prose build` works. prose's own repository runs its command line from source.
 - [`scripts-preview`]{#scripts-preview}: `preview` is a site's, the same as the reference's. A package, whose build is `dist/`, has none.
 - [`scripts-pr`]{#scripts-pr}: `pr` is `craftz pr`, and there's no `scripts/pr.ts`. `pnpm pr "<title>"` starts a branch when it's on `main`, or on a branch whose pull request merged. On a branch whose pull request is open, it adds to it when given the same title, and with another it waits for that one to merge and then starts a branch. It commits, runs `verify`, pushes, opens the pull request and turns on auto-merge, then returns, so the next change starts while CI runs. It says how long `verify` took, and a wait says how long CI took and how long the merge came after it. A package's pull request takes `--label <label>`, and stops without one, before anything is committed. `--wait` waits for the merge, updating the branch when another merge leaves it behind `main`, and merging it once its checks pass rather than waiting on auto-merge. Then it switches to `main` and pulls. A session's last change takes it. craftz's own repository runs it from source.
@@ -233,9 +233,10 @@ Every `main` takes changes the same way. Work happens on a branch, in a pull req
 
 ## Agents
 
-- [`agents-sections`]{#agents-sections}: every `AGENTS.md` opens with the same two sections as [the reference's](../reference/AGENTS.md), word for word, and `CLAUDE.md` holds only `@AGENTS.md`, so Claude Code reads the same file.
+- [`agents-sections`]{#agents-sections}: every `AGENTS.md` opens with the same three sections as [the reference's](../reference/AGENTS.md), word for word, and `CLAUDE.md` holds only `@AGENTS.md`, so Claude Code reads the same file.
+- [`agents-outline`]{#agents-outline}: `.gitignore` lists `outline.md`. `verify` writes it, so a committed copy would conflict between two open pull requests that each change a summary. The fix adds it.
 
-"craftz" points at these rules, says to read them with `craftz rules`, and says how changes reach `main`. "Prose" says to run `prose rules`, which prints the rules in [prose's usage](https://prose.amitkaps.com/docs/usage.md#for-agents) as the installed version has them, so an agent reads them without a fetch. The rules live there, once, and aren't copied into each repository, since the copies had already started to differ. It also says to run `prose style` on the files a change touched. That's advice, so it isn't a script or a check. The rest of an `AGENTS.md` is the repository's own.
+"craftz" points at these rules, and says how changes reach `main`. "Prose" says when to run `prose rules`, which prints the rules in [prose's usage](https://prose.amitkaps.com/docs/usage.md#for-agents) as the installed version has them. The rules live there, once, and aren't copied into each repository, since the copies had already started to differ. It names the first edit to a `.md` file or a `@prose` comment, and the first after a summary, since agents skipped the rules when told only "before writing prose". It also says to run `prose style`, which is advice, so it isn't a script or a check. "Outline" imports `outline.md`, every file with its summary, so an agent has the map without searching. Each section is short, since every agent loads the file every session. What a command does is in its `help`. The rest of an `AGENTS.md` is the repository's own.
 
 ## Docs
 
