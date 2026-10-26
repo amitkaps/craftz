@@ -24,7 +24,6 @@ import {
   type Pkg,
   VERSIONS,
   here,
-  origin,
   read,
   standard,
   versionsIn,
@@ -1191,31 +1190,6 @@ function snapshot(dir: string, top = dir, found = new Map<string, string>()): Ma
 }
 
 /** @prose
- * # Holds that moved
- *
- * Up to 0.3.0, craftz kept each repository's holds, by its name. They're in each repository's
- * `package.json` now, and the fix writes the ones craftz kept into the repository the folder's
- * `origin` names. Delete this once every repository is on 0.4.0.
- */
-const MOVED_HOLDS: Record<string, Record<string, string>> = {
-  base: {
-    "versions-typescript":
-      "svelte-check accepts TypeScript 5 and 6 only. Move when its peer range takes 7.",
-    "cloudflare-config":
-      "cf can't deploy SvelteKit, since the adapter doesn't write cf's Build Output. Move when it does.",
-    "toolchain-types":
-      "SvelteKit needs $app/types in types, and checkJs off, or svelte-check reads the Worker wrangler builds. Move when either changes.",
-  },
-};
-
-function moveHolds(dir: string): void {
-  const moved = MOVED_HOLDS[origin(dir) ?? ""];
-  const pkg = readPkg(dir);
-  if (!moved || pkg.craftz?.hold) return;
-  writePkg(dir, { ...pkg, craftz: { ...pkg.craftz, hold: moved } });
-}
-
-/** @prose
  * # Fixing the files
  *
  * Every fix in the files is applied, but the held ones, for `craftz fix`, `pnpm align` and `pnpm
@@ -1226,7 +1200,6 @@ function moveHolds(dir: string): void {
  */
 export function fixFiles(dir: string, std: string): string[] {
   const before = snapshot(dir);
-  moveHolds(dir);
   const held = readPkg(dir).craftz?.hold ?? {};
   for (const rule of RULES)
     if (rule.fix?.in === "files" && !held[rule.id]) rule.fix.apply(dir, std);
