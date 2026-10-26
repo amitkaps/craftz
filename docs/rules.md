@@ -258,7 +258,9 @@ Every repository has the same docs, so anyone, or any agent, finds the same thin
 
 The README is the site's home page when prose builds it, so it reads as one. It says what it is, gives a short example, and lists the commands a user runs, like a package's command. The repository's own scripts, like `dev` and `verify`, are the shared ones, and are left to `development.md`, which links these rules for the shared toolchain, scripts and workflows rather than describing them.
 
-The plan opens with what's next, since that's what it's read for. Its "Where it is" holds one line per thing that works now, rewritten when a release changes it, not a line per release. A release's notes on GitHub already say what it changed, and the plan links to them rather than copying them. A step leaves Next in the pull request that finishes it, rewritten into "Where it is", so the plan says what `main` does, and nothing in it is ticked. A package's plan names the version it's ready to release in its summary, and `craftz release` stops when it doesn't, or when a step is ticked.
+The plan opens with what's next, since that's what it's read for. Its "Where it is" holds one line per thing that works now, rewritten when a release changes it, not a line per release. A release's notes on GitHub already say what it changed, and the plan links to them rather than copying them.
+
+- [`docs-plan`]{#docs-plan}: each step in the plan's Next is a task, `- [ ]`, ticked as the pull request that finishes it merges. Before a release, the ticked steps move into "Where it is" and the summary names the version. `craftz release` stops until both are done, so the plan is current before each release, not after. The fix turns a numbered or plain step into a task.
 
 A site has no `usage.md`, since the site is what people use, unless it has commands to run. Any other doc is the repository's own, like markz's grammar, and goes in the `nav` too. `development.md` links to these rules for what's shared rather than repeating it. `docs-files`'s fix writes a first version of each one that's missing, and adds it to the `nav`, so `new` starts with all of them.
 

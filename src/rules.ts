@@ -460,7 +460,7 @@ What's next, in order, and what works now.
 
 ## Next, in order
 
-1. The first thing ${name} does.
+- [ ] The first thing ${name} does.
 
 ## Where it is
 
@@ -518,6 +518,13 @@ What an agent using ${name} should know, as a snippet to copy into its instructi
 }
 
 const DOCS = ["design.md", "plan.md", "development.md", "lessons.md"];
+
+/** The plan's Next section: from its heading to the next, or undefined when it has none. */
+const nextOf = (plan: string): RegExpExecArray | null =>
+  /^## Next[^\n]*\n([\s\S]*?)(?=^## |(?![\s\S]))/m.exec(plan);
+
+/** A step in Next that isn't a task, at the start of a line, as `1. ` or `- `. */
+const UNTICKED = /^(?:\d+\.|[-*])(?! \[[ x]\] ) +/gm;
 
 /** @prose
  * # The old name
@@ -1132,6 +1139,32 @@ export const RULES: Rule[] = [
           const all = [...listed, ...missing].join(", ");
           writeFileSync(index, had.replace(/^nav:\s*\[[^\]]*\]/m, `nav: [${all}]`));
         }
+      },
+    },
+  },
+  {
+    id: "docs-plan",
+    check: ({ files }) => {
+      const next = nextOf(files["docs/plan.md"] ?? "")?.[1] ?? "";
+      const steps = next.match(UNTICKED)?.length ?? 0;
+      return drifted(
+        steps
+          ? [
+              `docs/plan.md has ${steps} ${steps === 1 ? "step" : "steps"} in Next that aren't - [ ] tasks`,
+            ]
+          : [],
+      );
+    },
+    fix: {
+      in: "files",
+      apply: (dir) => {
+        const path = join(dir, "docs", "plan.md");
+        const plan = read(path);
+        const next = nextOf(plan);
+        if (!next) return;
+        const at = next.index + next[0].length - (next[1] ?? "").length;
+        const steps = (next[1] ?? "").replace(UNTICKED, "- [ ] ");
+        writeFileSync(path, plan.slice(0, at) + steps + plan.slice(at + (next[1] ?? "").length));
       },
     },
   },

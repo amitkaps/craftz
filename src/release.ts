@@ -15,10 +15,10 @@
  * only the generated notes.
  *
  * It reads `docs/plan.md` on `main` first, and stops unless the plan's summary names the version
- * and no step in it is ticked. A step leaves Next in the pull request that finishes it
- * ([rules](../docs/rules.md#docs-files)), so a plan that's current has nothing ticked, and it
- * names the release it's ready for. Updating the plan after a release was a step nobody took, so
- * it comes before.
+ * and no step in it is ticked. A step is ticked as it merges, and its ticked steps move into
+ * "Where it is" before a release ([docs-plan](../docs/rules.md#docs-plan)). So a plan that's
+ * ready has nothing ticked, and it names the release. Updating the plan after a release was a
+ * step nobody took, so it comes before.
  *
  * The pull request is opened with your login, not by a workflow, since GitHub doesn't run CI on
  * a pull request that a workflow's token opens, and `ci` is required.
