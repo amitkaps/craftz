@@ -120,7 +120,7 @@ A repository's `pr` and `gone` scripts run `craftz pr` and `craftz gone`, and ev
 pnpm craftz release 0.5.0 --notes "What this release is about."
 ```
 
-`craftz release` opens the `v0.5.0` pull request for the package the folder's `origin` names, with `version` set and auto-merge on. It works on GitHub, so it releases what's on `main`, whatever the folder has changed. It stops first unless `docs/plan.md` on `main` names the version in its summary and ticks no step, so update the plan before releasing. Without `--notes` it opens your editor for the summary. Once it merges, approve the staged version on npmjs.com. It needs `gh` logged in.
+`craftz release` opens the `v0.5.0` pull request for the package the folder's `origin` names, with `version` set and auto-merge on. It works on GitHub, so it releases what's on `main`, whatever the folder has changed. It stops first unless `docs/plan.md` on `main` names the version in its summary and ticks no step, so update the plan before releasing. Without `--notes` it opens your editor for the summary, and without a terminal it stops and asks for `--notes`. Once it merges, approve the staged version on npmjs.com. It needs `gh` logged in.
 
 ## Writing the settings
 

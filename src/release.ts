@@ -12,7 +12,8 @@
  *
  * The pull request's description is the release's summary, which goes above the generated notes.
  * `--notes "…"` gives it, and without that the editor opens for it. Left empty, the release has
- * only the generated notes.
+ * only the generated notes. Without a terminal, as under an agent, the editor would wait unseen,
+ * so it stops and asks for `--notes`, before anything changes on GitHub.
  *
  * It reads `docs/plan.md` on `main` first, and stops unless the plan's summary names the version
  * and no step in it is ticked. A step is ticked as it merges, and its ticked steps move into
@@ -101,6 +102,8 @@ export function release(dir: string, args: string[]): void {
   const bumped = text.replace(/("version":\s*")[^"]*(")/, `$1${version}$2`);
 
   function editor(): string {
+    if (!process.stdin.isTTY)
+      fail(`There's no terminal for an editor, so give the summary: --notes "…"`);
     const path = join(mkdtempSync(join(tmpdir(), "release-")), `${tag}.md`);
     writeFileSync(path, "");
     const edit = process.env["VISUAL"] ?? process.env["EDITOR"] ?? "vi";
