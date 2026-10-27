@@ -2,7 +2,7 @@
 # # One label
 #
 # A package's release notes are grouped by the label on each pull request, so a pull request
-# without one can't merge. The labels are the ones `.github/release.yml` names. The job is named
+# without one can't merge. The labels are the ones `.github/notes.yml` names. The job is named
 # `label`, a check the `main` ruleset requires next to `ci`.
 #
 # It's a workflow of its own, so a label added or taken off runs only this, not `verify` again. It
@@ -29,14 +29,14 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          sparse-checkout: .github/release.yml
+          sparse-checkout: .github/notes.yml
           sparse-checkout-cone-mode: false
       - name: Label
         env:
           LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
         run: |
           node -e '
-            const notes = require("node:fs").readFileSync(".github/release.yml", "utf8");
+            const notes = require("node:fs").readFileSync(".github/notes.yml", "utf8");
             const known = [...notes.matchAll(/labels: \[(\w+)\]|^ +- (\w+)$/gm)].map((m) => m[1] ?? m[2]);
             const have = JSON.parse(process.env.LABELS).filter((label) => known.includes(label));
             if (have.length !== 1) {

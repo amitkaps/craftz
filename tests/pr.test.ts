@@ -14,7 +14,7 @@ import { here } from "../src/reference.ts";
 import { RULES } from "../src/rules.ts";
 
 test("a pull request's labels are the ones the notes group by", () => {
-  const notes = readFileSync(join(here, "package", ".github", "release.yml"), "utf8");
+  const notes = readFileSync(join(here, "package", ".github", "notes.yml"), "utf8");
   expect(labelsIn(notes)).toEqual(["internal", "breaking", "added", "fixed", "improved", "docs"]);
 });
 

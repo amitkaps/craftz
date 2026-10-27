@@ -65,7 +65,7 @@ When cf can deploy SvelteKit, only `craftz deploy` changes, and the app needs no
 
 A fix never edits a file by its lines. Regular expressions depend on how a file is laid out, and most fixes that missed a real repository missed there. Each file a rule reaches is one of three kinds, and none needs a line edit.
 
-- **Files craftz owns** are written whole, from [reference/](../reference/README.md) and the repository's axes, and checked for an exact match. They're the workflows, `.github/release.yml`, `.vscode/` and `pnpm-workspace.yaml`. What a package adds to CI, like publint or a size budget, goes in `verify`, so CI is the same everywhere.
+- **Files craftz owns** are written whole, from [reference/](../reference/README.md) and the repository's axes, and checked for an exact match. They're the workflows, `.github/notes.yml`, `.vscode/` and `pnpm-workspace.yaml`. What a package adds to CI, like publint or a size budget, goes in `verify`, so CI is the same everywhere.
 - **Code the repository writes** takes craftz's values through a call, and the check only looks for the call. `vite.config.ts` uses `craftz()` and `cloudflare.config.ts` uses `site()`, so no value in either is read or edited.
 - **JSON** is parsed. `package.json` holds the versions and the holds, and `tsconfig.json` extends the one craftz ships.
 
@@ -81,7 +81,7 @@ A fix edits a config only to add the call, once, when a repository first moves t
 
 ## Files that stay in the repository
 
-GitHub reads workflows and `.github/release.yml` from the repository, the editor reads `.vscode/`, and pnpm reads `pnpm-workspace.yaml`. These stay as files, but short ones whose steps call craftz's commands, so they rarely change. craftz owns them, and each repository checks its own against the version it installs. `craftz check` compares them with the installed version's, and `craftz fix` writes them whole.
+GitHub reads workflows and `.github/notes.yml` from the repository, the editor reads `.vscode/`, and pnpm reads `pnpm-workspace.yaml`. These stay as files, but short ones whose steps call craftz's commands, so they rarely change. craftz owns them, and each repository checks its own against the version it installs. `craftz check` compares them with the installed version's, and `craftz fix` writes them whole.
 
 They aren't reusable workflows, which would version separately from the package. The release workflow keeps npm's trusted publishing as it is.
 

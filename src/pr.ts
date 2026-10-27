@@ -10,7 +10,7 @@
  * ([Where it starts](#where-it-starts) says what it does on another branch.)
  *
  * A package's pull request takes one label, `--label <label>`, from the ones its
- * `.github/release.yml` groups the notes by. Without one it stops before anything is committed,
+ * `.github/notes.yml` groups the notes by. Without one it stops before anything is committed,
  * as CI would stop after. A site or a tool has no release notes, so it takes none.
  *
  * It first deletes the other local branches that merged, as `craftz gone` does ([gone.ts](gone.ts)).
@@ -120,7 +120,7 @@ export async function pr(args: string[]): Promise<void> {
     fail('Give a title: craftz pr "<title>" [--label <label>] [--body <text>] [--wait]');
   }
 
-  const NOTES = ".github/release.yml";
+  const NOTES = ".github/notes.yml";
   const known = existsSync(NOTES) ? labelsIn(readFileSync(NOTES, "utf8")) : [];
   const label = values.label;
   if (known.length && !label) fail(`Label this pull request with one of ${known.join(", ")}.`);
