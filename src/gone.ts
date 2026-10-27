@@ -17,7 +17,9 @@
  *
  * A squash merge puts a new commit on `main`, so git can't tell the branch merged, and it's
  * deleted with `--force`. When the branch you're on is one of them, it switches to `main` and
- * pulls first. `pr` leaves the branch you're on to its own rules ([pr.ts](pr.ts)).
+ * pulls first, and on `main` it pulls too. So `gone` before a change starts it from what's live,
+ * and that's when `AGENTS.md` says to run it. A `main` with commits GitHub's lacks is kept as it
+ * is. `pr` leaves the branch you're on to its own rules ([pr.ts](pr.ts)).
  *
  * Git won't delete a branch that another worktree has checked out, so that worktree is removed
  * first. One git won't remove, such as one with changes, is kept with its branch, and `gone` goes on.
@@ -98,7 +100,7 @@ function mergedIn(dir: string): Gone[] {
   );
 }
 
-/** Deletes each local branch that merged. With `others`, the branch you're on stays, and a
+/** Deletes each local branch that merged, and pulls `main` when it's on it. With `others`, the branch you're on stays, and a
  *  run that deletes nothing prints nothing. */
 export function gone({ others = false } = {}): void {
   const current = output("branch", "--show-current");
@@ -106,6 +108,12 @@ export function gone({ others = false } = {}): void {
   if (branches.some(({ branch }) => branch === current)) {
     run("switch", "--quiet", "main");
     run("pull", "--quiet", "--prune");
+  } else if (!others && current === "main") {
+    try {
+      outputIn(".", "pull", "--quiet", "--ff-only", "--prune");
+    } catch {
+      console.log("Kept main, with commits GitHub's lacks.");
+    }
   }
   const top = output("rev-parse", "--show-toplevel");
   for (const { branch, worktree } of branches) {
