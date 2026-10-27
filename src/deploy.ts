@@ -15,7 +15,9 @@
  * 1. The manifest: each file's path, size and hash. The hash is any 32 hex characters, and this
  *    is the first 32 of SHA-256, as Cloudflare's own example takes it, so Node's crypto does it.
  * 2. The upload session answers which files Cloudflare doesn't already have, in buckets, and
- *    only those are sent, base64-encoded, with the session's token.
+ *    only those are sent, base64-encoded, with the session's token. A bucket is tried up to five
+ *    times, as cf tries it, since a site that changes every page sends many.
+ *    ([A bucket's tries](#a-buckets-tries) says which failures are tried again.)
  * 3. The Worker is uploaded with no code, only the assets' completion token, how it serves them
  *    and the date `site()` set. That deploys it.
  * 4. Its domains are written, replacing any it had, as cf does in a build.
@@ -100,18 +102,61 @@ type Answer<T> = { success: boolean; errors?: { code: number; message: string }[
 
 type Init = { method?: string; body?: string | FormData; headers?: Record<string, string> };
 
+// A call Cloudflare answered with a failure, with the status and codes that say whose it was.
+class Failed extends Error {
+  readonly status: number;
+  readonly codes: number[];
+  constructor(message: string, status: number, codes: number[]) {
+    super(message);
+    this.status = status;
+    this.codes = codes;
+  }
+}
+
 // One call to Cloudflare's API, with a token, answering its result or failing with its errors.
 async function call<T>(api: Fetch, token: string, path: string, init: Init = {}) {
   const response = await api(`${API}${path}`, {
     ...init,
     headers: { Authorization: `Bearer ${token}`, ...init.headers },
   });
-  const answer = (await response.json()) as Answer<T>;
+  const answer = (await response.json().catch(() => ({ success: false }))) as Answer<T>;
   if (!answer.success) {
     const errors = answer.errors?.map((e) => `${e.message} [${e.code}]`).join("; ");
-    throw new Error(`${init.method ?? "GET"} ${path} failed: ${errors || response.status}`);
+    const codes = answer.errors?.map((e) => e.code) ?? [];
+    const message = `${init.method ?? "GET"} ${path} failed: ${errors || response.status}`;
+    throw new Failed(message, response.status, codes);
   }
   return answer.result;
+}
+
+/** @prose
+ * # A bucket's tries
+ *
+ * A bucket that fails on Cloudflare's side is tried again, and one that fails on ours isn't.
+ *
+ * Cloudflare's side is a 5xx answer, its unknown error `10013`, or a request that never got an
+ * answer. markz's deploy once failed on `10013` alone. A failure that says the request was wrong,
+ * like a bad token, fails at once, since it would fail the same way again. The pause doubles after
+ * each try, from a second, so five tries wait 15 seconds at most.
+ */
+const TRIES = 5;
+const UNKNOWN = 10013;
+const ours = (error: unknown): boolean =>
+  !(error instanceof Failed) || error.status >= 500 || error.codes.includes(UNKNOWN);
+
+/** Pauses between tries. The test passes one that doesn't wait. */
+export type Pause = (ms: number) => Promise<void>;
+const pause: Pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function tried<T>(attempt: () => Promise<T>, wait: Pause): Promise<T> {
+  for (let tries = 1; ; tries++) {
+    try {
+      return await attempt();
+    } catch (error) {
+      if (tries === TRIES || !ours(error)) throw error;
+      await wait(1000 * 2 ** (tries - 1));
+    }
+  }
 }
 
 const json = (method: string, body: unknown, headers: Record<string, string> = {}) => ({
@@ -131,7 +176,7 @@ async function account(api: Fetch, token: string): Promise<string> {
 }
 
 /** Uploads the site that `dir`'s `cloudflare.config.ts` names, and says what it did. */
-export async function deploy(dir: string, api: Fetch = fetch): Promise<string[]> {
+export async function deploy(dir: string, api: Fetch = fetch, wait = pause): Promise<string[]> {
   const token = process.env["CLOUDFLARE_API_TOKEN"];
   if (!token) throw new Error("CLOUDFLARE_API_TOKEN isn't set. Workers Builds sets it.");
   const url = pathToFileURL(join(dir, "cloudflare.config.ts")).href;
@@ -161,11 +206,10 @@ export async function deploy(dir: string, api: Fetch = fetch): Promise<string[]>
       const content = readFileSync(join(folder, file.path)).toString("base64");
       form.append(hash, new Blob([content], { type: contentType(file.path) }), hash);
     }
-    const uploaded = await call<{ jwt?: string }>(
-      api,
-      session.jwt,
-      `/accounts/${id}/workers/assets/upload?base64=true`,
-      { method: "POST", body: form },
+    const upload = `/accounts/${id}/workers/assets/upload?base64=true`;
+    const uploaded = await tried(
+      () => call<{ jwt?: string }>(api, session.jwt, upload, { method: "POST", body: form }),
+      wait,
     );
     completion = uploaded.jwt ?? completion;
   }

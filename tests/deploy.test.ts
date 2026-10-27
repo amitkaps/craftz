@@ -11,6 +11,11 @@ import { join } from "node:path";
 import { COMPATIBILITY_DATE } from "../src/runtime.ts";
 import { contentType, deploy, manifest } from "../src/deploy.ts";
 
+// The failure markz's deploy hit, and one that says the request was wrong.
+const UNKNOWN = { code: 10013, message: "An unknown error has occurred", status: 500 };
+const REFUSED = { code: 10000, message: "Authentication error", status: 403 };
+const now = async (): Promise<void> => {};
+
 function siteIn(): string {
   const dir = mkdtempSync(join(tmpdir(), "craftz-deploy-"));
   const cloudflare = join(import.meta.dirname, "../src/cloudflare.ts");
@@ -35,8 +40,9 @@ export default site({
 
 type Call = { method: string; path: string; body: unknown };
 
-// Cloudflare's API, which asks for every file in one bucket.
-function cloudflare(calls: Call[]): typeof fetch {
+// Cloudflare's API, which asks for every file in one bucket. The first `failing` uploads fail
+// with `failure`.
+function cloudflare(calls: Call[], failing = 0, failure = UNKNOWN): typeof fetch {
   return (async (url: string, init: RequestInit) => {
     const path = url.replace("https://api.cloudflare.com/client/v4", "");
     const body = init.body;
@@ -47,6 +53,10 @@ function cloudflare(calls: Call[]): typeof fetch {
           ? Object.fromEntries([...body.keys()].map((key) => [key, body.get(key)]))
           : body;
     calls.push({ method: init.method ?? "GET", path, body: read });
+    if (path.includes("/assets/upload") && failing-- > 0) {
+      const errors = [{ code: failure.code, message: failure.message }];
+      return new Response(JSON.stringify({ success: false, errors }), { status: failure.status });
+    }
     const hashes = Object.values(
       (read as { manifest?: Record<string, { hash: string }> }).manifest ?? {},
     ).map((file) => file.hash);
@@ -104,4 +114,23 @@ test("deploy uploads the files, then the Worker, its domains and its addresses",
     "on x.amitkaps.com",
     "workers.dev and preview URLs off",
   ]);
+});
+
+test("an upload Cloudflare fails on its side is tried again, up to five times", async () => {
+  process.env["CLOUDFLARE_API_TOKEN"] = "token";
+  process.env["CLOUDFLARE_ACCOUNT_ID"] = "account";
+  const uploads = (calls: Call[]) => calls.filter((call) => call.path.includes("/assets/upload"));
+  const twice: Call[] = [];
+  const waits: number[] = [];
+  await deploy(siteIn(), cloudflare(twice, 2), async (ms) => void waits.push(ms));
+  expect(uploads(twice)).toHaveLength(3);
+  expect(waits).toEqual([1000, 2000]);
+
+  const always: Call[] = [];
+  await expect(deploy(siteIn(), cloudflare(always, 9), now)).rejects.toThrow("[10013]");
+  expect(uploads(always)).toHaveLength(5);
+
+  const refused: Call[] = [];
+  await expect(deploy(siteIn(), cloudflare(refused, 1, REFUSED), now)).rejects.toThrow("[10000]");
+  expect(uploads(refused)).toHaveLength(1);
 });
