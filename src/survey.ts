@@ -68,6 +68,8 @@ const FILES = [
   ".github/workflows/ci.yml",
   ".github/workflows/release.yml",
   ".github/workflows/label.yml",
+  ".github/notes.yml",
+  // The notes' config before it moved to notes.yml, which `releases-files`' fix deletes.
   ".github/release.yml",
   ".github/dependabot.yml",
   "README.md",

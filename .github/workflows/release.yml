@@ -90,15 +90,20 @@ jobs:
           fi
 
       # Creating the release tags the commit. The notes are generated from the pull requests'
-      # labels (`.github/release.yml`). The description of the pull request that bumped the
-      # version, down to the first `---` line, goes above them, like what to change in a breaking
-      # release.
+      # labels, grouped as `.github/notes.yml` says. GitHub looks only for `.github/release.yml`,
+      # which reads as this workflow, so the notes are asked for with the config's path. The
+      # description of the pull request that bumped the version, down to the first `---` line, goes
+      # above them, like what to change in a breaking release.
       - name: Tag and publish release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           body="$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" --jq '.[0].body // ""')"
           notes="$(printf '%s\n' "$body" | sed '/^---[[:space:]]*$/,$d')"
+          generated="$(gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" \
+            -f tag_name="$TAG" -f target_commitish="$GITHUB_SHA" \
+            -f configuration_file_path=.github/notes.yml --jq .body)"
+          if [ -n "$notes" ]; then notes="$(printf '%s\n\n%s' "$notes" "$generated")"; else notes="$generated"; fi
           pre=""; case "$TAG" in *-*) pre=--prerelease;; esac
           gh release create "$TAG" ./*.tgz --title "$TAG" --target "$GITHUB_SHA" \
-            $pre --generate-notes --notes "$notes"
+            $pre --notes "$notes"

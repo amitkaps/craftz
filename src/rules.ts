@@ -553,8 +553,14 @@ const nav = (text: string): string[] =>
 const RELEASE_FILES = [
   ".github/workflows/release.yml",
   ".github/workflows/label.yml",
-  ".github/release.yml",
+  ".github/notes.yml",
 ];
+/** @prose
+ * The notes' config was once `.github/release.yml`, GitHub's default path, which read as the
+ * release workflow. It's `.github/notes.yml` now, so the fix deletes the old one.
+ */
+const OLD_NOTES = ".github/release.yml";
+const releaseFiles = owns("releases-files", RELEASE_FILES, (pkg) => !pkg.private);
 const labelNames = (
   JSON.parse(read(join(here, ".github", "labels.json"))) as { name: string }[]
 ).map((label) => label.name);
@@ -1168,7 +1174,21 @@ export const RULES: Rule[] = [
       },
     },
   },
-  owns("releases-files", RELEASE_FILES, (pkg) => !pkg.private),
+  {
+    id: "releases-files",
+    check: (repo) => {
+      const found = releaseFiles.check(repo);
+      if (repo.pkg.private || !repo.files[OLD_NOTES]) return found;
+      return drifted([...(found?.drift ?? []), `${OLD_NOTES} is left from before notes.yml`]);
+    },
+    fix: {
+      in: "files",
+      apply: (dir, std) => {
+        if (releaseFiles.fix?.in === "files") releaseFiles.fix.apply(dir, std);
+        if (!readPkg(dir).private) rmSync(join(dir, OLD_NOTES), { force: true });
+      },
+    },
+  },
   {
     id: "releases-packing",
     check: ({ pkg, deps }) => {
