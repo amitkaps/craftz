@@ -1,10 +1,12 @@
 # Plan
 
-craftz 0.9.0 is on npm, and its docs are live at [craftz.amitkaps.com](https://craftz.amitkaps.com). What each release changed is in its [notes on GitHub](https://github.com/amitkaps/craftz/releases). This plan says what's next, in order, and what works now. [The design](design.md) is the whole of what craftz becomes. Each repository moves to a release in its own pull request, which its own plan tracks.
+craftz 0.9.0 is on npm, and its docs are live at [craftz.amitkaps.com](https://craftz.amitkaps.com). What each release changed is in its [notes on GitHub](https://github.com/amitkaps/craftz/releases). This plan says what's next, in order, and what works now. [The design](design.md) is the whole of what craftz becomes.
+
+This is a package's plan, of what craftz itself does next. Each repository moves to a release in its own pull request, which its own plan tracks, so this plan never lists those moves.
 
 ## Next, in order
 
-- [ ] **Move every repository to 0.9.0.** `pnpm align` runs its upgrade, and [`docs-plan`](rules.md#docs-plan)'s fix turns each plan's steps into tasks.
+Nothing is queued.
 
 ## Where it is
 
