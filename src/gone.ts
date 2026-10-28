@@ -24,14 +24,26 @@
  * Git won't delete a branch that another worktree has checked out, so that worktree is removed
  * first. One git won't remove, such as one with changes, is kept with its branch, and `gone` goes on.
  *
+ * Last, it writes `outline.md` ([the outline](#the-outline)).
+ *
  * # Catching up a checkout
  *
  * `pnpm align` merges in fresh clones, so the checkouts beside craftz are left on an old `main`,
  * or on a branch that merged. Once its pull requests merge, `catchUp` brings each one to `main`,
  * pulled, with its merged branches deleted. A checkout with uncommitted changes is kept as it is,
  * as is one on a branch that hasn't merged, or a `main` with commits GitHub's lacks.
+ *
+ * # The outline
+ *
+ * `AGENTS.md` imports `outline.md`, which an agent reads when its session starts. The file is
+ * ignored by git, so pulling `main` leaves it as the last `verify` wrote it, without the files
+ * that merged since. So `gone`, `pr --wait` and `catchUp` write it once they're on `main`.
+ * A repository without prose installed has no outline, and is left alone. A failed outline
+ * doesn't fail the command, since the branches are already where they should be.
  */
 import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 
 const run = (...args: string[]): void => {
   execFileSync("git", args, { stdio: "inherit" });
@@ -43,6 +55,20 @@ const outputIn = (dir: string, ...args: string[]): string =>
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
   }).trim();
+
+/** Writes `outline.md` in the checkout at `dir` with the prose it installs, if it installs prose. */
+export function writeOutline(dir = "."): void {
+  const top = outputIn(dir, "rev-parse", "--show-toplevel");
+  if (!existsSync(join(top, "node_modules", ".bin", "prose"))) return;
+  try {
+    execFileSync("pnpm", ["exec", "prose", "outline"], {
+      cwd: top,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+  } catch {
+    console.log("Kept outline.md as it was, since prose outline failed.");
+  }
+}
 
 /** A merged branch, and the worktree that has it checked out, if one does. */
 export interface Gone {
@@ -128,6 +154,7 @@ export function gone({ others = false } = {}): void {
     run("branch", "--delete", "--force", branch);
   }
   if (!branches.length && !others) console.log("No merged branches to delete.");
+  if (!others) writeOutline();
 }
 
 /** What `catchUp` does with a checkout: why it's kept as it is, or `undefined` to bring it to
@@ -164,6 +191,7 @@ export function catchUp(dir: string): string {
       // A worktree with changes keeps its branch, as `gone` keeps it.
     }
   }
+  writeOutline(dir);
   const branches = deleted === 1 ? "1 merged branch" : `${deleted} merged branches`;
   return deleted ? `on main, pulled, ${branches} deleted` : "on main, pulled";
 }

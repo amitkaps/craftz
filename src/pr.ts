@@ -24,7 +24,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
-import { gone } from "./gone.ts";
+import { gone, writeOutline } from "./gone.ts";
 
 function fail(message: string): never {
   console.error(message);
@@ -277,6 +277,7 @@ function mainElsewhere(): string | undefined {
  *
  * Then `--wait` switches to `main` and pulls. In a worktree, `main` is checked out in
  * another, so it switches to `origin/main` instead, detached, and the branch goes either way.
+ * Last, it writes `outline.md` from what it's on, as `gone` does ([the outline](gone.ts#the-outline)).
  */
 /** A check on a pull request's head commit, as `gh pr view` lists it. */
 export type Check = {
@@ -377,6 +378,7 @@ async function merged(branch: string, url: string): Promise<void> {
     run("git", "pull", "--quiet", "--prune");
   }
   run("git", "branch", "--quiet", "--delete", "--force", branch);
+  writeOutline();
   console.log(
     elsewhere
       ? `Merged, and on origin/main, since main is in ${elsewhere}.`

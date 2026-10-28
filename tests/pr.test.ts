@@ -3,12 +3,21 @@
  *
  * Holds `craftz pr` and `craftz gone` to what they read from git and the notes config, without
  * running git. The fix that moves a repository onto them is tested too, since it deletes files.
+ * Writing the outline runs in a new repository, once with prose installed and once without.
  */
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "vite-plus/test";
-import { goneIn, keptBecause } from "../src/gone.ts";
+import { goneIn, keptBecause, writeOutline } from "../src/gone.ts";
 import { branchOf, joined, labelsIn, startOn, timingOf, titled, took } from "../src/pr.ts";
 import { here } from "../src/reference.ts";
 import { RULES } from "../src/rules.ts";
@@ -38,6 +47,20 @@ test("a branch whose last commit merged is deleted, with or without an upstream"
   ].join("\n");
   const merged = (commit: string) => ["m1", "b1", "c1"].includes(commit);
   expect(goneIn(refs, merged)).toEqual([{ branch: "checkout" }, { branch: "squashed" }]);
+});
+
+test("the outline is written only where prose is installed", () => {
+  const dir = mkdtempSync(join(tmpdir(), "craftz-outline-"));
+  execFileSync("git", ["init", "--quiet"], { cwd: dir });
+  writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "x" }));
+  writeOutline(dir);
+  expect(existsSync(join(dir, "outline.md"))).toBe(false);
+  const bin = join(dir, "node_modules", ".bin");
+  mkdirSync(bin, { recursive: true });
+  writeFileSync(join(bin, "prose"), '#!/bin/sh\necho "# Outline" > outline.md\n');
+  chmodSync(join(bin, "prose"), 0o755);
+  writeOutline(dir);
+  expect(readFileSync(join(dir, "outline.md"), "utf8")).toBe("# Outline\n");
 });
 
 test("the fix runs the commands and deletes the copied scripts", () => {
