@@ -465,19 +465,48 @@ test("a chained verify moves to the all task, and the fix moves it once", () => 
   expect(drift()).toEqual([]);
 });
 
-test("a verify with a step of its own is moved by hand", () => {
+// A verify the fix moves as far as it can, with what the check says of the steps it leaves.
+function leftByHand(verify: string) {
   const dir = mkdtempSync(join(tmpdir(), "craftz-verify-"));
-  const verify = chained(["pnpm size"]);
   writeFileSync(
     join(dir, "package.json"),
     JSON.stringify({ scripts: { verify }, devDependencies: { "vite-plus": "0.0.0" } }),
   );
   writeFileSync(join(dir, "vite.config.ts"), VITE);
   const rule = RULES.find((r) => r.id === "scripts-verify");
-  if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
+  for (let i = 0; i < 2; i++) if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
   const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as Pkg;
-  expect(pkg.scripts?.["verify"]).toBe(verify);
-  expect(readFileSync(join(dir, "vite.config.ts"), "utf8")).toBe(VITE);
+  const vite = readFileSync(join(dir, "vite.config.ts"), "utf8");
+  const drift = rule?.check({
+    pkg,
+    files: { "vite.config.ts": vite },
+    vitePlus: "0.0.0",
+  } as unknown as Repo)?.drift;
+  return { scripts: pkg.scripts, vite, drift };
+}
+
+test("a verify with a step of its own moves as far as it can, and names the step", () => {
+  const { scripts, vite, drift } = leftByHand(chained(["pnpm size"]));
+  const verify = "pnpm check && pnpm test && pnpm build && pnpm size && pnpm site";
+  expect(scripts).toEqual({ site: "prose build", verify });
+  expect(vite).toBe(VITE);
+  expect(drift).toEqual([
+    `verify is ${verify}, not vp run --log grouped all`,
+    "pnpm size needs a task in vite.config.ts that waits for what it needs",
+  ]);
+});
+
+test("a step that ran after one it may need is named, and left in the chain", () => {
+  const { scripts, vite, drift } = leftByHand(
+    "pnpm check && pnpm prose check && pnpm craftz check && pnpm build && pnpm test",
+  );
+  const verify = "pnpm check && pnpm build && pnpm test";
+  expect(scripts).toEqual({ verify });
+  expect(vite).toBe(VITE);
+  expect(drift).toEqual([
+    `verify is ${verify}, not vp run --log grouped all`,
+    "pnpm test runs after pnpm build, so it's a task in vite.config.ts if it needs it",
+  ]);
 });
 
 test(".gitignore lists outline.md, and the fix adds it once", () => {

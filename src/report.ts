@@ -9,7 +9,11 @@
  * step's own work, not the wait for another repository's turn to verify. Each version that moved
  * is one line, with the repositories it moved in, since a release moves most of them alike. Then
  * the files a fix brought, what's left by hand, and what failed, which print `none` when empty,
- * since those are what a run is read for. What's left for review, the settings and the pull
+ * since those are what a run is read for.
+ *
+ * A repository left by hand or failed gets no pull request, so nothing in it moved, and its
+ * versions and files aren't listed. Its own `craftz upgrade` does the fix again, before the steps
+ * that are left. What's left for review, the settings and the pull
  * requests print only when there are any. A last line counts the outcomes.
  */
 
@@ -79,8 +83,9 @@ function section(title: string, rows: Row[], of: (row: Row) => string[], always:
 
 /** The report at the end of a run. */
 export function report(rows: Row[]): string[] {
+  const kept = rows.filter((r) => r.status !== "left by hand" && r.status !== "failed");
   const moved = new Map<string, string[]>();
-  for (const { repo, moved: moves } of rows) {
+  for (const { repo, moved: moves } of kept) {
     for (const move of moves) moved.set(arrow(move), [...(moved.get(arrow(move)) ?? []), repo]);
   }
   const count = (status: Row["status"]) => rows.filter((r) => r.status === status).length;
@@ -97,7 +102,7 @@ export function report(rows: Row[]): string[] {
     moved.size
       ? ["Moved", ...pad([...moved].map(([move, repos]) => [move, repos.join(", ")]))]
       : ["Moved: none"],
-    section("From craftz", rows, (r) => r.files, true),
+    section("From craftz", kept, (r) => r.files, true),
     section("Left for review", rows, (r) => r.review, false),
     section("By hand", rows, (r) => r.byHand, true),
     section("Failed", rows, (r) => (r.failed ? [r.failed] : []), true),

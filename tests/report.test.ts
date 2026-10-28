@@ -4,6 +4,9 @@
  * A run's rows stand in for one, like the candidate run before 0.6.0, where one repository was
  * in line and the rest moved alike. A version prints once with every repository it moved in, and a
  * repository that's left by hand or failed shows `✗` in its step and is counted.
+ *
+ * Nothing in such a repository moved, so its versions and files aren't listed, as in the run for 0.11.0, which listed five
+ * repositories under Moved that no pull request moved.
  */
 import { expect, test } from "vite-plus/test";
 import { moveLine, report, row, type Row } from "../src/report.ts";
@@ -45,7 +48,7 @@ test("a version prints once, with every repository it moved in", () => {
   );
 });
 
-test("what's left by hand and what failed are listed and counted", () => {
+test("what's left by hand and what failed are listed and counted, and moved nothing", () => {
   const rows: Row[] = [
     {
       ...row("pagez"),
@@ -59,11 +62,9 @@ test("what's left by hand and what failed are listed and counted", () => {
   ];
   expect(report(rows).slice(4).join("\n")).toBe(
     [
-      "Moved",
-      "  @amitkaps/prose 0.8.0 → 0.9.0   pagez",
+      "Moved: none",
       "",
-      "From craftz",
-      "  pagez   .github/workflows/ci.yml from craftz",
+      "From craftz: none",
       "",
       "By hand",
       "  pagez   versions-markz: 0.7.0, not 0.8.0",

@@ -613,15 +613,39 @@ const PROSE = "@amitkaps/prose";
 // can check, so its prose check is a task of its own.
 const checkedBy = (pkg: Pkg): string[] =>
   pkg.name === PROSE ? ["pnpm craftz check"] : ["pnpm prose check", "pnpm craftz check"];
-// The scripts `all` runs, of those the repository has. craftz's tests pack it, which builds it.
+// The scripts `all` runs, of those the repository has.
 const allFor = (pkg: Pkg): string[] =>
-  ["check", "test", "build", "site"].filter(
-    (name) => pkg.scripts?.[name] && !(name === "build" && ownCraftz(pkg)),
-  );
+  ["check", "test", "build", "site"].filter((name) => pkg.scripts?.[name]);
 // The steps a chained verify ran, in their order, and the script each is in `all`. Those in
-// `check` now, and the outline, which `pr` and `gone` write, are dropped.
-const CHAINED = ["pnpm check", "pnpm test", "pnpm build", "pnpm prose build"];
+// `check` now, and the outline, which `pr` and `gone` write, are dropped. `prose build` is `site`.
+const CHAINED = ["pnpm check", "pnpm test", "pnpm build", "pnpm site"];
 const DROPPED = ["pnpm prose check", "pnpm prose outline", "pnpm craftz check"];
+
+/** @prose
+ * # A chained verify
+ *
+ * A `verify` chained with `&&` ran each step after the last, so a step may need one before it.
+ * The fix moves what it can know is safe. It drops the steps `check` runs now, and the outline,
+ * and makes `prose build` the `site` script. When every step left is a standard one, in `all`'s
+ * order, the chain moves to `all`.
+ *
+ * Otherwise the chain stays, shorter, and the check names each step that's left. That's a step of
+ * the repository's own, or a standard one that ran after a step it may need, like a test that
+ * reads the build. Each becomes a task in `vite.config.ts` that waits for what it needs, by hand,
+ * since only the repository knows what that is.
+ */
+function chain(verify: string): { kept: string[]; own: string[]; late: [string, string][] } {
+  const kept = steps(verify)
+    .filter((step) => !DROPPED.includes(step))
+    .map((step) => (step === "pnpm prose build" ? "pnpm site" : step));
+  const own = kept.filter((step) => !CHAINED.includes(step));
+  const standard = kept.filter((step) => CHAINED.includes(step));
+  const late = standard.flatMap((step, n): [string, string][] => {
+    const before = standard.slice(0, n).find((it) => CHAINED.indexOf(it) > CHAINED.indexOf(step));
+    return before ? [[step, before]] : [];
+  });
+  return { kept, own, late };
+}
 
 const onVitePlus = (pkg: Pkg): boolean =>
   Boolean(pkg.dependencies?.["vite-plus"] ?? pkg.devDependencies?.["vite-plus"]);
@@ -929,7 +953,20 @@ export const RULES: Rule[] = [
       const verify = pkg.scripts?.verify;
       if (!verify || !vitePlus) return undefined;
       const want = standardScripts.verify;
-      if (verify !== want) return drifted([`verify is ${verify}, not ${want}`]);
+      if (verify !== want) {
+        // prose's chain is its own, since its prose check is a task of its own.
+        const { own, late } = pkg.name === PROSE ? { own: [], late: [] } : chain(verify);
+        return drifted([
+          `verify is ${verify}, not ${want}`,
+          ...own.map(
+            (step) => `${step} needs a task in vite.config.ts that waits for what it needs`,
+          ),
+          ...late.map(
+            ([step, before]) =>
+              `${step} runs after ${before}, so it's a task in vite.config.ts if it needs it`,
+          ),
+        ]);
+      }
       const all = allOf(files["vite.config.ts"] ?? "");
       if (!all) return drifted(["vite.config.ts has no all task"]);
       return drifted(
@@ -940,26 +977,28 @@ export const RULES: Rule[] = [
     },
     fix: {
       in: "files",
-      // A verify that chains the standard steps in their order moves to `all`. One with steps of
-      // its own, or in another order, may need one to finish before the next, so it's by hand.
       apply: (dir, std) => {
         const pkg = readPkg(dir);
         const verify = pkg.scripts?.verify;
         const want = readPkg(std).scripts?.verify;
         if (!verify || !want || verify === want || !onVitePlus(pkg) || pkg.name === PROSE) return;
-        const kept = steps(verify).filter((step) => !DROPPED.includes(step));
-        const at = kept.map((step) => CHAINED.indexOf(step));
-        if (at.some((i, n) => i < 0 || (n > 0 && i <= at[n - 1]!))) return;
+        const { kept, own, late } = chain(verify);
+        const site: Record<string, string> = steps(verify).includes("pnpm prose build")
+          ? { site: standardScripts.site ?? "prose build" }
+          : {};
+        if (own.length || late.length) {
+          pkg.scripts = { ...pkg.scripts, ...site, verify: kept.join(" && ") };
+          return writePkg(dir, pkg);
+        }
         const file = join(dir, "vite.config.ts");
         const vite = read(file);
         if (!vite) return;
-        const all = kept.map((step) => (step === "pnpm prose build" ? "site" : step.slice(5)));
-        const edited = withVerify(vite, all);
+        const edited = withVerify(
+          vite,
+          kept.map((step) => step.slice(5)),
+        );
         if (edited === vite) return;
         writeFileSync(file, edited);
-        const site: Record<string, string> = all.includes("site")
-          ? { site: standardScripts.site ?? "prose build" }
-          : {};
         pkg.scripts = { ...pkg.scripts, ...site, verify: want };
         writePkg(dir, pkg);
       },

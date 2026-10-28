@@ -6,7 +6,9 @@ This is a package's plan, of what craftz itself does next. Each repository moves
 
 ## Next, in order
 
-Nothing is next yet.
+- [x] **align reports only what moved.** A repository left by hand or failed gets no pull request, so its versions and files stay where they were. The report lists them under Moved and From craftz only for a repository whose pull request opened.
+- [x] **craftz's `all` runs `build`.** craftz's tests pack from a build of their own, in a folder of their own, so `build` can run beside them, and [`scripts-verify`](rules.md#scripts-verify) has no case for craftz.
+- [x] **A verify with steps of its own moves as far as it can.** The fix drops the steps `check` now runs and the outline, and makes `prose build` the `site` script, even when a step is left. The check names each step that's left, and why: one of the repository's own, or one that ran after a step it may need.
 
 ## Where it is
 
