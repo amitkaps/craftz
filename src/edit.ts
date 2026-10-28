@@ -125,3 +125,38 @@ export function withoutCloudflare(vite: string, builds: boolean): string {
     .replace(/,?\s*cloudflare\(\{[^}]*\}\)/, "");
   return builds ? without : without.replace(PUBLIC_DIR, "");
 }
+
+/** @prose
+ * # Running verify
+ *
+ * `verify` is `vp run --log grouped all`, and `all` is a task in `vite.config.ts` that runs the
+ * repository's scripts side by side, one for each entry in its `dependsOn`.
+ *
+ * `scripts-verify`'s fix moves a `verify` that chained them with `&&` into that list, and adds
+ * the `run` block before the config's last line. A config that already has a `run` block comes
+ * back unchanged, so the task is added by hand.
+ *
+ * The cache is off. A cached step replays its output without running, so a check could pass on
+ * files it never read, and `verify` is what CI, `pr` and a release trust.
+ */
+
+/** The scripts the config's `all` task depends on, or `undefined` without one. */
+export function allOf(vite: string): string[] | undefined {
+  const list = /\ball:\s*\{[^}]*?\bdependsOn:\s*\[([^\]]*)\]/.exec(vite)?.[1];
+  return list === undefined ? undefined : [...list.matchAll(/"([^"]+)"/g)].map((m) => m[1] ?? "");
+}
+
+/** The `run` block whose `all` task runs these scripts, as a config's key, indented. */
+export const runBlock = (scripts: string[]): string => `  run: {
+    cache: false,
+    tasks: {
+      all: { command: "true", dependsOn: [${scripts.map((it) => JSON.stringify(it)).join(", ")}] },
+    },
+  },
+`;
+
+/** A Vite config whose `all` task runs these scripts, added before its last line. */
+export function withVerify(vite: string, scripts: string[]): string {
+  if (/^\s*run:\s*\{/m.test(vite)) return vite;
+  return vite.replace(/,\n\}\);\n?$/, `,\n\n${runBlock(scripts)}});\n`);
+}

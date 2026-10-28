@@ -36,8 +36,9 @@
  * # The outline
  *
  * `AGENTS.md` imports `outline.md`, which an agent reads when its session starts. The file is
- * ignored by git, so pulling `main` leaves it as the last `verify` wrote it, without the files
- * that merged since. So `gone`, `pr --wait` and `catchUp` write it once they're on `main`.
+ * ignored by git, and `verify` only checks, so `pnpm outline` writes it, and so does every
+ * command that moves a checkout. `pr` writes it before `verify`, and `gone`, `pr --wait` and
+ * `catchUp` write it once they're on `main`, with the files that merged.
  * A repository without prose installed has no outline, and is left alone. A failed outline
  * doesn't fail the command, since the branches are already where they should be.
  */

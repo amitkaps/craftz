@@ -2,8 +2,8 @@
  * # New
  *
  * Starts a repository that follows the rules from its first commit. It writes the folder in the
- * current one, formatted, then installs, makes the first commit and runs `verify`, so what it
- * hands over already passes.
+ * current one, formatted, then installs, writes the outline, makes the first commit and runs
+ * `verify`, so what it hands over already passes.
  *
  * The commit comes first, since a prose site builds from one. It formats with oxfmt's own
  * `format`, with the options `craftz()` sets, so nothing about the format is copied here.
@@ -39,6 +39,8 @@ import { dirname, join } from "node:path";
 import { type Shape, fixFiles, listed, shipping } from "./rules.ts";
 import { CRAFTZ, OWNER, VERSIONS, here, root } from "./reference.ts";
 import { writeSettings } from "./apply.ts";
+import { runBlock } from "./edit.ts";
+import { writeOutline } from "./gone.ts";
 import { craftz } from "./index.ts";
 import { type FormatConfig, format } from "vite-plus/fmt";
 
@@ -72,17 +74,10 @@ async function packageJson(name: string, shape: Shape, description: string): Pro
   };
 
   if (!shape.package) {
-    // The reference's verify also builds its prose site, which a new site doesn't have.
+    // The reference's site script builds its prose site, which a new site doesn't have.
     const built = shape.site
-      ? {
-          ...scripts("dev", "build", "preview", "check", "test"),
-          verify: "pnpm check && pnpm prose check && pnpm craftz check && pnpm test && pnpm build",
-          ...scripts("ship"),
-        }
-      : {
-          ...scripts("check", "test"),
-          verify: "pnpm check && pnpm prose check && pnpm craftz check && pnpm test",
-        };
+      ? scripts("dev", "build", "preview", "check", "test", "verify", "ship")
+      : scripts("check", "test", "verify");
     return JSON.stringify(
       { name, private: true, description, type: "module", scripts: built, devDependencies },
       null,
@@ -106,10 +101,8 @@ async function packageJson(name: string, shape: Shape, description: string): Pro
       scripts: {
         dev: "vp pack --watch",
         build: "vp pack",
-        ...scripts("check"),
-        test: "vp test --run",
-        verify: `pnpm check && pnpm prose check && pnpm craftz check && pnpm test && pnpm build${shape.site ? " && pnpm prose build" : ""}`,
-        ...(shape.site ? scripts("ship") : {}),
+        ...scripts("check", "test", "verify"),
+        ...(shape.site ? scripts("site", "ship") : {}),
       },
       devDependencies,
     },
@@ -140,6 +133,15 @@ function wrapped(text: string): string[] {
   }
   return lines;
 }
+
+// The scripts `verify` runs side by side: a tool has nothing to build, and a package's site is
+// the one `prose build` writes.
+const verified = (shape: Shape): string[] => [
+  "check",
+  "test",
+  ...(shape.package || shape.site ? ["build"] : []),
+  ...(shape.package && shape.site ? ["site"] : []),
+];
 
 function viteConfig(shape: Shape): string {
   const what = listed([
@@ -184,7 +186,7 @@ import { defineConfig } from "vite-plus";
 import { craftz } from "@amitkaps/craftz";
 
 export default defineConfig({
-${[plugins, ...(shape.package ? [pack] : [])].join("\n")}
+${[plugins, ...(shape.package ? [pack] : []), runBlock(verified(shape))].join("\n")}
   test: {
     expect: { requireAssertions: true },
     include: ["tests/**/*.test.ts"],
@@ -382,6 +384,7 @@ export async function start(argv: string[]): Promise<void> {
     execFileSync(command, a, { cwd: dir, stdio: "inherit" });
   };
   run("pnpm", "install");
+  writeOutline(dir);
   run("git", "add", "-A");
   run("git", "commit", "-q", "-m", `Start ${name} from craftz's rules`);
   run("pnpm", "run", "verify");
