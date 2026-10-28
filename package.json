@@ -19,10 +19,6 @@
   ],
   "type": "module",
   "exports": {
-    "./cloudflare": {
-      "types": "./dist/cloudflare.d.ts",
-      "default": "./dist/cloudflare.js"
-    },
     "./package.json": "./package.json"
   },
   "publishConfig": {

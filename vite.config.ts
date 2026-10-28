@@ -36,7 +36,7 @@ export default defineConfig({
   },
 
   pack: {
-    entry: ["src/cloudflare.ts", "src/cli.ts"],
+    entry: ["src/cli.ts"],
     format: ["esm"],
     platform: "node",
     // Oxc writes the types, so there's no typescript dependency, and fails on an export

@@ -19,9 +19,12 @@
  *    times, as cf tries it, since a site that changes every page sends many.
  *    ([A bucket's tries](#a-buckets-tries) says which failures are tried again.)
  * 3. The Worker is uploaded with no code, only the assets' completion token, how it serves them
- *    and the date `site()` set. That deploys it.
+ *    and its compatibility date. That deploys it.
  * 4. Its domains are written, replacing any it had, as cf does in a build.
- * 5. `workers.dev` and preview URLs are turned off, as `site()` sets.
+ * 5. `workers.dev` and preview URLs are turned off, as the config says.
+ *
+ * The config is parsed, not run, as the rules read it ([config.ts](config.ts)), so it imports
+ * nothing and installs nothing. A value it works out, rather than writes, isn't read.
  *
  * `_headers` and `_redirects` at the folder's root go with the Worker, not as files, as cf sends
  * them. A `.assetsignore` fails the deploy, since nothing here reads its patterns.
@@ -29,9 +32,20 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { extname, join, sep } from "node:path";
-import { pathToFileURL } from "node:url";
-import type { Set, Site } from "./cloudflare.ts";
+import { valueAt } from "./config.ts";
 import { OWNER } from "./reference.ts";
+
+// What a static site's `cloudflare.config.ts` writes under `worker`, as cf's config names it.
+type Site = {
+  name: string;
+  domains: string[];
+  compatibilityDate: string;
+  assets: {
+    directory: string;
+    notFoundHandling?: string;
+    htmlHandling?: string;
+  };
+};
 
 const API = "https://api.cloudflare.com/client/v4";
 // Cloudflare's limit on one file.
@@ -179,9 +193,15 @@ async function account(api: Fetch, token: string): Promise<string> {
 export async function deploy(dir: string, api: Fetch = fetch, wait = pause): Promise<string[]> {
   const token = process.env["CLOUDFLARE_API_TOKEN"];
   if (!token) throw new Error("CLOUDFLARE_API_TOKEN isn't set. Workers Builds sets it.");
-  const url = pathToFileURL(join(dir, "cloudflare.config.ts")).href;
-  const config = (await import(url)) as { default: Site & Set };
-  const { name, domains, assets, compatibilityDate } = config.default;
+  const config = join(dir, "cloudflare.config.ts");
+  const { name, domains, assets, compatibilityDate } = (valueAt(readFileSync(config, "utf8"), [
+    "worker",
+  ]) ?? {}) as Partial<Site>;
+  if (!name || !domains || !assets?.directory || !compatibilityDate) {
+    throw new Error(
+      "cloudflare.config.ts doesn't write out its worker's name, domains, assets.directory and compatibilityDate.",
+    );
+  }
   const folder = join(dir, assets.directory);
   if (!existsSync(folder)) throw new Error(`${assets.directory} isn't built. verify builds it.`);
 
