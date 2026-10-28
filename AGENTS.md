@@ -20,7 +20,7 @@ Explanations go in `@prose` comments, and every Markdown file is prose too.
 
 ## Outline
 
-Every file in this repository with its summary, which `pnpm run verify` writes. Run `pnpm prose outline` when it's missing.
+Every file in this repository with its summary, which `pnpm pr` and `pnpm gone` write. Run `pnpm outline` when it's missing.
 
 @outline.md
 

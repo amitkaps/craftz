@@ -28,7 +28,7 @@ import {
   standard,
   versionsIn,
 } from "./reference.ts";
-import { PLUGIN, withCraftz, withSite, withoutCloudflare } from "./edit.ts";
+import { PLUGIN, allOf, withCraftz, withSite, withVerify, withoutCloudflare } from "./edit.ts";
 import { rulesetFor, writeLabels, writeRuleset } from "./settings.ts";
 import { BROWSERS } from "./pinned.ts";
 import { stated } from "./stated.ts";
@@ -66,6 +66,8 @@ export const SHARED = [
   "verify",
   "ship",
   "prose",
+  "outline",
+  "site",
   "pr",
   "gone",
 ];
@@ -573,10 +575,21 @@ function setScript(dir: string, std: string, name: string, applies: (pkg: Pkg) =
   pkg.scripts = { ...pkg.scripts, [name]: want };
   writePkg(dir, pkg);
 }
-// What every verify runs, as whole steps between `&&`.
-const VERIFIED = ["pnpm prose check", "pnpm prose outline", "pnpm craftz check"];
-const runs = (verify: string, step: string): boolean =>
-  verify.split("&&").some((it) => it.trim() === step);
+const steps = (script: string): string[] => script.split("&&").map((it) => it.trim());
+const PROSE = "@amitkaps/prose";
+// What `check` runs after `vp check`. prose's own repository builds its command line before it
+// can check, so its prose check is a task of its own.
+const checkedBy = (pkg: Pkg): string[] =>
+  pkg.name === PROSE ? ["pnpm craftz check"] : ["pnpm prose check", "pnpm craftz check"];
+// The scripts `all` runs, of those the repository has. craftz's tests pack it, which builds it.
+const allFor = (pkg: Pkg): string[] =>
+  ["check", "test", "build", "site"].filter(
+    (name) => pkg.scripts?.[name] && !(name === "build" && ownCraftz(pkg)),
+  );
+// The steps a chained verify ran, in their order, and the script each is in `all`. Those in
+// `check` now, and the outline, which `pr` and `gone` write, are dropped.
+const CHAINED = ["pnpm check", "pnpm test", "pnpm build", "pnpm prose build"];
+const DROPPED = ["pnpm prose check", "pnpm prose outline", "pnpm craftz check"];
 
 const onVitePlus = (pkg: Pkg): boolean =>
   Boolean(pkg.dependencies?.["vite-plus"] ?? pkg.devDependencies?.["vite-plus"]);
@@ -638,7 +651,8 @@ function folderOf(dir: string): string | undefined {
   const vite = read(join(dir, "vite.config.ts")) ?? "";
   const named = /^\s*publicDir:\s*"([^"]+)"/m.exec(vite)?.[1];
   if (named) return named;
-  return /pnpm prose build/.test(readPkg(dir).scripts?.verify ?? "") ? ".prose" : undefined;
+  const scripts = readPkg(dir).scripts ?? {};
+  return /prose build/.test(scripts.site ?? scripts.verify ?? "") ? ".prose" : undefined;
 }
 
 export const RULES: Rule[] = [
@@ -841,7 +855,24 @@ export const RULES: Rule[] = [
     check: ({ pkg, vitePlus }) => {
       const check = pkg.scripts?.check;
       if (!vitePlus || !check) return undefined;
-      return drifted(/(^|&& )vp check( &&|$)/.test(check) ? [] : ["check doesn't run vp check"]);
+      return drifted(
+        ["vp check", ...checkedBy(pkg)]
+          .filter((step) => !steps(check).includes(step))
+          .map((step) => `check doesn't run ${step}`),
+      );
+    },
+    fix: {
+      in: "files",
+      // Each missing step but vp check goes last, after a framework's own checker.
+      apply: (dir) => {
+        const pkg = readPkg(dir);
+        const check = pkg.scripts?.check;
+        if (!check || !onVitePlus(pkg)) return;
+        const missing = checkedBy(pkg).filter((step) => !steps(check).includes(step));
+        if (!missing.length) return;
+        pkg.scripts = { ...pkg.scripts, check: [check, ...missing].join(" && ") };
+        writePkg(dir, pkg);
+      },
     },
   },
   {
@@ -868,28 +899,42 @@ export const RULES: Rule[] = [
   },
   {
     id: "scripts-verify",
-    check: ({ pkg }) => {
+    check: ({ pkg, files, vitePlus }) => {
       const verify = pkg.scripts?.verify;
-      if (!verify) return undefined;
+      if (!verify || !vitePlus) return undefined;
+      const want = standardScripts.verify;
+      if (verify !== want) return drifted([`verify is ${verify}, not ${want}`]);
+      const all = allOf(files["vite.config.ts"] ?? "");
+      if (!all) return drifted(["vite.config.ts has no all task"]);
       return drifted(
-        VERIFIED.filter((step) => !runs(verify, step)).map((step) => `verify doesn't run ${step}`),
+        allFor(pkg)
+          .filter((name) => !all.includes(name))
+          .map((name) => `all doesn't run ${name}`),
       );
     },
     fix: {
       in: "files",
-      // Each missing step goes after the one before it in VERIFIED, and a verify without prose
-      // check is fixed by hand.
-      apply: (dir) => {
+      // A verify that chains the standard steps in their order moves to `all`. One with steps of
+      // its own, or in another order, may need one to finish before the next, so it's by hand.
+      apply: (dir, std) => {
         const pkg = readPkg(dir);
         const verify = pkg.scripts?.verify;
-        if (!verify || !runs(verify, "pnpm prose check")) return;
-        const steps = verify.split("&&").map((it) => it.trim());
-        const missing = VERIFIED.filter((step) => !steps.includes(step));
-        if (missing.length === 0) return;
-        for (const step of missing) {
-          steps.splice(steps.indexOf(VERIFIED[VERIFIED.indexOf(step) - 1]!) + 1, 0, step);
-        }
-        pkg.scripts = { ...pkg.scripts, verify: steps.join(" && ") };
+        const want = readPkg(std).scripts?.verify;
+        if (!verify || !want || verify === want || !onVitePlus(pkg) || pkg.name === PROSE) return;
+        const kept = steps(verify).filter((step) => !DROPPED.includes(step));
+        const at = kept.map((step) => CHAINED.indexOf(step));
+        if (at.some((i, n) => i < 0 || (n > 0 && i <= at[n - 1]!))) return;
+        const file = join(dir, "vite.config.ts");
+        const vite = read(file);
+        if (!vite) return;
+        const all = kept.map((step) => (step === "pnpm prose build" ? "site" : step.slice(5)));
+        const edited = withVerify(vite, all);
+        if (edited === vite) return;
+        writeFileSync(file, edited);
+        const site: Record<string, string> = all.includes("site")
+          ? { site: standardScripts.site ?? "prose build" }
+          : {};
+        pkg.scripts = { ...pkg.scripts, ...site, verify: want };
         writePkg(dir, pkg);
       },
     },
@@ -899,12 +944,21 @@ export const RULES: Rule[] = [
     check: ({ pkg }) => {
       const prose = pkg.scripts?.prose;
       // prose's own repository runs its command line from source.
-      if (!prose || pkg.name === "@amitkaps/prose") return undefined;
-      return drifted(prose === "prose" ? [] : [`prose is ${prose}, not prose`]);
+      if (!prose || pkg.name === PROSE) return undefined;
+      const outline = pkg.scripts?.outline;
+      return drifted([
+        ...(prose === "prose" ? [] : [`prose is ${prose}, not prose`]),
+        ...(outline === standardScripts.outline
+          ? []
+          : [`outline is ${outline ?? "missing"}, not ${standardScripts.outline}`]),
+      ]);
     },
     fix: {
       in: "files",
-      apply: (dir, std) => setScript(dir, std, "prose", (pkg) => pkg.name !== "@amitkaps/prose"),
+      apply: (dir, std) => {
+        for (const name of ["prose", "outline"])
+          setScript(dir, std, name, (pkg) => pkg.name !== PROSE);
+      },
     },
   },
   {

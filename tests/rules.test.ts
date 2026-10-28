@@ -303,37 +303,93 @@ test("the editor's settings are compared as JSON, and an app's add Svelte's", ()
   expect(rule?.check(repo(app, "app"))?.drift).toEqual([]);
 });
 
-test("verify runs prose outline and craftz check after prose check, and the fix puts them there once", () => {
-  const dir = mkdtempSync(join(tmpdir(), "craftz-verify-"));
+test("check runs prose check and craftz check after a framework's checker, and the fix adds them once", () => {
+  const dir = mkdtempSync(join(tmpdir(), "craftz-check-"));
   const file = join(dir, "package.json");
-  const verify = "pnpm check && pnpm prose check && pnpm test";
-  writeFileSync(file, JSON.stringify({ scripts: { verify } }));
-  const rule = RULES.find((r) => r.id === "scripts-verify");
-  const read = () => JSON.parse(readFileSync(file, "utf8")) as Pkg;
-  expect(rule?.check({ pkg: read() } as Repo)?.drift).toEqual([
-    "verify doesn't run pnpm prose outline",
-    "verify doesn't run pnpm craftz check",
-  ]);
-  for (let i = 0; i < 2; i++) if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
-  expect(read().scripts?.["verify"]).toBe(
-    "pnpm check && pnpm prose check && pnpm prose outline && pnpm craftz check && pnpm test",
-  );
-  expect(rule?.check({ pkg: read() } as Repo)?.drift).toEqual([]);
-});
-
-test("verify gains prose outline where it already runs craftz check", () => {
-  const dir = mkdtempSync(join(tmpdir(), "craftz-verify-"));
-  const file = join(dir, "package.json");
+  const check = "svelte-kit sync && vp check && svelte-check";
   writeFileSync(
     file,
-    JSON.stringify({ scripts: { verify: "pnpm prose check && pnpm craftz check" } }),
+    JSON.stringify({ scripts: { check }, devDependencies: { "vite-plus": "0.0.0" } }),
   );
+  const rule = RULES.find((r) => r.id === "scripts-check");
+  const read = () => JSON.parse(readFileSync(file, "utf8")) as Pkg;
+  const drift = () => rule?.check({ pkg: read(), vitePlus: "0.0.0" } as Repo)?.drift;
+  expect(drift()).toEqual([
+    "check doesn't run pnpm prose check",
+    "check doesn't run pnpm craftz check",
+  ]);
+  for (let i = 0; i < 2; i++) if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
+  expect(read().scripts?.["check"]).toBe(`${check} && pnpm prose check && pnpm craftz check`);
+  expect(drift()).toEqual([]);
+});
+
+// A verify as every repository chained it before `all`, with a step of the repository's own.
+const chained = (own: string[] = []) =>
+  [
+    "pnpm check",
+    "pnpm prose check",
+    "pnpm prose outline",
+    "pnpm craftz check",
+    "pnpm test",
+    "pnpm build",
+    ...own,
+    "pnpm prose build",
+  ].join(" && ");
+const VITE = `import { defineConfig } from "vite-plus";
+
+export default defineConfig({
+  plugins: [craftz()],
+  test: {
+    include: ["tests/**/*.test.ts"],
+  },
+});
+`;
+
+test("a chained verify moves to the all task, and the fix moves it once", () => {
+  const dir = mkdtempSync(join(tmpdir(), "craftz-verify-"));
+  const scripts = { check: "vp check", test: "vp test --run", build: "vp pack" };
+  writeFileSync(
+    join(dir, "package.json"),
+    JSON.stringify({
+      scripts: { ...scripts, verify: chained() },
+      devDependencies: { "vite-plus": "0.0.0" },
+    }),
+  );
+  writeFileSync(join(dir, "vite.config.ts"), VITE);
+  const rule = RULES.find((r) => r.id === "scripts-verify");
+  const read = () => JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as Pkg;
+  const vite = () => readFileSync(join(dir, "vite.config.ts"), "utf8");
+  const drift = () =>
+    rule?.check({
+      pkg: read(),
+      files: { "vite.config.ts": vite() },
+      vitePlus: "0.0.0",
+    } as unknown as Repo)?.drift;
+  expect(drift()).toEqual([`verify is ${chained()}, not vp run --log grouped all`]);
+  for (let i = 0; i < 2; i++) if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
+  expect(read().scripts).toEqual({
+    ...scripts,
+    site: "prose build",
+    verify: "vp run --log grouped all",
+  });
+  expect(vite().match(/\brun:/g)).toHaveLength(1);
+  expect(vite()).toContain('dependsOn: ["check", "test", "build", "site"]');
+  expect(drift()).toEqual([]);
+});
+
+test("a verify with a step of its own is moved by hand", () => {
+  const dir = mkdtempSync(join(tmpdir(), "craftz-verify-"));
+  const verify = chained(["pnpm size"]);
+  writeFileSync(
+    join(dir, "package.json"),
+    JSON.stringify({ scripts: { verify }, devDependencies: { "vite-plus": "0.0.0" } }),
+  );
+  writeFileSync(join(dir, "vite.config.ts"), VITE);
   const rule = RULES.find((r) => r.id === "scripts-verify");
   if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
-  const pkg = JSON.parse(readFileSync(file, "utf8")) as Pkg;
-  expect(pkg.scripts?.["verify"]).toBe(
-    "pnpm prose check && pnpm prose outline && pnpm craftz check",
-  );
+  const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as Pkg;
+  expect(pkg.scripts?.["verify"]).toBe(verify);
+  expect(readFileSync(join(dir, "vite.config.ts"), "utf8")).toBe(VITE);
 });
 
 test(".gitignore lists outline.md, and the fix adds it once", () => {

@@ -37,9 +37,11 @@
   "scripts": {
     "dev": "vp pack --watch",
     "build": "vp pack",
-    "check": "vp check",
+    "check": "vp check && pnpm prose check && pnpm craftz check",
     "test": "vp test --run",
-    "verify": "pnpm check && pnpm prose check && pnpm prose outline && pnpm craftz check && pnpm test && pnpm build && pnpm prose build",
+    "outline": "prose outline",
+    "site": "prose build",
+    "verify": "vp run --log grouped all",
     "ship": "node src/cli.ts deploy",
     "fix": "vp check --fix",
     "prose": "prose",
