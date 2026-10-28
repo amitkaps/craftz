@@ -10,7 +10,10 @@
  * upgrade. So a repository on an older craftz gets the newer one's fixes, and so does
  * [align](align.ts), which runs these steps in a clone of each repository.
  *
- * align can hand it a packed craftz in place of npm's, to try a release before it's out.
+ * align can hand it a packed craftz in place of npm's, to try a release before it's out. The
+ * fix pins craftz to its own version, which for a packed one is the version already on npm. So
+ * the tarball is added again after the fix, or the install brings npm's back, and `verify` runs
+ * the release instead of the candidate.
  *
  * craftz itself isn't upgraded this way, since it checks itself from source. `pnpm bump` moves its
  * reference instead.
@@ -25,6 +28,8 @@ export async function upgrade(run: Run, craftz = `${CRAFTZ}@latest`): Promise<vo
   await run("pnpm", "add", "--save-dev", "--save-exact", craftz);
   // fix exits 1 when something's left to do by hand, which the check after says.
   await run("pnpm", "exec", "craftz", "fix").catch(() => undefined);
-  await run("pnpm", "install");
+  await (craftz.endsWith(".tgz")
+    ? run("pnpm", "add", "--save-dev", "--save-exact", craftz)
+    : run("pnpm", "install"));
   await run("pnpm", "run", "fix");
 }
