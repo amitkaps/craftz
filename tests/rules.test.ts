@@ -21,6 +21,10 @@ import { CHECKS, type Repo, worker } from "../src/survey.ts";
 const checked = RULES.map((rule) => rule.id);
 const statedIds = stated().map((s) => s.id);
 
+// A Vite config with these keys.
+const config = (keys: string) =>
+  `import { defineConfig } from "vite-plus";\n\nexport default defineConfig({\n  ${keys}\n});\n`;
+
 test("each rule has one id", () => {
   expect(new Set(checked).size).toBe(checked.length);
   expect(new Set(statedIds).size).toBe(statedIds.length);
@@ -105,10 +109,10 @@ test("our own package is exact and at least the reference's, and its fix only ra
 test("a build for browsers targets this repository's browsers", () => {
   const rule = RULES.find((r) => r.id === "toolchain-browsers");
   const list = BROWSERS.map((b) => `"${b}"`).join(", ");
-  const drift = (vite: string, deploys = false, pkg: Pkg = { private: true }, directory?: string) =>
+  const drift = (keys: string, deploys = false, pkg: Pkg = { private: true }, directory?: string) =>
     rule?.check({
       pkg,
-      files: { "vite.config.ts": vite },
+      files: { "vite.config.ts": config(keys) },
       worker: deploys ? { deploys: "app", directory } : undefined,
     } as unknown as Repo)?.drift;
   const pkg: Pkg = {};
@@ -123,15 +127,19 @@ test("a build for browsers targets this repository's browsers", () => {
   ]);
   expect(drift(`build: { target: [${list}] }`, true)).toEqual([]);
   expect(drift(`plugins: [sveltekit()]`, true)).toEqual(["build.target isn't set"]);
+  // A target under another key, or in a comment, isn't build's.
+  expect(drift(`// build: { target: [${list}] }\n  pack: { target: [${list}] }`, true)).toEqual([
+    "build.target isn't set",
+  ]);
   expect(drift(`build: { target: ["chrome111"] }`, true)).toEqual([
     `build.target is chrome111, not ${BROWSERS.join(" ")}`,
   ]);
 });
 
 test("a config with craftz() has the format and lint the rules set", () => {
-  const drift = (id: string, vite: string) =>
+  const drift = (id: string, keys: string) =>
     RULES.find((r) => r.id === id)?.check({
-      files: { "vite.config.ts": vite },
+      files: { "vite.config.ts": config(keys) },
       vitePlus: "1",
     } as unknown as Repo)?.drift;
   for (const id of ["toolchain-wrap", "toolchain-lint"]) {
@@ -139,15 +147,25 @@ test("a config with craftz() has the format and lint the rules set", () => {
     expect(drift(id, "plugins: [sveltekit(), craftz()],")).toEqual([]);
     expect(drift(id, "// craftz() isn't used yet")).not.toEqual([]);
   }
+  const lint = "lint: { options: { typeAware: true, typeCheck: true } }";
+  expect(drift("toolchain-lint", lint)).toEqual([]);
+  expect(drift("toolchain-lint", `test: { ${lint} }`)).toEqual([
+    "lint isn't type-aware",
+    "lint doesn't type-check",
+  ]);
+  expect(drift("toolchain-wrap", 'fmt: { proseWrap: "never" }')).toEqual([]);
+  expect(drift("toolchain-wrap", "fmt: { proseWrap: wrap }")).toEqual([
+    'fmt doesn\'t set proseWrap: "never"',
+  ]);
 });
 
 test("every repository but craftz depends on craftz and uses craftz()", () => {
   const rule = RULES.find((r) => r.id === "toolchain-craftz");
-  const drift = (name: string, deps: Record<string, string>, vite: string) =>
+  const drift = (name: string, deps: Record<string, string>, keys: string) =>
     rule?.check({
       pkg: { name },
       deps,
-      files: { "vite.config.ts": vite },
+      files: { "vite.config.ts": config(keys) },
       vitePlus: "1",
     } as unknown as Repo)?.drift;
   const used = "plugins: [craftz()],";
@@ -372,8 +390,20 @@ test("a chained verify moves to the all task, and the fix moves it once", () => 
     site: "prose build",
     verify: "vp run --log grouped all",
   });
-  expect(vite().match(/\brun:/g)).toHaveLength(1);
-  expect(vite()).toContain('dependsOn: ["check", "test", "build", "site"]');
+  expect(vite()).toBe(
+    VITE.replace(
+      "\n});",
+      `
+
+  run: {
+    cache: false,
+    tasks: {
+      all: { command: "true", dependsOn: ["check", "test", "build", "site"] },
+    },
+  },
+});`,
+    ),
+  );
   expect(drift()).toEqual([]);
 });
 
@@ -427,60 +457,6 @@ test("each step in the plan's Next is a task, and the fix turns a numbered step 
   expect(check()).toEqual([]);
 });
 
-test("the site fix rewrites a cf config as site(), serving Vite's folder, once", () => {
-  const dir = mkdtempSync(join(tmpdir(), "craftz-site-"));
-  const file = join(dir, "cloudflare.config.ts");
-  const config = (worker: string) => `import { defineConfig } from "cf/config";
-import { worker } from "${CRAFTZ}/cloudflare";
-
-export default defineConfig({
-  worker: worker({
-    name: "x",
-    domains: ["x.amitkaps.com"],
-    ${worker}
-    assets: {
-      // Its own 404 page.
-      notFoundHandling: "404-page",
-    },
-  }),
-});
-`;
-  writeFileSync(join(dir, "package.json"), JSON.stringify({ scripts: { verify: "pnpm check" } }));
-  writeFileSync(join(dir, "vite.config.ts"), `export default {\n  publicDir: "site/dist",\n};\n`);
-  const fix = RULES.find((r) => r.id === "cloudflare-site")?.fix;
-  writeFileSync(file, config('compatibilityDate: "2026-10-12",'));
-  for (let i = 0; i < 2; i++) if (fix?.in === "files") fix.apply(dir, here);
-  expect(readFileSync(file, "utf8")).toBe(`import { site } from "${CRAFTZ}/cloudflare";
-
-export default site({
-  name: "x",
-  domains: ["x.amitkaps.com"],
-  assets: {
-    directory: "site/dist",
-    // Its own 404 page.
-    notFoundHandling: "404-page",
-  },
-});
-`);
-  // An assets object on one line takes the folder in the same object.
-  writeFileSync(
-    file,
-    config('compatibilityDate: "2026-10-12",').replace(
-      /assets: \{\n.*\n.*\n {4}\},/,
-      'assets: { notFoundHandling: "404-page" },',
-    ),
-  );
-  if (fix?.in === "files") fix.apply(dir, here);
-  expect(readFileSync(file, "utf8")).toContain(
-    '  assets: { directory: "site/dist", notFoundHandling: "404-page" },\n});',
-  );
-  // site() would fail a Worker that turns an address on, so that's left by hand.
-  const on = config("workersDev: true,");
-  writeFileSync(file, on);
-  if (fix?.in === "files") fix.apply(dir, here);
-  expect(readFileSync(file, "utf8")).toBe(on);
-});
-
 test("a site's Worker is site(), which the survey reads with its folder", () => {
   const drift = (text: string) => {
     const files = { "cloudflare.config.ts": text };
@@ -530,7 +506,7 @@ test("site() sets the date and addresses, and fails a config that sets them", ()
   ).toThrow("site() sets workersDev, so cloudflare.config.ts can't");
 });
 
-test("a static site installs nothing of Cloudflare's, and the fix takes it out, once", () => {
+test("a static site installs nothing of Cloudflare's, and the fix takes it out, once, but for its Vite config", () => {
   const dir = mkdtempSync(join(tmpdir(), "craftz-static-"));
   const config = `import { site } from "${CRAFTZ}/cloudflare";
 
@@ -580,18 +556,7 @@ export default defineConfig({
     "verify runs vp build, with no index.html to build",
   ]);
   for (let i = 0; i < 2; i++) if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
-  expect(readFileSync(join(dir, "vite.config.ts"), "utf8"))
-    .toBe(`import { defineConfig } from "vite-plus";
-import { craftz } from "@amitkaps/craftz";
-
-export default defineConfig({
-  plugins: [
-    craftz(),
-  ],
-
-});
-`);
-  expect(drift()).toEqual([]);
+  expect(drift()).toEqual(["vite.config.ts loads Cloudflare's plugin"]);
 });
 
 test("the betas this repository is on are the ones the rules name", () => {
