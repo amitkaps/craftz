@@ -1,8 +1,8 @@
 /** @prose
  * # A repository's Worker
  *
- * What a repository deploys, read from its Worker config. The survey, the command and `craftz()`
- * all read it here, and it imports only Node's own modules, so the plugin stays small.
+ * What a repository deploys, read from its Worker config. The survey, the rules and the command
+ * all read it here, and it imports only Node's own modules.
  *
  * A repository deploys if it has a Cloudflare config, and the Worker's name is read from it.
  * `cloudflare.config.ts` is the one to use, and `wrangler.jsonc` and `wrangler.toml` are the ones

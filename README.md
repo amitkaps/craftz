@@ -21,7 +21,6 @@ Every repository makes the same choices, like its toolchain, versions, workflows
 | [`craftz rules`](docs/usage.md#rules) | prints the rules, or one rule, from the installed version |
 | [`craftz help`](docs/usage.md#help) | lists the commands, or prints what one does |
 | [`craftz new`](docs/usage.md#new) | starts a repository that already follows the rules |
-| [`craftz()`](docs/usage.md#the-plugin) | a Vite plugin that sets `fmt`, `lint` and a site's config, and never overrides the repository's |
 
 An agent reads the rules with `craftz rules`, from the version the repository installed, so it never works from a fetched page or an older copy.
 

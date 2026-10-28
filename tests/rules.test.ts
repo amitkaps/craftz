@@ -13,6 +13,8 @@ import { BROWSERS } from "../src/browsers.ts";
 import { COMPATIBILITY_DATE } from "../src/runtime.ts";
 import { site } from "../src/cloudflare.ts";
 import { BETA, RULES } from "../src/rules.ts";
+import { RULED, written } from "../src/ruled.ts";
+import { type FormatConfig, format } from "vite-plus/fmt";
 import { parts, printed, stated } from "../src/stated.ts";
 import { CRAFTZ, type Pkg, VERSIONS, here, standard } from "../src/reference.ts";
 import { rulesetFor } from "../src/settings.ts";
@@ -115,15 +117,22 @@ test("a build for browsers targets this repository's browsers", () => {
       files: { "vite.config.ts": config(keys) },
       worker: deploys ? { deploys: "app", directory } : undefined,
     } as unknown as Repo)?.drift;
-  const pkg: Pkg = {};
+  const pkg: Pkg = { engines: { node: ">=26.12.1" } };
+  const browsers = `[${list}, "node26.12.1"]`;
   expect(BROWSERS.length).toBeGreaterThan(0);
-  expect(
-    drift(`plugins: [craftz()], pack: { entry: ["src/index.ts"] }`, false, pkg),
-  ).toBeUndefined();
-  expect(drift("plugins: [craftz()]", true, { private: true }, ".prose")).toBeUndefined();
-  expect(drift(`plugins: [craftz({ browser: true })], pack: {}`, false, pkg)).toEqual([]);
+  expect(drift(`pack: { platform: "node" }`, false, pkg)).toEqual([]);
+  expect(drift(`pack: { entry: ["src/index.ts"] }`, false, pkg)).toEqual([
+    'pack.platform isn\'t "node"',
+  ]);
+  expect(drift("", true, { private: true }, ".prose")).toBeUndefined();
+  expect(drift(`pack: { platform: "neutral", target: ${browsers} }`, false, pkg)).toEqual([]);
+  // A package that targets a browser runs in browsers, and targets the list and its Node.
   expect(drift(`pack: { target: [${list}, "node26"] }`, false, pkg)).toEqual([
-    "pack.target is set. A package for browsers says craftz({ browser: true })",
+    'pack.platform isn\'t "neutral"',
+    `pack.target is [${list}, "node26"], not ${browsers}`,
+  ]);
+  expect(drift(`pack: { platform: "node", target: ["node26"] }`, false, pkg)).toEqual([
+    "pack.target is set, for a package that runs in Node",
   ]);
   expect(drift(`build: { target: [${list}] }`, true)).toEqual([]);
   expect(drift(`plugins: [sveltekit()]`, true)).toEqual(["build.target isn't set"]);
@@ -136,30 +145,103 @@ test("a build for browsers targets this repository's browsers", () => {
   ]);
 });
 
-test("a config with craftz() has the format and lint the rules set", () => {
-  const drift = (id: string, keys: string) =>
-    RULES.find((r) => r.id === id)?.check({
-      files: { "vite.config.ts": config(keys) },
-      vitePlus: "1",
-    } as unknown as Repo)?.drift;
-  for (const id of ["toolchain-wrap", "toolchain-lint"]) {
-    expect(drift(id, "plugins: [craftz()],")).toEqual([]);
-    expect(drift(id, "plugins: [sveltekit(), craftz()],")).toEqual([]);
-    expect(drift(id, "// craftz() isn't used yet")).not.toEqual([]);
+test("a package writes out its publint and types, and the fixes write them in", () => {
+  const dir = mkdtempSync(join(tmpdir(), "craftz-pack-"));
+  writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "x", files: ["dist"] }));
+  writeFileSync(
+    join(dir, "vite.config.ts"),
+    config('pack: {\n    entry: ["src/index.ts"],\n    dts: { generator: "tsc" },\n  },'),
+  );
+  const repo = () =>
+    ({
+      pkg: { name: "x" },
+      deps: { publint: "1" },
+      files: { "vite.config.ts": readFileSync(join(dir, "vite.config.ts"), "utf8") },
+    }) as unknown as Repo;
+  const drift = (id: string) => RULES.find((r) => r.id === id)?.check(repo())?.drift;
+  expect(drift("releases-types")).toEqual(['pack.dts.generator is "tsc", not "oxc"']);
+  expect(drift("releases-packing")).toContain("pack.publint.strict isn't true");
+  for (const id of ["releases-packing", "releases-types", "toolchain-browsers"]) {
+    const fix = RULES.find((r) => r.id === id)?.fix;
+    if (fix?.in === "files") fix.apply(dir, here);
   }
-  const lint = "lint: { options: { typeAware: true, typeCheck: true } }";
-  expect(drift("toolchain-lint", lint)).toEqual([]);
-  expect(drift("toolchain-lint", `test: { ${lint} }`)).toEqual([
-    "lint isn't type-aware",
-    "lint doesn't type-check",
-  ]);
-  expect(drift("toolchain-wrap", 'fmt: { proseWrap: "never" }')).toEqual([]);
-  expect(drift("toolchain-wrap", "fmt: { proseWrap: wrap }")).toEqual([
-    'fmt doesn\'t set proseWrap: "never"',
-  ]);
+  expect(readFileSync(join(dir, "vite.config.ts"), "utf8")).toBe(
+    config(
+      'pack: {\n    entry: ["src/index.ts"],\n    dts: { generator: "oxc" },\n    publint: { strict: true },\n    platform: "node",\n  },',
+    ),
+  );
 });
 
-test("every repository but craftz depends on craftz and uses craftz()", () => {
+test("a config writes out the format and lint the rules set, and the fix writes them in", () => {
+  const drift = (id: string, vite: string) =>
+    RULES.find((r) => r.id === id)?.check({
+      files: { "vite.config.ts": vite },
+      vitePlus: "1",
+    } as unknown as Repo)?.drift;
+  const fixed = (vite: string) => {
+    const dir = mkdtempSync(join(tmpdir(), "craftz-ruled-"));
+    writeFileSync(join(dir, "vite.config.ts"), vite);
+    for (let i = 0; i < 2; i++) {
+      for (const id of ["toolchain-wrap", "toolchain-lint"]) {
+        const fix = RULES.find((r) => r.id === id)?.fix;
+        if (fix?.in === "files") fix.apply(dir, here);
+      }
+    }
+    return readFileSync(join(dir, "vite.config.ts"), "utf8");
+  };
+  const lint = `lint: {
+    plugins: ["typescript", "unicorn", "import"],
+    categories: { correctness: "error" },
+    options: { typeAware: true, typeCheck: true },
+  },`;
+  const ruled = config(`fmt: { proseWrap: "never" },\n\n  ${lint}`);
+  expect(drift("toolchain-wrap", ruled)).toEqual([]);
+  expect(drift("toolchain-lint", ruled)).toEqual([]);
+  // A config with only its plugins has neither.
+  expect(drift("toolchain-wrap", config("plugins: [sveltekit()],"))).toEqual([
+    'fmt.proseWrap isn\'t "never"',
+  ]);
+  expect(drift("toolchain-lint", config('lint: { plugins: ["typescript"] },'))).toEqual([
+    'lint.plugins is ["typescript"], not ["typescript", "unicorn", "import"]',
+    'lint.categories.correctness isn\'t "error"',
+    "lint.options.typeAware isn't true",
+    "lint.options.typeCheck isn't true",
+  ]);
+  // A config with neither block gains both, after its last key.
+  expect(fixed(config("plugins: [sveltekit()],"))).toBe(
+    config(
+      'plugins: [sveltekit()],\n\n  fmt: { proseWrap: "never" },\n\n  lint: { plugins: ["typescript", "unicorn", "import"], categories: { correctness: "error" }, options: { typeAware: true, typeCheck: true } },',
+    ),
+  );
+  // A block of the config's own keeps its keys, and gains the rules' after them, or has them
+  // replaced.
+  expect(
+    fixed(config('fmt: { ignorePatterns: generated },\n  lint: {\n    plugins: ["oxc"],\n  },')),
+  ).toBe(
+    config(
+      'fmt: { ignorePatterns: generated, proseWrap: "never" },\n  lint: {\n    plugins: ["typescript", "unicorn", "import"],\n    categories: { correctness: "error" },\n    options: { typeAware: true, typeCheck: true },\n  },',
+    ),
+  );
+  // A block the config works out is left by hand.
+  expect(fixed(config("lint: shared,"))).toBe(
+    config('lint: shared,\n\n  fmt: { proseWrap: "never" },'),
+  );
+});
+
+test("the values the fix writes are spelled as oxfmt formats them", async () => {
+  const lines = Object.entries(RULED).flatMap(([block, keys]) => [
+    `  ${block}: {`,
+    ...Object.entries(keys as Record<string, unknown>).map(
+      ([key, value]) => `    ${key}: ${written(value)},`,
+    ),
+    "  },",
+  ]);
+  const vite = `export default {\n${lines.join("\n")}\n};\n`;
+  const fmt = RULED["fmt"] as FormatConfig;
+  expect((await format("vite.config.ts", vite, fmt)).code).toBe(vite);
+});
+
+test("every repository but craftz depends on craftz, and calls no craftz()", () => {
   const rule = RULES.find((r) => r.id === "toolchain-craftz");
   const drift = (name: string, deps: Record<string, string>, keys: string) =>
     rule?.check({
@@ -168,12 +250,11 @@ test("every repository but craftz depends on craftz and uses craftz()", () => {
       files: { "vite.config.ts": config(keys) },
       vitePlus: "1",
     } as unknown as Repo)?.drift;
-  const used = "plugins: [craftz()],";
-  expect(drift("x", { [CRAFTZ]: "^0.1.0" }, used)).toEqual([]);
-  expect(drift(CRAFTZ, {}, used)).toEqual([]);
-  expect(drift("x", {}, "")).toEqual([
+  expect(drift("x", { [CRAFTZ]: "^0.1.0" }, "")).toEqual([]);
+  expect(drift(CRAFTZ, {}, "")).toEqual([]);
+  expect(drift("x", {}, "plugins: [craftz()],")).toEqual([
     `doesn't depend on ${CRAFTZ}`,
-    "vite.config.ts has no craftz()",
+    "vite.config.ts calls craftz()",
   ]);
 });
 
@@ -197,71 +278,50 @@ test("craftz's version is its own, exactly", () => {
   expect(VERSIONS[CRAFTZ]).toBe(own.version);
 });
 
-test("the fix adds craftz, and takes out the blocks the plugin sets", () => {
-  const dir = mkdtempSync(join(tmpdir(), "craftz-use-"));
-  writeFileSync(
-    join(dir, "package.json"),
-    JSON.stringify({ name: "x", devDependencies: { "vite-plus": "1.3.0" } }),
-  );
-  writeFileSync(
-    join(dir, "vite.config.ts"),
-    `import { defineConfig } from "vite-plus";
-import { cloudflare } from "@cloudflare/vite-plugin";
-
-export default defineConfig({
-  plugins: [cloudflare({ assetsOnly: true })],
-
-  test: { include: ["tests/**/*.test.ts"] },
-});
-`,
-  );
-  const fix = RULES.find((r) => r.id === "toolchain-craftz")?.fix;
-  if (fix?.in === "files") fix.apply(dir, here);
-  const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as {
-    devDependencies: Record<string, string>;
+test("the fix adds craftz, and takes craftz() and its import out", () => {
+  const fixed = (vite: string) => {
+    const dir = mkdtempSync(join(tmpdir(), "craftz-use-"));
+    writeFileSync(
+      join(dir, "package.json"),
+      JSON.stringify({ name: "x", devDependencies: { "vite-plus": "1.3.0" } }),
+    );
+    writeFileSync(join(dir, "vite.config.ts"), vite);
+    const fix = RULES.find((r) => r.id === "toolchain-craftz")?.fix;
+    if (fix?.in === "files") fix.apply(dir, here);
+    const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as {
+      devDependencies: Record<string, string>;
+    };
+    expect(Object.keys(pkg.devDependencies)).toEqual([CRAFTZ, "vite-plus"]);
+    expect(pkg.devDependencies[CRAFTZ]).toBe(VERSIONS[CRAFTZ]);
+    return readFileSync(join(dir, "vite.config.ts"), "utf8");
   };
-  expect(Object.keys(pkg.devDependencies)).toEqual([CRAFTZ, "vite-plus"]);
-  expect(pkg.devDependencies[CRAFTZ]).toBe(VERSIONS[CRAFTZ]);
-  expect(readFileSync(join(dir, "vite.config.ts"), "utf8"))
-    .toBe(`import { defineConfig } from "vite-plus";
-import { craftz } from "@amitkaps/craftz";
-import { cloudflare } from "@cloudflare/vite-plugin";
-
-export default defineConfig({
-  plugins: [craftz(), cloudflare({ assetsOnly: true })],
-
-  test: { include: ["tests/**/*.test.ts"] },
-});
-`);
-});
-
-test("the fix keeps a config's plugins one to a line", () => {
-  const dir = mkdtempSync(join(tmpdir(), "craftz-lines-"));
-  writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "x" }));
-  writeFileSync(
-    join(dir, "vite.config.ts"),
-    `import { defineConfig } from "vite-plus";
-
-export default defineConfig({
-  plugins: [
-    cloudflare({ assetsOnly: true }),
-  ],
-});
-`,
+  const head = `import { defineConfig } from "vite-plus";\nimport { craftz } from "@amitkaps/craftz";\n`;
+  const config = (body: string) => `export default defineConfig({\n${body}});\n`;
+  const test = 'test: { include: ["tests/**/*.test.ts"] },\n';
+  // The only plugin takes `plugins` with it, and the comment after it stays.
+  expect(fixed(`${head}\n${config(`  plugins: [craftz()],\n\n  // Tests.\n  ${test}`)}`)).toBe(
+    `import { defineConfig } from "vite-plus";\n\n${config(`  // Tests.\n  ${test}`)}`,
   );
-  const fix = RULES.find((r) => r.id === "toolchain-craftz")?.fix;
-  if (fix?.in === "files") fix.apply(dir, here);
-  expect(readFileSync(join(dir, "vite.config.ts"), "utf8"))
-    .toBe(`import { defineConfig } from "vite-plus";
-import { craftz } from "@amitkaps/craftz";
-
-export default defineConfig({
-  plugins: [
-    craftz(),
-    cloudflare({ assetsOnly: true }),
-  ],
-});
-`);
+  // One plugin of several goes, wherever it is, one to a line or not, and a comment after it
+  // stays.
+  expect(
+    fixed(
+      `${head}\n${config("  plugins: [\n    craftz(),\n    // Svelte.\n    sveltekit(),\n  ],\n")}`,
+    ),
+  ).toBe(
+    `import { defineConfig } from "vite-plus";\n\n${config("  plugins: [\n    // Svelte.\n    sveltekit(),\n  ],\n")}`,
+  );
+  expect(fixed(`${head}\n${config("  plugins: [sveltekit(), craftz()],\n")}`)).toBe(
+    `import { defineConfig } from "vite-plus";\n\n${config("  plugins: [sveltekit()],\n")}`,
+  );
+  // A package for browsers says so in its pack.
+  expect(
+    fixed(
+      `${head}\n${config('  plugins: [craftz({ browser: true })],\n  pack: { entry: ["src/index.ts"] },\n')}`,
+    ),
+  ).toBe(
+    `import { defineConfig } from "vite-plus";\n\n${config('  pack: { entry: ["src/index.ts"], platform: "neutral" },\n')}`,
+  );
 });
 
 test("the files craftz owns are its own word for word, and the fix writes them whole", () => {
@@ -356,7 +416,6 @@ const chained = (own: string[] = []) =>
 const VITE = `import { defineConfig } from "vite-plus";
 
 export default defineConfig({
-  plugins: [craftz()],
   test: {
     include: ["tests/**/*.test.ts"],
   },
@@ -576,26 +635,32 @@ test("a package's ruleset requires label next to ci, and others only ci", () => 
   expect(contexts({ private: true })).toEqual(["ci"]);
 });
 
-test("a tsconfig extends craftz's and only says what to include, and the fix writes it so", () => {
+test("a tsconfig writes out the reference's options and its own include, and the fix writes it so", () => {
   const dir = mkdtempSync(join(tmpdir(), "craftz-tsconfig-"));
   const file = join(dir, "tsconfig.json");
   const rule = RULES.find((r) => r.id === "toolchain-types");
   const drift = () =>
     rule?.check({ files: { "tsconfig.json": readFileSync(file, "utf8") } } as unknown as Repo)
       ?.drift;
-  const shared = `${CRAFTZ}/tsconfig.json`;
+  const { compilerOptions } = JSON.parse(readFileSync(join(here, "tsconfig.json"), "utf8")) as {
+    compilerOptions: Record<string, unknown>;
+  };
+  const options: Record<string, unknown> = { ...compilerOptions, strict: false, outDir: "dist" };
+  delete options["noEmit"];
   // A tsconfig's comments and trailing commas parse.
   writeFileSync(
     file,
-    `{\n  // Its own options.\n  "compilerOptions": { "strict": true, },\n  "include": ["src", "// not a comment"],\n}\n`,
+    `{\n  // Its own options.\n  "extends": "${CRAFTZ}/tsconfig.json",\n  "compilerOptions": ${JSON.stringify(options)},\n  "include": ["src", "// not a comment"],\n}\n`,
   );
   expect(drift()).toEqual([
-    `tsconfig.json doesn't extend ${shared}`,
-    `tsconfig.json sets compilerOptions, which is ${shared}'s`,
+    "tsconfig.json sets extends",
+    "compilerOptions.strict is false, not true",
+    "compilerOptions.noEmit is undefined, not true",
+    "compilerOptions sets outDir, which the rules don't",
   ]);
   for (let i = 0; i < 2; i++) if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
   expect(JSON.parse(readFileSync(file, "utf8"))).toEqual({
-    extends: shared,
+    compilerOptions,
     include: ["src", "// not a comment"],
   });
   expect(drift()).toEqual([]);
