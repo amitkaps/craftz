@@ -1,8 +1,7 @@
 /** @prose
  * # site()
  *
- * A static site's Worker, for a repository's `cloudflare.config.ts`, as `craftz()` is for
- * `vite.config.ts`. The config names its Worker, its domains and the folder it serves, with how
+ * A static site's Worker, for a repository's `cloudflare.config.ts`. The config names its Worker, its domains and the folder it serves, with how
  * it serves it, and `site()` adds the rest:
  *
  * - the compatibility date, which is the build date of the workerd the reference's cf brings, so a

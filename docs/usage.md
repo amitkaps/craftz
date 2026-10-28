@@ -1,6 +1,6 @@
 # Usage
 
-craftz is used through its commands and its plugin.
+craftz is used through its commands, and `site()` for a static site's Worker.
 
 Each command is stated once, here, as the list item that opens its section, with how it's run and what it does. `craftz help` lists them from the installed version, and `craftz help <command>` prints its section, so the help is this page. Any repository has every command, and `craftz new` starts one. The last part, [Keeping every repository](#keeping-every-repository), is for whoever keeps them all, from a checkout of craftz.
 
@@ -50,20 +50,9 @@ pnpm craftz fix            # write every fix, then check again
 
 `craftz fix` writes every fix that can be automated. It lists each file it changed, then checks again and prints what's left to do by hand. A second run changes nothing. A fix can move versions, so run `pnpm install` next, then `pnpm run fix` for the format.
 
-## The plugin
+## The Vite config
 
-```ts
-import { craftz } from "@amitkaps/craftz";
-import { defineConfig } from "vite-plus";
-
-export default defineConfig({
-  plugins: [craftz()],
-});
-```
-
-`craftz()` sets the `fmt` and `lint` blocks the rules ask for, so `vite.config.ts` holds only what's the repository's own. It never overrides the config. A key the config leaves unset is filled in, and one it sets differently fails `vp` with the key named, so take that key out. `pnpm craftz rules toolchain-lint` and `toolchain-wrap` say what it sets.
-
-A static site, read from its Worker config, also gets `build.target`, the rules' browsers.
+`vite.config.ts` imports nothing from craftz. It writes out what the rules set: the `fmt` and `lint` blocks, a package's publint, types and platform, and the browsers a build targets. `craftz check` compares each value with the rules, and `craftz fix` writes in any that differs. `pnpm craftz rules toolchain-wrap`, `toolchain-lint`, `toolchain-browsers`, `releases-packing` and `releases-types` say what they hold.
 
 ## A site's Worker
 

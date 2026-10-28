@@ -61,7 +61,7 @@ const FILES = [
   "cloudflare.config.ts",
   "wrangler.jsonc",
   "wrangler.toml",
-  // Whether a static site has its own page, which says what `craftz()` fills in for it.
+  // Whether a static site has its own page, which Vite builds.
   "index.html",
   "AGENTS.md",
   "CLAUDE.md",

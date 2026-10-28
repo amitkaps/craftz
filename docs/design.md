@@ -10,7 +10,7 @@ A package, `@amitkaps/craftz` on npm, that each repository depends on, the way a
 - **The checks and fixes.** Each rule has a check, and a fix where one can be automated. `craftz check` runs them in a repository's `verify`, and `craftz fix` writes the fixes.
 - **The reference.** [reference/](../reference/README.md) holds the files a repository is compared with, like the workflows, the editor settings and the pinned versions. A fix copies from there.
 - **The settings.** `craftz settings` checks and writes what lives outside the files, like the `main` ruleset, the labels and each Worker's build settings.
-- **The plugin and the deploy.** `craftz()` sets the Vite+ config the rules ask for, and `craftz deploy` deploys a site the way its Worker config says.
+- **The deploy.** `site()` fills in a static site's Worker config, and `craftz deploy` deploys a site the way that config says.
 - **The start.** `craftz new` writes a repository that passes the rules from its first commit, from any folder, as `pnpm dlx @amitkaps/craftz new`.
 
 It's opinionated, and built for one setup: Vite+, pnpm, Node 26, GitHub and Cloudflare Workers. It doesn't try to fit another, since every choice it makes rests on that setup.
@@ -66,18 +66,18 @@ When cf can deploy SvelteKit, only `craftz deploy` changes, and the app needs no
 A fix never edits a file by its lines. Regular expressions depend on how a file is laid out, and most fixes that missed a real repository missed there. Each file a rule reaches is one of three kinds, and none needs a line edit.
 
 - **Files craftz owns** are written whole, from [reference/](../reference/README.md) and the repository's axes, and checked for an exact match. They're the workflows, `.github/notes.yml`, `.vscode/` and `pnpm-workspace.yaml`. What a package adds to CI, like publint or a size budget, goes in `verify`, so CI is the same everywhere.
-- **Code the repository writes** takes craftz's values through a call, and the check only looks for the call. `vite.config.ts` uses `craftz()` and `cloudflare.config.ts` uses `site()`, so no value in either is read or edited.
-- **JSON** is parsed. `package.json` holds the versions and the holds, and `tsconfig.json` extends the one craftz ships.
+- **Code the repository writes** is parsed, never run. `vite.config.ts` writes out its `fmt`, `lint`, pack and browsers, and the check reads each value where it sits. The fix writes a value at its key, or adds the block, and leaves one the config works out. A static site's Worker config comes through a call, `site()`, and the check only looks for the call.
+- **JSON** is parsed. `package.json` holds the versions and the holds, and `tsconfig.json` writes out its compiler options.
 
 Markdown is read by its headings, like `AGENTS.md`'s sections, since a heading is the structure. A fix that moved repositories off an old layout is deleted once every repository is past it, so the edits don't pile up.
 
-## A thin plugin
+## Configs written out
 
-`vite.config.ts` and `cloudflare.config.ts` are code. So the values every config shares aren't in either file, but in a call to craftz, from the installed version. `craftz()` sets `fmt`, `lint`, and a package's publint, declarations and platform. A package packs for Node unless it says `craftz({ browser: true })`, its one option. A site names its folder in `cloudflare.config.ts`. `site()` sets a Worker's compatibility date and turns its other addresses off. Vite+ and `craftz deploy` hold a config to them each time they load it, and a new craftz changes them with no edit to the file.
+`vite.config.ts` and `tsconfig.json` write out every value the rules set, so each reads whole, and a repository builds without craftz installed. A package packs for Node, or for `"neutral"` with the rules' browsers when it runs in browsers too. A site Vite bundles targets the browsers. `craftz check` compares each value, and a release that moves one, like the browsers, reaches a repository as the fix align writes into it.
 
-A fix edits a config only to add the call, once, when a repository first moves to craftz.
+There used to be a plugin, `craftz()`, that filled these in from the installed version. Nothing in a repository's files then showed its format, lint or pack, and they changed with craftz's version unseen. A plugin's `config` hook also wins over the repository's own config without a word, so the plugin had to fail on every conflict. With `proseWrap: "preserve"` in the config and `"never"` from a plugin, oxfmt used the plugin's.
 
-`craftz()` fills in only what the repository leaves unset, or fails and names the conflict, and a test holds it to that. It has to, since a plugin's `config` hook wins over the repository's own `vite.config.ts` without a word. With `proseWrap: "preserve"` in the config and `"never"` from a plugin, oxfmt used the plugin's.
+`cloudflare.config.ts` still calls `site()`, which sets a Worker's compatibility date and turns its other addresses off. A site names its folder there. `craftz deploy` holds a config to them each time it loads it.
 
 ## Files that stay in the repository
 

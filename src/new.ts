@@ -6,7 +6,8 @@
  * `verify`, so what it hands over already passes.
  *
  * The commit comes first, since a prose site builds from one. It formats with oxfmt's own
- * `format`, with the options `craftz()` sets, so nothing about the format is copied here.
+ * `format`, with the options [ruled.ts](ruled.ts) states, so nothing about the format is copied
+ * here.
  *
  * What it starts is two of [the axes](../docs/rules.md#axes): `--package` publishes it to npm, and
  * `--site` deploys a static site to Cloudflare. Either, both or neither, which is scripts run on a
@@ -21,10 +22,10 @@
  * CI, the editor settings, pnpm's settings, the shared sections of `AGENTS.md`, a package's release
  * files, and a first version of each doc. So it can't follow the rules any less than `craftz fix`
  * does, and a rule's fix reaches the next repository with no second copy here. What it does write
- * is built from [the reference](../reference/README.md) where it can be, like `tsconfig.json`,
- * which extends craftz's, and `.gitignore`, which the reference holds as `gitignore`. The licence
- * is craftz's own. The format and lint the rules ask for, and a site's build target, aren't written
- * at all: the config uses `craftz()`, which sets them from the version the repository installs.
+ * is built from [the reference](../reference/README.md) where it can be, like `.gitignore`, which
+ * the reference holds as `gitignore`. The licence is craftz's own. `tsconfig.json` starts as its
+ * `include`, and the config without `fmt`, `lint`, a package's publint, types and platform or a
+ * site's browsers, since their rules' fixes write the rest.
  * `pnpm test` checks the result against the survey.
  *
  * `--push` also creates the repository on GitHub, pushes the first commit and writes its GitHub
@@ -41,7 +42,7 @@ import { CRAFTZ, OWNER, VERSIONS, here, root } from "./reference.ts";
 import { writeSettings } from "./apply.ts";
 import { runBlock } from "./edit.ts";
 import { writeOutline } from "./gone.ts";
-import { craftz } from "./index.ts";
+import { RULED } from "./ruled.ts";
 import { type FormatConfig, format } from "vite-plus/fmt";
 
 /** What `new` starts: the axes it reads, with the repository's visibility and the site's audience. */
@@ -112,14 +113,13 @@ async function packageJson(name: string, shape: Shape, description: string): Pro
 }
 
 function tsconfig(shape: Shape): string {
-  const { extends: shared } = JSON.parse(read("tsconfig.json")) as { extends: string };
   const include = [
     "src",
     "tests",
     "vite.config.ts",
     ...(shape.site ? ["cloudflare.config.ts"] : []),
   ];
-  return JSON.stringify({ extends: shared, include }, null, 2);
+  return JSON.stringify({ include }, null, 2);
 }
 
 // Text as the lines of an `@prose` comment, each within 100 characters.
@@ -151,10 +151,10 @@ function viteConfig(shape: Shape): string {
   ]);
   const why = [
     `One Vite+ config ${what}.`,
-    "`craftz()` sets the format, lint and build the rules ask for, so this config holds only what's its own.",
+    "The format and lint are the ones the rules ask every config to write out.",
     ...(shape.package
       ? [
-          "`vp pack` writes ESM for Node, with its types from Oxc, and runs publint, which fails the build on a package npm would serve badly. `craftz()` sets all but the entry and the format.",
+          "`vp pack` writes ESM for Node, with its types from Oxc, and runs publint, which fails the build on a package npm would serve badly.",
         ]
       : []),
     ...(shape.site
@@ -168,8 +168,6 @@ function viteConfig(shape: Shape): string {
       ? []
       : ["There's nothing to build or serve, so Vite+ is here for its checks and tests."]),
   ];
-  const plugins = `  plugins: [craftz()],
-`;
   const pack = `  pack: {
     entry: ["src/index.ts"],
     format: ["esm"],
@@ -183,10 +181,9 @@ function viteConfig(shape: Shape): string {
  * ${wrapped(why.join(" ")).join("\n * ")}
  */
 import { defineConfig } from "vite-plus";
-import { craftz } from "@amitkaps/craftz";
 
 export default defineConfig({
-${[plugins, ...(shape.package ? [pack] : []), runBlock(verified(shape))].join("\n")}
+${[...(shape.package ? [pack] : []), runBlock(verified(shape))].join("\n")}
   test: {
     expect: { requireAssertions: true },
     include: ["tests/**/*.test.ts"],
@@ -324,8 +321,8 @@ export async function write(
   }
   fixFiles(dir, here);
   execFileSync("git", ["init", "-q", "-b", "main"], { cwd: dir });
-  // Formatted as `vp fmt` formats it, with what `craftz()` sets, so the repository starts out formatted.
-  const { fmt } = craftz().config({ root: dir }) as { fmt: FormatConfig };
+  // Formatted as `vp fmt` formats it, with the rules' options, so the repository starts out formatted.
+  const fmt = RULED["fmt"] as FormatConfig;
   for (const file of readdirSync(dir, { recursive: true, encoding: "utf8" })) {
     const path = join(dir, file);
     if (!/\.(json|ts|md|ya?ml|html)$/.test(file)) continue;

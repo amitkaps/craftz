@@ -8,8 +8,8 @@
  * [pinned.ts](src/pinned.ts) says. browser-compat-data, where the browsers come from, stays out
  * of the bundle.
  *
- * `craftz()` sets the format and lint the rules ask for, from source, as a repository sets them
- * from the package. craftz's site is its docs, the folder `prose build` writes, which
+ * The format, lint and pack are the ones [the rules](docs/rules.md#toolchain-wrap) ask every
+ * config to write out. craftz's site is its docs, the folder `prose build` writes, which
  * [cloudflare.config.ts](cloudflare.config.ts) names, so Vite doesn't build it.
  *
  * `verify` runs `all`, as [the rules](docs/rules.md#scripts-verify) say, without `build`. The
@@ -18,10 +18,15 @@
 import { defineConfig } from "vite-plus";
 import { BROWSERS } from "./src/browsers.ts";
 import { COMPATIBILITY_DATE } from "./src/runtime.ts";
-import { craftz } from "./src/index.ts";
 
 export default defineConfig({
-  plugins: [craftz()],
+  fmt: { proseWrap: "never" },
+
+  lint: {
+    plugins: ["typescript", "unicorn", "import"],
+    categories: { correctness: "error" },
+    options: { typeAware: true, typeCheck: true },
+  },
 
   run: {
     cache: false,
@@ -31,10 +36,13 @@ export default defineConfig({
   },
 
   pack: {
-    entry: ["src/index.ts", "src/cloudflare.ts", "src/cli.ts"],
+    entry: ["src/cloudflare.ts", "src/cli.ts"],
     format: ["esm"],
+    platform: "node",
     // Oxc writes the types, so there's no typescript dependency, and fails on an export
     // whose type isn't written out.
+    dts: { generator: "oxc" },
+    publint: { strict: true },
     clean: true,
     fixedExtension: false,
     define: { __PINNED__: JSON.stringify({ browsers: BROWSERS, date: COMPATIBILITY_DATE }) },

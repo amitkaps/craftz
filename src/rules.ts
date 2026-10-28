@@ -28,8 +28,9 @@ import {
   standard,
   versionsIn,
 } from "./reference.ts";
-import { type Node, at, exported, jsonc, literal, pluginCall, valueAt } from "./config.ts";
-import { allOf, usesCraftz, withCraftz, withVerify } from "./edit.ts";
+import { at, exported, jsonc, literal, valueAt } from "./config.ts";
+import { allOf, unlike, usesCraftz, withValues, withVerify, withoutCraftz } from "./edit.ts";
+import { type Config, PACKED, RULED, written } from "./ruled.ts";
 import { rulesetFor, writeLabels, writeRuleset } from "./settings.ts";
 import { BROWSERS } from "./pinned.ts";
 import { stated } from "./stated.ts";
@@ -100,11 +101,6 @@ function rulesDrift(found: BranchRule[], pkg: Pkg): string[] {
 
 const drifted = (drift: string[]): Finding => ({ drift });
 
-// Whether `craftz()` fills in `build.target`, as it does for a static site. Its src/index.ts
-// says why.
-const filled = (vite: string, site?: Worker): boolean =>
-  usesCraftz(vite) && site?.deploys === "static";
-
 // What GitHub couldn't answer. Its rate limit isn't drift: the check says it wasn't made.
 export function unread(error: Error): Finding {
   if (error.name === "RateLimit") return { drift: [], unchecked: error.message };
@@ -136,11 +132,10 @@ function pin(dir: string, std: string, name: string): void {
   writePkg(dir, pkg);
 }
 
-// craftz in the dev dependencies, and `craftz()` in the Vite config, as edit.ts says.
+// craftz in the dev dependencies, and no `craftz()` in the Vite config, as edit.ts says.
 function useCraftz(dir: string, std: string): void {
   const pkg = readPkg(dir);
-  if (ownCraftz(pkg)) return;
-  const want = versionsIn(std)[CRAFTZ];
+  const want = ownCraftz(pkg) ? undefined : versionsIn(std)[CRAFTZ];
   if (want && !pkg.dependencies?.[CRAFTZ] && !pkg.devDependencies?.[CRAFTZ]) {
     const deps = { ...pkg.devDependencies, [CRAFTZ]: want };
     pkg.devDependencies = Object.fromEntries(
@@ -148,7 +143,7 @@ function useCraftz(dir: string, std: string): void {
     );
     writePkg(dir, pkg);
   }
-  editFile(join(dir, "vite.config.ts"), withCraftz);
+  editFile(join(dir, "vite.config.ts"), withoutCraftz);
 }
 
 /** @prose
@@ -219,41 +214,81 @@ const vitePlus = VERSIONS["vite-plus"];
 /** @prose
  * # The toolchain
  *
- * A repository's `tsconfig.json` extends the one craftz ships,
- * [tsconfig.base.json](../tsconfig.base.json), and says only what to include, so every option is
- * craftz's. It's parsed as [config.ts](config.ts) parses a config, which takes the comments and
- * trailing commas a tsconfig allows. The fix keeps `include` and writes the rest, so a
- * repository's own options and comments go.
+ * A repository's `tsconfig.json` writes out the compiler options of
+ * [the reference's](../reference/tsconfig.json), and its own `include`. It extends nothing.
  *
- * The `lint` and `fmt` blocks are read from the parsed `vite.config.ts` too, and have no fix,
- * since `toolchain-craftz`'s adds the plugin that sets them.
+ * So the editor and `vp check` read the options from the file, and the types work without craftz
+ * installed. It's parsed as [config.ts](config.ts) parses a config, which takes the comments
+ * and trailing commas a tsconfig allows. Each option is compared, so the check names the ones
+ * that differ. The fix keeps `include` and writes the rest, so a repository's own options and
+ * comments go.
+ *
+ * The `fmt` and `lint` blocks are read from the parsed `vite.config.ts` too, a value at a time
+ * from [ruled.ts](ruled.ts), and the fix writes each one that differs, as edit.ts does. A
+ * package's `pack` is read the same way, by the releases' rules.
  */
-const TSCONFIG = `${CRAFTZ}/tsconfig.json`;
+const OPTIONS = (JSON.parse(read(join(here, "tsconfig.json"))) as { compilerOptions: Json })
+  .compilerOptions;
 
-type Tsconfig = { extends?: unknown; include?: unknown } & Json;
+type Tsconfig = { compilerOptions?: Json; include?: unknown } & Json;
 
 function tsconfigIn(text: string): Tsconfig | undefined {
   const parsed = jsonc(text);
   return parsed && typeof parsed === "object" ? (parsed as Tsconfig) : undefined;
 }
 
+// What a config sets otherwise than `values`, a value at a time.
+const unruled = (vite: string, values: Config): string[] =>
+  unlike(vite, values).map(([path, want]) => {
+    const have = literal(at(exported(vite), path));
+    const key = path.join(".");
+    return have === undefined
+      ? `${key} isn't ${written(want)}`
+      : `${key} is ${written(have)}, not ${written(want)}`;
+  });
+
+// Writes values into the Vite config, where edit.ts can place them.
+const rule = (dir: string, values: Config): void =>
+  editFile(join(dir, "vite.config.ts"), (vite) => withValues(vite, values));
+
 const EDITOR = [".vscode/settings.json", ".vscode/extensions.json"];
 
 /** @prose
  * # The browsers
  *
- * The list comes from [browsers.ts](browsers.ts). `craftz()` sets it for a static site, and for
- * a package that says `craftz({ browser: true })`, so either has nothing to read.
+ * The list comes from [browsers.ts](browsers.ts). A package runs in Node, with `platform: "node"`
+ * and no `pack.target`. One that runs in browsers too packs for `"neutral"`, and targets the list
+ * and the Node its `engines` asks for. A package is read as one for browsers when it packs for
+ * `"neutral"` or targets a browser, so the fix keeps it there.
  *
- * A package that sets `pack.target` itself is told to say so instead. An app's config is its
- * framework's, so its `build.target` is read, and the browsers in it have to be the list, with
- * any Node left out.
+ * A site Vite bundles sets the list in `build.target`, a static site or an app. The browsers in
+ * it have to be the list, with any Node left out, since an app's config is its framework's.
  */
 // The browsers in a target, without Node.
 const targetsIn = (target: unknown): string[] =>
   (Array.isArray(target) ? target : [target])
     .filter((it): it is string => typeof it === "string")
     .filter((it) => !it.startsWith("node"));
+
+// What a package's `pack` sets for where it runs.
+function packFor(pkg: Pkg, vite: string): Config {
+  const browser =
+    valueAt(vite, ["pack", "platform"]) === "neutral" ||
+    targetsIn(valueAt(vite, ["pack", "target"])).length > 0;
+  if (!browser) return { platform: "node" };
+  const floor = /^>=\s*([\d.]+)$/.exec(pkg.engines?.node ?? "")?.[1];
+  return { platform: "neutral", target: [...BROWSERS, ...(floor ? [`node${floor}`] : [])] };
+}
+
+// The browsers a site Vite bundles has in `build.target`, unlike the list, or nothing.
+function siteDrift(vite: string, site?: Worker): string[] {
+  // A site Vite bundles from source, unlike one that serves a folder `prose build` wrote.
+  if (!site || site.directory === ".prose") return [];
+  const have = targetsIn(valueAt(vite, ["build", "target"]));
+  if (!have.length) return ["build.target isn't set"];
+  const same = [...new Set(have)].sort().join(" ") === [...BROWSERS].sort().join(" ");
+  return same ? [] : [`build.target is ${have.join(" ")}, not ${BROWSERS.join(" ")}`];
+}
 
 // Writes a file's edit, where the file exists and the edit changes it.
 function editFile(file: string, edit: (text: string) => string): void {
@@ -731,9 +766,19 @@ export const RULES: Rule[] = [
       if (!tsconfig) return drifted(["no tsconfig.json"]);
       const parsed = tsconfigIn(tsconfig);
       if (!parsed) return drifted(["tsconfig.json can't be parsed"]);
-      const drift = parsed.extends === TSCONFIG ? [] : [`tsconfig.json doesn't extend ${TSCONFIG}`];
-      for (const key of Object.keys(parsed).filter((k) => !["extends", "include"].includes(k))) {
-        drift.push(`tsconfig.json sets ${key}, which is ${TSCONFIG}'s`);
+      const drift = Object.keys(parsed)
+        .filter((key) => !["compilerOptions", "include"].includes(key))
+        .map((key) => `tsconfig.json sets ${key}`);
+      const own = parsed.compilerOptions ?? {};
+      for (const [key, want] of Object.entries(OPTIONS)) {
+        if (JSON.stringify(own[key]) !== JSON.stringify(want)) {
+          drift.push(
+            `compilerOptions.${key} is ${JSON.stringify(own[key])}, not ${JSON.stringify(want)}`,
+          );
+        }
+      }
+      for (const key of Object.keys(own).filter((key) => !(key in OPTIONS))) {
+        drift.push(`compilerOptions sets ${key}, which the rules don't`);
       }
       return drifted(drift);
     },
@@ -744,7 +789,7 @@ export const RULES: Rule[] = [
         const parsed = tsconfigIn(read(path));
         if (!parsed) return;
         writeJson(path, {
-          extends: TSCONFIG,
+          compilerOptions: OPTIONS,
           ...(parsed.include ? { include: parsed.include } : {}),
         });
       },
@@ -755,32 +800,17 @@ export const RULES: Rule[] = [
     check: ({ files, vitePlus: own }) => {
       // Without Vite+ there's no lint block to read, and versions-vite-plus already says so.
       if (!own) return undefined;
-      const vite = files["vite.config.ts"] ?? "";
-      if (usesCraftz(vite)) return drifted([]);
-      const drift: string[] = [];
-      if (valueAt(vite, ["lint", "options", "typeAware"]) !== true) {
-        drift.push("lint isn't type-aware");
-      }
-      if (valueAt(vite, ["lint", "options", "typeCheck"]) !== true) {
-        drift.push("lint doesn't type-check");
-      }
-      return drifted(drift);
+      return drifted(unruled(files["vite.config.ts"] ?? "", { lint: RULED["lint"] }));
     },
+    fix: { in: "files", apply: (dir) => rule(dir, { lint: RULED["lint"] }) },
   },
   {
     id: "toolchain-wrap",
     check: ({ files, vitePlus: own }) => {
       if (!own) return undefined;
-      const vite = files["vite.config.ts"] ?? "";
-      if (usesCraftz(vite)) return drifted([]);
-      if (!valueAt(vite, ["fmt"])) return drifted(["no fmt block"]);
-      return drifted(
-        valueAt(vite, ["fmt", "proseWrap"]) === "never"
-          ? []
-          : ['fmt doesn\'t set proseWrap: "never"'],
-      );
+      return drifted(unruled(files["vite.config.ts"] ?? "", { fmt: RULED["fmt"] }));
     },
-    // A config without craftz() gets it from toolchain-craftz's fix, which sets this.
+    fix: { in: "files", apply: (dir) => rule(dir, { fmt: RULED["fmt"] }) },
   },
   {
     id: "toolchain-craftz",
@@ -788,7 +818,7 @@ export const RULES: Rule[] = [
       if (!own) return undefined;
       const drift: string[] = [];
       if (!ownCraftz(pkg) && !deps[CRAFTZ]) drift.push(`doesn't depend on ${CRAFTZ}`);
-      if (!usesCraftz(files["vite.config.ts"] ?? "")) drift.push("vite.config.ts has no craftz()");
+      if (usesCraftz(files["vite.config.ts"] ?? "")) drift.push("vite.config.ts calls craftz()");
       return drifted(drift);
     },
     fix: { in: "files", apply: (dir, std) => useCraftz(dir, std) },
@@ -797,24 +827,26 @@ export const RULES: Rule[] = [
     id: "toolchain-browsers",
     check: ({ pkg, files, worker: site }) => {
       const vite = files["vite.config.ts"] ?? "";
-      const call = pluginCall(vite, "craftz")?.["arguments"] as Node[] | undefined;
-      const option = literal(call?.[0]);
-      const browser = (option as { browser?: unknown } | undefined)?.browser === true;
-      if (browser || filled(vite, site)) return { value: BROWSERS.join(" "), drift: [] };
-      if (!pkg.private && at(exported(vite), ["pack", "target"])) {
-        return drifted([
-          "pack.target is set. A package for browsers says craftz({ browser: true })",
-        ]);
-      }
-      // A site Vite bundles from source, unlike one that serves a folder `prose build` wrote.
-      const bundled = Boolean(site) && site?.directory !== ".prose";
-      if (!bundled) return undefined;
-      const have = targetsIn(valueAt(vite, ["build", "target"]));
-      const where = "build.target";
-      if (!have.length) return drifted([`${where} isn't set`]);
-      const value = have.join(" ");
-      const same = [...new Set(have)].sort().join(" ") === [...BROWSERS].sort().join(" ");
-      return { value, drift: same ? [] : [`${where} is ${value}, not ${BROWSERS.join(" ")}`] };
+      const drift = siteDrift(vite, site);
+      if (!pkg.private) {
+        const pack = packFor(pkg, vite);
+        drift.push(...unruled(vite, { pack }));
+        if (!pack["target"] && at(exported(vite), ["pack", "target"])) {
+          drift.push("pack.target is set, for a package that runs in Node");
+        }
+      } else if (!site || site.directory === ".prose") return undefined;
+      return { value: BROWSERS.join(" "), drift };
+    },
+    fix: {
+      in: "files",
+      apply: (dir) => {
+        const pkg = readPkg(dir);
+        const vite = existsSync(join(dir, "vite.config.ts"))
+          ? read(join(dir, "vite.config.ts"))
+          : "";
+        if (!pkg.private) rule(dir, { pack: packFor(pkg, vite) });
+        if (siteDrift(vite, workerIn(dir)).length) rule(dir, { build: { target: BROWSERS } });
+      },
     },
   },
   owns("toolchain-editor", EDITOR),
@@ -1218,7 +1250,7 @@ export const RULES: Rule[] = [
   },
   {
     id: "releases-packing",
-    check: ({ pkg, deps }) => {
+    check: ({ pkg, deps, files }) => {
       if (pkg.private) return undefined;
       const drift: string[] = [];
       if (pkg.scripts?.prepack !== "pnpm run build")
@@ -1227,9 +1259,11 @@ export const RULES: Rule[] = [
         drift.push(`files is ${JSON.stringify(pkg.files)}, not "dist" first`);
       if (pkg.publishConfig?.access !== "public") drift.push("publishConfig.access isn't public");
       if (!deps.publint) drift.push("no publint dev dependency");
+      drift.push(
+        ...unruled(files["vite.config.ts"] ?? "", { pack: { publint: PACKED["publint"] } }),
+      );
       return drifted(drift);
     },
-    // The fields in package.json. The pack block in vite.config.ts is left to do by hand.
     fix: {
       in: "files",
       apply: (dir, std) => {
@@ -1243,14 +1277,24 @@ export const RULES: Rule[] = [
           pkg.devDependencies = { ...pkg.devDependencies, publint };
         }
         writePkg(dir, pkg);
+        rule(dir, { pack: { publint: PACKED["publint"] } });
       },
     },
   },
   {
     id: "releases-types",
-    check: ({ pkg, deps }) => {
+    check: ({ pkg, deps, files }) => {
       if (pkg.private) return undefined;
-      return drifted(deps.typescript ? ["has typescript, which Oxc's types don't need"] : []);
+      return drifted([
+        ...(deps.typescript ? ["has typescript, which Oxc's types don't need"] : []),
+        ...unruled(files["vite.config.ts"] ?? "", { pack: { dts: PACKED["dts"] } }),
+      ]);
+    },
+    fix: {
+      in: "files",
+      apply: (dir) => {
+        if (!readPkg(dir).private) rule(dir, { pack: { dts: PACKED["dts"] } });
+      },
     },
   },
   {

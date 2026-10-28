@@ -1,10 +1,14 @@
 /** @prose
  * # What the rules set
  *
- * The values `craftz()` gives every Vite+ config, from `toolchain-wrap` and `toolchain-lint`.
- * They're stated once, here. The plugin fills them in, and `toolchain-craftz`'s fix takes each
- * one out of a config that sets it the same, spelled as `written` spells it, so the two can't
- * disagree on what the rules set.
+ * The values every Vite+ config writes out, from `toolchain-wrap` and `toolchain-lint`, and the
+ * ones a package's `pack` does, from `releases-packing` and `releases-types`. They're stated once,
+ * here. The checks compare a config's values with them, and the fixes write them in, spelled as
+ * `written` spells them, which is how oxfmt lays out a short block.
+ *
+ * `craftz()` used to fill them in. A config that only read them through the plugin left them out
+ * of the file, so a repository's format, lint and pack changed with craftz's version, where
+ * nothing in its own files showed it.
  */
 
 /** A Vite+ config, or a block of one. */
@@ -18,6 +22,12 @@ export const RULED: Config = {
     categories: { correctness: "error" },
     options: { typeAware: true, typeCheck: true },
   },
+};
+
+/** What the rules set in a package's `pack`, by block. Where it runs is `toolchain-browsers`'. */
+export const PACKED: Config = {
+  publint: { strict: true },
+  dts: { generator: "oxc" },
 };
 
 /** A value as oxfmt writes it in a config, like `{ typeAware: true, typeCheck: true }`. */
