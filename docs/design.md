@@ -113,7 +113,7 @@ While craftz is below 1.0, a minor release plays the breaking release's part, as
 
 Every change to the rules is a release, with its 2FA approval. craftz's site shows the latest, and the installed version is what binds a repository. Small changes wait and go out together.
 
-A repository is checked against the version it installs, never craftz's latest. Checking against the latest would fail a pull request that passed `verify` on a laptop. `craftz check` notes a newer release, as a note that never fails, and moving to it is the repository's own pull request.
+A repository is checked against the version it installs, never craftz's latest. Checking against the latest would fail a pull request that passed `verify` on a laptop. `craftz status` notes a newer release, as a note that never fails, and moving to it is the repository's own pull request.
 
 ## Errors, warnings and notes
 
@@ -135,7 +135,7 @@ A hold is a field in the repository's `package.json`, from a rule's id to its re
 }
 ```
 
-A note that reads npm, like a newer craftz or a graduated beta, is left out when npm can't be reached. CI never fails because npm is down.
+A note that reads npm, like a newer craftz or a graduated beta, is `status`'s, not `check`'s, so a `verify` never waits on npm. It's left out when npm can't be reached.
 
 An app that deploys with wrangler while cf can't build it holds `cloudflare-config`. Its `wrangler.toml` is its own until the hold goes, and no rule describes it.
 

@@ -26,7 +26,7 @@ import { gone } from "./gone.ts";
 import { pr } from "./pr.ts";
 import { release } from "./release.ts";
 import { buildLog, status, timing } from "./status.ts";
-import { CRAFTZ, OWNER, type Pkg, here, read } from "./reference.ts";
+import { CRAFTZ, OWNER, type Pkg, here } from "./reference.ts";
 import { fixFiles } from "./rules.ts";
 import { cloudflareLogin, githubLogin, hasClassic } from "./settings.ts";
 import { upgrade } from "./upgrade.ts";
@@ -48,9 +48,12 @@ const lines = (f: Finding): string[] =>
 /** @prose
  * # Check and fix
  *
- * `check` prints a folder's warnings and notes, as
+ * `check` prints a folder's warnings, as
  * [the design](../docs/design.md#errors-warnings-and-notes) has them, each in markz's line, and
- * exits 1 on a warning that isn't held. It reads no settings, so it runs in CI with no login.
+ * exits 1 on a warning that isn't held.
+ *
+ * It reads only the folder's files, so it runs in CI with no login, and asks npm nothing.
+ * [notes.ts](notes.ts) says why the notes on npm are `status`'s.
  * The lines stay grouped under the folder, since `align` reads them per repository.
  *
  * `fix` writes every fix, the same ones `pnpm align` runs, then checks again. A fix can move
@@ -58,15 +61,11 @@ const lines = (f: Finding): string[] =>
  */
 async function check(dir: string): Promise<boolean> {
   const { findings } = await checkFolder(dir);
-  const pkg = JSON.parse(read(join(dir, "package.json")) || "{}") as Pkg;
   const drift = findings.filter((f) => !f.held && f.drift.length);
   console.log(drift.length ? `✗ ${dir}` : `✓ ${dir}`);
   for (const line of drift.flatMap(lines)) console.log(`    ${line}`);
   for (const line of findings.filter((f) => f.held).flatMap(lines)) console.log(`    ${line}`);
-  const said = [
-    ...(await notes(pkg)),
-    ...findings.flatMap((f) => (f.unchecked ? [`not checked: ${f.unchecked}`] : [])),
-  ];
+  const said = findings.flatMap((f) => (f.unchecked ? [`not checked: ${f.unchecked}`] : []));
   for (const message of said)
     console.log(`    ${finding({ tool: "craftz", level: "note", message })}`);
   if (drift.length) console.log("    craftz: `craftz rules <id>` prints the rule an id names");
@@ -125,7 +124,7 @@ async function deploy(dir: string): Promise<number> {
 }
 
 // Prints what's live for a repository, and returns whether anything has failed.
-async function live(dir: string, log: boolean, notes: boolean, timed: boolean): Promise<boolean> {
+async function live(dir: string, log: boolean, full: boolean, timed: boolean): Promise<boolean> {
   const { repo, pkg, site } = target(dir);
   const { lines, build, release, summary } = await status(repo, pkg, site);
   const failed = lines.some((line) => !line.ok);
@@ -134,7 +133,9 @@ async function live(dir: string, log: boolean, notes: boolean, timed: boolean): 
   for (const line of lines) {
     console.log(`    ${line.ok ? "✓" : "✗"} ${line.what.padEnd(width)}  ${line.found}`);
   }
-  if (notes && release) console.log(`\n${release.body.trim()}`);
+  for (const message of await notes(pkg))
+    console.log(`    ${finding({ tool: "craftz", level: "note", message })}`);
+  if (full && release) console.log(`\n${release.body.trim()}`);
   else if (summary) console.log(`\n${summary}`);
   if (log && build) console.log(`\n${buildLog(build).join("\n")}`);
   if (timed) console.log(`\n${timing(repo).join("\n")}`);

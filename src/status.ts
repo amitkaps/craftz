@@ -22,6 +22,9 @@
  *   [Access](settings.ts#access) says. Either is fine, and saying which means a site meant to be
  *   internal doesn't go public unseen. An Access application with no policy is marked.
  *
+ * The [notes](notes.ts) follow the lines: a newer craftz, and in craftz's own repository a beta
+ * that's graduated.
+ *
  * `--log` prints the latest build's log after, which is where a failed deploy says why, and
  * `--notes` prints the latest release's notes in full. `--timing` prints what the last pull
  * requests took, as [Timing](#timing) says.

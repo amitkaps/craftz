@@ -1,12 +1,13 @@
 /** @prose
  * # Notes
  *
- * What `craftz check` says when nothing has drifted but something is worth knowing: a newer
- * craftz than the one a repository installs, and a beta that's graduated. A note never fails the
- * check.
+ * What `craftz status` says after its lines, when something is worth knowing: a newer craftz
+ * than the one a repository installs, and a beta that's graduated. A note never fails `status`.
  *
- * Both read npm. When npm can't be reached in a few seconds, there's no note, so CI never fails
- * because npm is down.
+ * Both read npm, which took 0.5 to 3 seconds, while the rules take a quarter of one. `check` once
+ * printed them, in every `verify`, `pr` and CI run, where nobody read them, and align moves every
+ * repository to a new craftz anyway. `status` already reads npm, and is run on purpose. When npm
+ * can't be reached in a few seconds, there's no note.
  */
 import { CRAFTZ, type Pkg, VERSIONS } from "./reference.ts";
 import { BETA } from "./rules.ts";
