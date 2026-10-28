@@ -7,6 +7,7 @@ This is a package's plan, of what craftz itself does next. Each repository moves
 ## Next, in order
 
 - [ ] **`check` stops asking npm.** The lookup for a newer craftz takes 0.5 to 3 seconds, while the rules take a quarter of a second. It runs in every `verify`, `pnpm pr` and CI run, where nobody reads a note. align already moves every repository to a new craftz, so the note tells nobody what they need. The notes on a newer craftz and a graduated beta move to `craftz status`, which already reads npm and is run on purpose. Then `check` reads only the folder's files.
+- [ ] **A labelled pull request isn't blocked by its first `label` run.** `gh pr create --label` opens the pull request, then labels it, so `label.yml` runs twice. The first run sees no label and is cancelled by the second, and GitHub keeps the pull request blocked on the cancelled run. The run reads the labels when it runs, with `gh pr view`, not from the event, and no run cancels another. Then every run sees the current labels.
 
 ## Where it is
 
