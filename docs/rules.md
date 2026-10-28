@@ -148,7 +148,7 @@ Every repository uses these names, and runs them with `pnpm run …` in anything
 | `ship` | uploads what `verify` built: `craftz deploy` |
 | `prose` | reads the repository as a document: `prose`, so `pnpm prose build` works |
 | `outline` | writes `outline.md` for agents: `prose outline` |
-| `site` | a package's site, the repository read as prose: `prose build` |
+| `site` | a package's site, which `vp pack` doesn't build, like `prose build` or `pagez build` |
 | `pr` | opens a pull request that merges itself once CI passes |
 | `gone` | deletes the local branches that merged |
 | `craftz` | runs craftz, so `pnpm craftz rules` works |
