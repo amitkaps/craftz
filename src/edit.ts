@@ -1,19 +1,21 @@
 /** @prose
  * # Editing a repository's files
  *
- * The fixes that edit code a repository writes itself, `vite.config.ts` and `cloudflare.config.ts`,
- * each once, to add craftz's calls, and to take Cloudflare's plugin out. [rules.ts](rules.ts) reads
- * and writes the files, and keeps only the rules. CI and pnpm's settings are craftz's, written
- * whole.
+ * The fixes that edit `vite.config.ts`, code a repository writes itself, to add `craftz()` and
+ * the task `verify` runs. [rules.ts](rules.ts) reads and writes the files, and keeps only the
+ * rules. CI and pnpm's settings are craftz's, written whole.
  *
- * Each edit is read with regular expressions, which depend on how a file is laid out, so most
- * fixes that missed a real repository missed here. An edit takes a file's text and gives back
- * the fixed text. A file laid out otherwise comes back unchanged, so its check still drifts.
+ * An edit takes a file's text and gives back the fixed text. It finds where to write by parsing
+ * the config, as [config.ts](config.ts) does, and writes there, so the rest of the file stays as
+ * it was. A config it can't place the edit in comes back unchanged, so its check still drifts.
+ * Adding `craftz()` still finds the plugins by their lines, and goes when the plugin does.
  *
  * An edit belongs here only where `craftz()` can't do the job. The plugin sets what's a value in
  * a config, like `fmt` and `lint`, but it can't add itself, so that stays an edit. A fix that moved
- * repositories off an old layout is deleted once every repository is past it.
+ * repositories off an old layout is deleted once every repository is past it, like the ones that
+ * moved a static site off Cloudflare's plugin and onto `site()`.
  */
+import { at, exported, literal, pluginCall, properties } from "./config.ts";
 import { CRAFTZ } from "./reference.ts";
 
 /** @prose
@@ -25,8 +27,8 @@ import { CRAFTZ } from "./reference.ts";
  * config, naming it to settle by hand.
  */
 
-/** A config with `craftz()` in its plugins, which then has what the plugin sets. */
-export const PLUGIN = /\bplugins:\s*\[[^\]]*\bcraftz\(/;
+/** Whether a config has `craftz()` in its plugins, and so has what the plugin sets. */
+export const usesCraftz = (vite: string): boolean => Boolean(pluginCall(vite, "craftz"));
 
 const IMPORT = /^import \{ defineConfig(?:, lazyPlugins)? \} from "vite-plus";\n/m;
 // Puts craftz() first in Vite's plugins, on a line of its own when they're one to a line.
@@ -42,88 +44,13 @@ const plugIn = (text: string): string =>
 
 /** A Vite config with `craftz()` first in its plugins. */
 export function withCraftz(vite: string): string {
-  if (PLUGIN.test(vite) || !IMPORT.test(vite)) return vite;
+  if (usesCraftz(vite) || !IMPORT.test(vite)) return vite;
   const used = plugIn(
     vite.replace(IMPORT, (line) => `${line}import { craftz } from "${CRAFTZ}";\n`),
   );
-  return PLUGIN.test(used)
+  return usesCraftz(used)
     ? used
     : used.replace(/defineConfig\(\{\n/, "defineConfig({\n  plugins: [craftz()],\n\n");
-}
-
-/** @prose
- * # A static site's configs
- *
- * `cloudflare-site`'s fix rewrites a cf config as `site()`'s: the Worker that `worker: {…}` or
- * `worker: worker({…})` held becomes `site()`'s argument, without what `site()` sets, and the
- * folder Vite served goes in `assets.directory`. A config that turns an address on, or sets a
- * Node.js flag, comes back unchanged, since `site()` would fail it, and that's settled by hand.
- *
- * `cloudflare-static`'s fix takes Cloudflare's plugin out of `vite.config.ts`, with the
- * `lazyPlugins()` that loaded it, and the `publicDir` that named its folder, which is
- * `cloudflare.config.ts`'s now, unless Vite still builds the site from an `index.html`.
- */
-
-const CF_IMPORT = /^import \{ defineConfig \} from "cf\/config";\n/m;
-const SETS = /^[ \t]+(compatibilityDate: "[^"]*"|workersDev: false|previewUrls: false),\n/gm;
-
-/** A Worker config that takes its Worker from `site()`, serving `directory`. */
-export function withSite(config: string, directory: string): string {
-  const open = /^([ \t]*)worker: (?:worker\()?\{\n/m.exec(config);
-  if (
-    !open ||
-    !CF_IMPORT.test(config) ||
-    /workersDev: true|previewUrls: true|nodejs_/.test(config)
-  ) {
-    return config;
-  }
-  const [line, indent = ""] = open;
-  const close = new RegExp(`\n${indent}\\}\\)?,\n`);
-  const rest = config.slice(open.index + line.length);
-  const end = close.exec(rest);
-  if (!end) return config;
-  // The Worker's keys, one level out, as site()'s argument.
-  const body = rest
-    .slice(0, end.index + 1)
-    .replace(SETS, "")
-    .replace(new RegExp(`^${indent}`, "gm"), "");
-  const folder = `    directory: "${directory}",\n`;
-  const opened = /^  assets: \{\n/m;
-  // An assets object on one line, like `assets: { notFoundHandling: "404-page" },`.
-  const inline = /^  assets: \{ ?(.*?) ?\},\n/m;
-  const keys = opened.test(body)
-    ? body.replace(opened, (assets) => `${assets}${folder}`)
-    : inline.test(body)
-      ? body.replace(
-          inline,
-          (_, own: string) => `  assets: { directory: "${directory}", ${own} },\n`,
-        )
-      : `${body}  assets: {\n${folder}  },\n`;
-  const after = rest.slice(end.index + end[0].length).replace(/^\}\);\n?/, "");
-  const before = config
-    .slice(0, open.index)
-    .replace(CF_IMPORT, `import { site } from "${CRAFTZ}/cloudflare";\n`)
-    .replace(/^import \{ worker \} from "[^"]*";\n/m, "")
-    .replace(/^export default defineConfig\(\{\n/m, "export default site({\n");
-  return `${before}${keys}});\n${after}`;
-}
-
-const LAZY =
-  /^[ \t]*lazyPlugins\(async \(\) => \{\n[^]*?@cloudflare\/vite-plugin[^]*?\n[ \t]*\}\),\n/m;
-// The publicDir line, with the comment lines just above it.
-const PUBLIC_DIR = /(?:^[ \t]*\/\/.*\n)*^[ \t]*publicDir: "[^"]*",\n(?:[ \t]*\n)?/m;
-
-/** A Vite config without Cloudflare's plugin, and without `publicDir` unless Vite builds. */
-export function withoutCloudflare(vite: string, builds: boolean): string {
-  const without = vite
-    .replace(LAZY, "")
-    .replace(
-      /^import \{ defineConfig, lazyPlugins \} from "vite-plus";$/m,
-      'import { defineConfig } from "vite-plus";',
-    )
-    .replace(/^import \{ cloudflare \} from "@cloudflare\/vite-plugin";\n/m, "")
-    .replace(/,?\s*cloudflare\(\{[^}]*\}\)/, "");
-  return builds ? without : without.replace(PUBLIC_DIR, "");
 }
 
 /** @prose
@@ -133,7 +60,7 @@ export function withoutCloudflare(vite: string, builds: boolean): string {
  * repository's scripts side by side, one for each entry in its `dependsOn`.
  *
  * `scripts-verify`'s fix moves a `verify` that chained them with `&&` into that list, and adds
- * the `run` block before the config's last line. A config that already has a `run` block comes
+ * the `run` block after the config's last key. A config that already has a `run` block comes
  * back unchanged, so the task is added by hand.
  *
  * The cache is off. A cached step replays its output without running, so a check could pass on
@@ -142,8 +69,8 @@ export function withoutCloudflare(vite: string, builds: boolean): string {
 
 /** The scripts the config's `all` task depends on, or `undefined` without one. */
 export function allOf(vite: string): string[] | undefined {
-  const list = /\ball:\s*\{[^}]*?\bdependsOn:\s*\[([^\]]*)\]/.exec(vite)?.[1];
-  return list === undefined ? undefined : [...list.matchAll(/"([^"]+)"/g)].map((m) => m[1] ?? "");
+  const list = literal(at(exported(vite), ["run", "tasks", "all", "dependsOn"]));
+  return Array.isArray(list) ? list.filter((it) => typeof it === "string") : undefined;
 }
 
 /** The `run` block whose `all` task runs these scripts, as a config's key, indented. */
@@ -155,8 +82,13 @@ export const runBlock = (scripts: string[]): string => `  run: {
   },
 `;
 
-/** A Vite config whose `all` task runs these scripts, added before its last line. */
+/** A Vite config whose `all` task runs these scripts, added after its last key. */
 export function withVerify(vite: string, scripts: string[]): string {
-  if (/^\s*run:\s*\{/m.test(vite)) return vite;
-  return vite.replace(/,\n\}\);\n?$/, `,\n\n${runBlock(scripts)}});\n`);
+  const config = exported(vite);
+  const last = properties(config).at(-1);
+  if (!last || at(config, ["run"])) return vite;
+  const comma = vite[last.end] === ",";
+  const after = last.end + (comma ? 1 : 0);
+  const block = runBlock(scripts).trimEnd();
+  return `${vite.slice(0, after)}${comma ? "" : ","}\n\n${block}${vite.slice(after)}`;
 }

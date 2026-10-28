@@ -28,7 +28,8 @@ import {
   standard,
   versionsIn,
 } from "./reference.ts";
-import { PLUGIN, allOf, withCraftz, withSite, withVerify, withoutCloudflare } from "./edit.ts";
+import { type Node, at, exported, jsonc, literal, pluginCall, valueAt } from "./config.ts";
+import { allOf, usesCraftz, withCraftz, withVerify } from "./edit.ts";
 import { rulesetFor, writeLabels, writeRuleset } from "./settings.ts";
 import { BROWSERS } from "./pinned.ts";
 import { stated } from "./stated.ts";
@@ -102,7 +103,7 @@ const drifted = (drift: string[]): Finding => ({ drift });
 // Whether `craftz()` fills in `build.target`, as it does for a static site. Its src/index.ts
 // says why.
 const filled = (vite: string, site?: Worker): boolean =>
-  PLUGIN.test(vite) && site?.deploys === "static";
+  usesCraftz(vite) && site?.deploys === "static";
 
 // What GitHub couldn't answer. Its rate limit isn't drift: the check says it wasn't made.
 export function unread(error: Error): Finding {
@@ -220,33 +221,20 @@ const vitePlus = VERSIONS["vite-plus"];
  *
  * A repository's `tsconfig.json` extends the one craftz ships,
  * [tsconfig.base.json](../tsconfig.base.json), and says only what to include, so every option is
- * craftz's. It's parsed, with the comments and trailing commas a tsconfig allows taken out. The fix
- * keeps `include` and writes the rest, so a repository's own options and comments go.
+ * craftz's. It's parsed as [config.ts](config.ts) parses a config, which takes the comments and
+ * trailing commas a tsconfig allows. The fix keeps `include` and writes the rest, so a
+ * repository's own options and comments go.
  *
- * The lint block is found by a regular expression, since `vite.config.ts` is code, and has no fix.
+ * The `lint` and `fmt` blocks are read from the parsed `vite.config.ts` too, and have no fix,
+ * since `toolchain-craftz`'s adds the plugin that sets them.
  */
 const TSCONFIG = `${CRAFTZ}/tsconfig.json`;
-
-// A tsconfig without its comments and trailing commas. Strings are kept whole.
-const uncommented = (text: string): string =>
-  text
-    .replace(
-      /("(?:[^"\\]|\\.)*")|\/\/[^\n]*|\/\*[\s\S]*?\*\//g,
-      (_, string?: string) => string ?? "",
-    )
-    .replace(
-      /("(?:[^"\\]|\\.)*")|,(\s*[}\]])/g,
-      (_, string?: string, close?: string) => string ?? close ?? "",
-    );
 
 type Tsconfig = { extends?: unknown; include?: unknown } & Json;
 
 function tsconfigIn(text: string): Tsconfig | undefined {
-  try {
-    return JSON.parse(uncommented(text)) as Tsconfig;
-  } catch {
-    return undefined;
-  }
+  const parsed = jsonc(text);
+  return parsed && typeof parsed === "object" ? (parsed as Tsconfig) : undefined;
 }
 
 const EDITOR = [".vscode/settings.json", ".vscode/extensions.json"];
@@ -261,13 +249,11 @@ const EDITOR = [".vscode/settings.json", ".vscode/extensions.json"];
  * framework's, so its `build.target` is read, and the browsers in it have to be the list, with
  * any Node left out.
  */
-const BROWSER = /\bcraftz\(\{\s*browser:\s*true\s*\}\)/;
-const TARGET = /\btarget:\s*\[([^\]]*)\]/g;
-const targetsIn = (vite: string): string[] =>
-  [...vite.matchAll(TARGET)]
-    .flatMap((m) => [...(m[1] ?? "").matchAll(/"([^"]+)"/g)])
-    .map((m) => m[1] ?? "")
-    .filter((target) => !target.startsWith("node"));
+// The browsers in a target, without Node.
+const targetsIn = (target: unknown): string[] =>
+  (Array.isArray(target) ? target : [target])
+    .filter((it): it is string => typeof it === "string")
+    .filter((it) => !it.startsWith("node"));
 
 // Writes a file's edit, where the file exists and the edit changes it.
 function editFile(file: string, edit: (text: string) => string): void {
@@ -644,17 +630,6 @@ const commandScript = (id: string, name: string): Rule => ({
 // What deployed a static site through Cloudflare's plugin.
 const CLOUDFLARE_TOOLS = ["cf", "@cloudflare/vite-plugin", "wrangler"];
 
-// The folder a static site serves: Vite's own build, which copies in its publicDir, or the
-// publicDir alone, or prose's.
-function folderOf(dir: string): string | undefined {
-  if (existsSync(join(dir, "index.html"))) return "dist";
-  const vite = read(join(dir, "vite.config.ts")) ?? "";
-  const named = /^\s*publicDir:\s*"([^"]+)"/m.exec(vite)?.[1];
-  if (named) return named;
-  const scripts = readPkg(dir).scripts ?? {};
-  return /prose build/.test(scripts.site ?? scripts.verify ?? "") ? ".prose" : undefined;
-}
-
 export const RULES: Rule[] = [
   {
     id: "versions-node",
@@ -781,10 +756,14 @@ export const RULES: Rule[] = [
       // Without Vite+ there's no lint block to read, and versions-vite-plus already says so.
       if (!own) return undefined;
       const vite = files["vite.config.ts"] ?? "";
-      if (PLUGIN.test(vite)) return drifted([]);
+      if (usesCraftz(vite)) return drifted([]);
       const drift: string[] = [];
-      if (!/typeAware:\s*true/.test(vite)) drift.push("lint isn't type-aware");
-      if (!/typeCheck:\s*true/.test(vite)) drift.push("lint doesn't type-check");
+      if (valueAt(vite, ["lint", "options", "typeAware"]) !== true) {
+        drift.push("lint isn't type-aware");
+      }
+      if (valueAt(vite, ["lint", "options", "typeCheck"]) !== true) {
+        drift.push("lint doesn't type-check");
+      }
       return drifted(drift);
     },
   },
@@ -793,10 +772,12 @@ export const RULES: Rule[] = [
     check: ({ files, vitePlus: own }) => {
       if (!own) return undefined;
       const vite = files["vite.config.ts"] ?? "";
-      if (PLUGIN.test(vite)) return drifted([]);
-      if (!/\bfmt:\s*\{/.test(vite)) return drifted(["no fmt block"]);
+      if (usesCraftz(vite)) return drifted([]);
+      if (!valueAt(vite, ["fmt"])) return drifted(["no fmt block"]);
       return drifted(
-        /proseWrap:\s*"never"/.test(vite) ? [] : ['fmt doesn\'t set proseWrap: "never"'],
+        valueAt(vite, ["fmt", "proseWrap"]) === "never"
+          ? []
+          : ['fmt doesn\'t set proseWrap: "never"'],
       );
     },
     // A config without craftz() gets it from toolchain-craftz's fix, which sets this.
@@ -807,7 +788,7 @@ export const RULES: Rule[] = [
       if (!own) return undefined;
       const drift: string[] = [];
       if (!ownCraftz(pkg) && !deps[CRAFTZ]) drift.push(`doesn't depend on ${CRAFTZ}`);
-      if (!PLUGIN.test(files["vite.config.ts"] ?? "")) drift.push("vite.config.ts has no craftz()");
+      if (!usesCraftz(files["vite.config.ts"] ?? "")) drift.push("vite.config.ts has no craftz()");
       return drifted(drift);
     },
     fix: { in: "files", apply: (dir, std) => useCraftz(dir, std) },
@@ -816,9 +797,11 @@ export const RULES: Rule[] = [
     id: "toolchain-browsers",
     check: ({ pkg, files, worker: site }) => {
       const vite = files["vite.config.ts"] ?? "";
-      const browser = BROWSER.test(vite);
+      const call = pluginCall(vite, "craftz")?.["arguments"] as Node[] | undefined;
+      const option = literal(call?.[0]);
+      const browser = (option as { browser?: unknown } | undefined)?.browser === true;
       if (browser || filled(vite, site)) return { value: BROWSERS.join(" "), drift: [] };
-      if (!pkg.private && /\bpack:\s*\{[^]*?\btarget:/.test(vite)) {
+      if (!pkg.private && at(exported(vite), ["pack", "target"])) {
         return drifted([
           "pack.target is set. A package for browsers says craftz({ browser: true })",
         ]);
@@ -826,7 +809,7 @@ export const RULES: Rule[] = [
       // A site Vite bundles from source, unlike one that serves a folder `prose build` wrote.
       const bundled = Boolean(site) && site?.directory !== ".prose";
       if (!bundled) return undefined;
-      const have = targetsIn(vite);
+      const have = targetsIn(valueAt(vite, ["build", "target"]));
       const where = "build.target";
       if (!have.length) return drifted([`${where} isn't set`]);
       const value = have.join(" ");
@@ -1016,9 +999,8 @@ export const RULES: Rule[] = [
    * `cloudflare.config.ts` is code, so the check only looks for `site()`, which sets the date and
    * the addresses, and fails a config that sets them too.
    *
-   * The fix is edit.ts's, which rewrites the Worker a cf config has. The folder it serves is the
-   * one Vite served as `publicDir`, or Vite's own `dist` for a site with an `index.html`, or
-   * `.prose` for a prose site. Any other site is moved by hand.
+   * There's no fix. The one that rewrote a cf config as `site()`'s went once every repository
+   * had moved, and a new site starts on `site()`.
    *
    * A site on wrangler, like base, is left out. It's held on wrangler, so it moves when it moves
    * to `cloudflare.config.ts`.
@@ -1029,14 +1011,6 @@ export const RULES: Rule[] = [
       if (site?.file !== "cloudflare.config.ts") return undefined;
       return drifted(USES_SITE.test(files[site.file] ?? "") ? [] : [`${site.file} has no site()`]);
     },
-    fix: {
-      in: "files",
-      apply: (dir) => {
-        const directory = folderOf(dir);
-        if (!directory) return;
-        editFile(join(dir, "cloudflare.config.ts"), (text) => withSite(text, directory));
-      },
-    },
   },
   /** @prose
    * # Nothing of Cloudflare's in a static site
@@ -1044,9 +1018,9 @@ export const RULES: Rule[] = [
    * A static site's dependencies, Vite config and scripts are read for what deployed it through
    * Cloudflare's plugin.
    *
-   * The fix removes the dependencies, takes the plugin out of the Vite config, as edit.ts does,
-   * and drops ` && vp build` from the scripts of a site with no `index.html`. A script that runs
-   * `vp build` another way is left to fix by hand.
+   * The fix removes the dependencies and drops ` && vp build` from the scripts of a site with no
+   * `index.html`. A script that runs `vp build` another way is left to fix by hand, as is a Vite
+   * config that loads the plugin, since every repository has taken it out.
    */
   {
     id: "cloudflare-static",
@@ -1083,7 +1057,6 @@ export const RULES: Rule[] = [
           if (script) pkg.scripts = { ...pkg.scripts, [name]: script.replace(/ && vp build$/, "") };
         }
         writePkg(dir, pkg);
-        editFile(join(dir, "vite.config.ts"), (vite) => withoutCloudflare(vite, builds));
       },
     },
   },
