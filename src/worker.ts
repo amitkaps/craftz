@@ -2,27 +2,26 @@
  * # A repository's Worker
  *
  * What a repository deploys, read from its Worker config. The survey, the rules and the command
- * all read it here, and it imports only Node's own modules.
+ * all read it here.
  *
  * A repository deploys if it has a Cloudflare config, and the Worker's name is read from it.
  * `cloudflare.config.ts` is the one to use, and `wrangler.jsonc` and `wrangler.toml` are the ones
- * still on wrangler. A regular expression is enough, since each file states `name` once.
+ * still on wrangler. Each is read for its name, its first domain, whether it turns off
+ * `workers.dev` and preview URLs, the folder it serves, and what it deploys. The addresses are
+ * on unless the config says otherwise.
  *
- * Its domain is read the same way, the first in `domains` or the first route's `pattern`, and
- * the page links to it under the repository's name.
- *
- * So is whether it turns off `workers.dev` and preview URLs, each on unless the config says
- * otherwise. A config that uses `site()` has both off, since `site()` sets them. Otherwise
- * wrangler's config names them `workers_dev` and `preview_urls`.
- *
- * So is the folder a static site serves, its `assets.directory`, or wrangler's `directory`.
- *
- * And what it deploys, the deploy axis in [the rules](../docs/rules.md#axes). A Worker with code
+ * What it deploys is the deploy axis in [the rules](../docs/rules.md#axes). A Worker with code
  * of its own, cf's `entrypoint` or wrangler's `main`, is an app, and one without is a static
  * site, whatever builds its files.
+ *
+ * `cloudflare.config.ts` and `wrangler.jsonc` are parsed, as [config.ts](config.ts) reads every
+ * config, so a key is found by where it sits. A config that still calls `site()` reads the same,
+ * since its one argument is the Worker. Only an app's `wrangler.toml` is read with regular
+ * expressions, since nothing installed parses TOML, and it goes when the app moves to cf.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { exported, jsonc, literal } from "./config.ts";
 
 /** A repository's Worker, as its config states it. */
 export type Worker = {
@@ -38,23 +37,57 @@ export type Worker = {
 /** The Worker configs, cf's first, then wrangler's. */
 export const CONFIGS = ["cloudflare.config.ts", "wrangler.jsonc", "wrangler.toml"];
 
-/** Whether a Worker's config takes its date and addresses from `site()`. */
-export const USES_SITE = /^export default site\(/m;
+type Config = Record<string, unknown> & { assets?: { directory?: unknown } };
 
-const off = (text: string, key: string): boolean =>
-  USES_SITE.test(text) || new RegExp(`"?${key}"?\\s*[:=]\\s*false`).test(text);
+const string = (value: unknown): string | undefined =>
+  typeof value === "string" ? value : undefined;
+
+/** cf's `worker`, or a `site()` call's argument, which is the Worker itself. */
+function cf(text: string): Config | undefined {
+  const value = literal(exported(text)) as Config | undefined;
+  return (value?.["worker"] as Config | undefined) ?? value;
+}
+
+/** wrangler's TOML, read for the keys it states once each. */
+function toml(text: string): Config {
+  const value = (key: string): string | undefined =>
+    new RegExp(`^${key}\\s*=\\s*"([^"]+)"`, "m").exec(text)?.[1];
+  const off = (key: string): false | undefined =>
+    new RegExp(`^${key}\\s*=\\s*false`, "m").test(text) ? false : undefined;
+  const pattern = /pattern\s*=\s*"([^"]+)"/.exec(text)?.[1];
+  return {
+    name: value("name"),
+    main: value("main"),
+    routes: pattern ? [{ pattern }] : [],
+    workers_dev: off("workers_dev"),
+    preview_urls: off("preview_urls"),
+    assets: { directory: value("directory") },
+  };
+}
+
+const READ: Record<string, (text: string) => Config | undefined> = {
+  "cloudflare.config.ts": cf,
+  "wrangler.jsonc": (text) => jsonc(text) as Config | undefined,
+  "wrangler.toml": toml,
+};
 
 /** The Worker the config files state, by name, or none. */
 export function worker(files: Record<string, string | undefined>): Worker | undefined {
   for (const file of CONFIGS) {
-    const text = files[file] ?? "";
-    const name = /^\s*"?name"?\s*[:=]\s*"([^"]+)"/m.exec(text)?.[1];
-    const domain = /(?:domains"?\s*:\s*\[\s*|"?pattern"?\s*[:=]\s*)"([^"]+)"/.exec(text)?.[1];
-    const workersDev = !off(text, "workersDev") && !off(text, "workers_dev");
-    const previewUrls = !off(text, "previewUrls") && !off(text, "preview_urls");
-    const directory = /"?directory"?\s*[:=]\s*"([^"]+)"/.exec(text)?.[1];
-    const deploys = /^\s*"?(?:entrypoint|main)"?\s*[:=]/m.test(text) ? "app" : "static";
-    if (name) return { file, name, domain, workersDev, previewUrls, directory, deploys };
+    const text = files[file];
+    const config = text ? READ[file]!(text) : undefined;
+    const name = string(config?.["name"]);
+    if (!config || !name) continue;
+    const routes = (config["routes"] ?? []) as { pattern?: unknown }[];
+    return {
+      file,
+      name,
+      domain: string((config["domains"] as unknown[] | undefined)?.[0] ?? routes[0]?.pattern),
+      workersDev: (config["workersDev"] ?? config["workers_dev"]) !== false,
+      previewUrls: (config["previewUrls"] ?? config["preview_urls"]) !== false,
+      directory: string(config.assets?.directory),
+      deploys: config["entrypoint"] || config["main"] ? "app" : "static",
+    };
   }
   return undefined;
 }

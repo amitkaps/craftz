@@ -232,18 +232,18 @@ function cloudflareConfig(name: string, internal: boolean, directory: string): s
   return `/** @prose
  * # The Worker
  *
- * What Cloudflare runs: its name, domain and the folder it serves. \`site()\` sets the
- * compatibility date and turns off \`workers.dev\` and preview URLs, so the site answers only on
- * its domain. Keep the name equal to the Worker connected to this repository in the dashboard.
- * The build and deploy commands are set on the Worker, as craftz's rules list.${why}
+ * What Cloudflare runs: its name, domain and the folder it serves, its compatibility date, and
+ * \`workers.dev\` and preview URLs off, so the site answers only on its domain. Keep the name
+ * equal to the Worker connected to this repository in the dashboard. The build and deploy
+ * commands are set on the Worker, as craftz's rules list.${why}
  */
-import { site } from "${CRAFTZ}/cloudflare";
-
-export default site({
-  name: "${name}",
-  domains: ["${name}.amitkaps.com"],
-  assets: { directory: "${directory}" },
-});
+export default {
+  worker: {
+    name: "${name}",
+    domains: ["${name}.amitkaps.com"],
+    assets: { directory: "${directory}" },
+  },
+};
 `;
 }
 

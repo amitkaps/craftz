@@ -29,13 +29,21 @@ import {
   versionsIn,
 } from "./reference.ts";
 import { at, exported, jsonc, literal, valueAt } from "./config.ts";
-import { allOf, unlike, usesCraftz, withValues, withVerify, withoutCraftz } from "./edit.ts";
+import {
+  allOf,
+  unlike,
+  usesCraftz,
+  withValues,
+  withVerify,
+  withoutCraftz,
+  withoutSite,
+} from "./edit.ts";
 import { type Config, PACKED, RULED, written } from "./ruled.ts";
 import { rulesetFor, writeLabels, writeRuleset } from "./settings.ts";
-import { BROWSERS } from "./pinned.ts";
+import { BROWSERS, COMPATIBILITY_DATE } from "./pinned.ts";
 import { stated } from "./stated.ts";
 import type { BranchRule, Finding, Repo } from "./survey.ts";
-import { USES_SITE, type Worker, workerIn } from "./worker.ts";
+import { type Worker, workerIn } from "./worker.ts";
 
 export type Fix =
   | { in: "files"; apply: (dir: string, std: string) => void }
@@ -250,6 +258,9 @@ const unruled = (vite: string, values: Config): string[] =>
 // Writes values into the Vite config, where edit.ts can place them.
 const rule = (dir: string, values: Config): void =>
   editFile(join(dir, "vite.config.ts"), (vite) => withValues(vite, values));
+
+// What every Worker's `cloudflare.config.ts` sets: the date cf's runtime knows, and only its domain.
+const WORKER = { compatibilityDate: COMPATIBILITY_DATE, workersDev: false, previewUrls: false };
 
 const EDITOR = [".vscode/settings.json", ".vscode/extensions.json"];
 
@@ -1028,11 +1039,10 @@ export const RULES: Rule[] = [
   /** @prose
    * # A static site's Worker
    *
-   * `cloudflare.config.ts` is code, so the check only looks for `site()`, which sets the date and
-   * the addresses, and fails a config that sets them too.
-   *
-   * There's no fix. The one that rewrote a cf config as `site()`'s went once every repository
-   * had moved, and a new site starts on `site()`.
+   * `cloudflare.config.ts` is written as cf's own, with the Worker under `worker`, and imports
+   * nothing. It's parsed as `vite.config.ts` is, and the date and addresses are read where they
+   * sit. The fix writes in each one that differs, after rewriting a config that still calls
+   * `site()`, as edit.ts does.
    *
    * A site on wrangler, like base, is left out. It's held on wrangler, so it moves when it moves
    * to `cloudflare.config.ts`.
@@ -1041,7 +1051,16 @@ export const RULES: Rule[] = [
     id: "cloudflare-site",
     check: ({ files, worker: site }) => {
       if (site?.file !== "cloudflare.config.ts") return undefined;
-      return drifted(USES_SITE.test(files[site.file] ?? "") ? [] : [`${site.file} has no site()`]);
+      const text = files[site.file] ?? "";
+      const drift = /^export default site\(/m.test(text) ? [`${site.file} calls site()`] : [];
+      return drifted([...drift, ...unruled(withoutSite(text), { worker: WORKER })]);
+    },
+    fix: {
+      in: "files",
+      apply: (dir) =>
+        editFile(join(dir, "cloudflare.config.ts"), (text) =>
+          withValues(withoutSite(text), { worker: WORKER }),
+        ),
     },
   },
   /** @prose

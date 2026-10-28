@@ -1,6 +1,6 @@
 # Usage
 
-craftz is used through its commands, and `site()` for a static site's Worker.
+craftz is used through its commands. Nothing in a repository imports it.
 
 Each command is stated once, here, as the list item that opens its section, with how it's run and what it does. `craftz help` lists them from the installed version, and `craftz help <command>` prints its section, so the help is this page. Any repository has every command, and `craftz new` starts one. The last part, [Keeping every repository](#keeping-every-repository), is for whoever keeps them all, from a checkout of craftz.
 
@@ -57,16 +57,19 @@ pnpm craftz fix            # write every fix, then check again
 ## A site's Worker
 
 ```ts
-import { site } from "@amitkaps/craftz/cloudflare";
-
-export default site({
-  name: "prose",
-  domains: ["prose.amitkaps.com"],
-  assets: { directory: ".prose" },
-});
+export default {
+  worker: {
+    name: "prose",
+    domains: ["prose.amitkaps.com"],
+    assets: { directory: ".prose" },
+    compatibilityDate: "2026-10-19",
+    workersDev: false,
+    previewUrls: false,
+  },
+};
 ```
 
-A static site's `cloudflare.config.ts` names its Worker, its domains and the folder it serves, as `assets.directory`: `.prose` for a prose site, and `dist` for one with an `index.html`, which Vite builds. `site()` adds the compatibility date and turns `workers.dev` and preview URLs off. A site installs nothing from Cloudflare, since `craftz deploy` uploads the folder itself.
+A static site's `cloudflare.config.ts` names its Worker, its domains and the folder it serves, as `assets.directory`: `.prose` for a prose site, and `dist` for one with an `index.html`, which Vite builds. It's cf's own format, with no import, and it writes out the compatibility date and turns `workers.dev` and preview URLs off, which `craftz check` compares with [the rules](rules.md#cloudflare-site). A site installs nothing from Cloudflare, since `craftz deploy` uploads the folder itself.
 
 ## Moving to a new craftz
 

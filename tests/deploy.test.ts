@@ -18,16 +18,18 @@ const now = async (): Promise<void> => {};
 
 function siteIn(): string {
   const dir = mkdtempSync(join(tmpdir(), "craftz-deploy-"));
-  const cloudflare = join(import.meta.dirname, "../src/cloudflare.ts");
   writeFileSync(
     join(dir, "cloudflare.config.ts"),
-    `import { site } from ${JSON.stringify(cloudflare)};
-
-export default site({
-  name: "x",
-  domains: ["x.amitkaps.com"],
-  assets: { directory: ".prose", notFoundHandling: "404-page" },
-});
+    `export default {
+  worker: {
+    name: "x",
+    compatibilityDate: "${COMPATIBILITY_DATE}",
+    domains: ["x.amitkaps.com"],
+    workersDev: false,
+    previewUrls: false,
+    assets: { directory: ".prose", notFoundHandling: "404-page" },
+  },
+};
 `,
   );
   mkdirSync(join(dir, ".prose/docs"), { recursive: true });

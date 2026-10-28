@@ -1,9 +1,9 @@
 /** @prose
  * # Reading a config
  *
- * The rules read `vite.config.ts` and `tsconfig.json` by parsing them, with the oxc parser
- * Vite+ ships, so a value is found by where it sits in the config, not by how the file is laid
- * out. A key in a comment isn't read, and neither is one with the same name under another key.
+ * The rules read `vite.config.ts`, `tsconfig.json` and `cloudflare.config.ts` by parsing them,
+ * with the oxc parser Vite+ ships. So a value is found by where it sits in the config, not by how
+ * the file is laid out. A key in a comment isn't read, and neither is one with the same name under another key.
  *
  * Nothing is run. A config is code, and loading it as Vite does takes about half a second and
  * runs its plugins, where parsing takes a millisecond. So only what's written as a literal is
@@ -27,8 +27,8 @@ export interface Node {
 type Parse = (file: string, text: string) => { program: Node; errors: unknown[] };
 let parseSync: Parse | undefined;
 
-// The program in `text`, or `undefined` where it doesn't parse.
-function parse(text: string): Node | undefined {
+/** The program in `text`, or `undefined` where it doesn't parse. */
+export function parsed(text: string): Node | undefined {
   parseSync ??= (createRequire(import.meta.url)("vite-plus") as { parseSync: Parse }).parseSync;
   const { program, errors } = parseSync("config.ts", text);
   return errors.length ? undefined : program;
@@ -36,9 +36,9 @@ function parse(text: string): Node | undefined {
 
 const nodes = (value: unknown): Node[] => (Array.isArray(value) ? (value as Node[]) : []);
 
-/** The object a config exports, as in `export default defineConfig({…})`, `site({…})` or `{…}`. */
+/** The object a config exports, as in `export default defineConfig({…})` or `{…}`. */
 export function exported(text: string): Node | undefined {
-  const body = nodes(parse(text)?.["body"]);
+  const body = nodes(parsed(text)?.["body"]);
   let value = body.find((node) => node.type === "ExportDefaultDeclaration")?.["declaration"] as
     | Node
     | undefined;

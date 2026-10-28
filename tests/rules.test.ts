@@ -11,7 +11,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { BROWSERS } from "../src/browsers.ts";
 import { COMPATIBILITY_DATE } from "../src/runtime.ts";
-import { site } from "../src/cloudflare.ts";
 import { BETA, RULES } from "../src/rules.ts";
 import { RULED, written } from "../src/ruled.ts";
 import { type FormatConfig, format } from "vite-plus/fmt";
@@ -516,30 +515,30 @@ test("each step in the plan's Next is a task, and the fix turns a numbered step 
   expect(check()).toEqual([]);
 });
 
-test("a site's Worker is site(), which the survey reads with its folder", () => {
+test("a site's Worker is written as cf's config is, which the survey reads with its folder", () => {
   const drift = (text: string) => {
     const files = { "cloudflare.config.ts": text };
     const repo = { files, worker: worker(files) } as unknown as Repo;
     return RULES.find((r) => r.id === "cloudflare-site")?.check(repo)?.drift;
   };
-  const old = `import { defineConfig } from "cf/config";
-
-export default defineConfig({
+  const config = `export default {
   worker: {
     name: "x",
+    compatibilityDate: "${COMPATIBILITY_DATE}",
+    domains: ["x.amitkaps.com"],
+    workersDev: false,
+    previewUrls: false,
+    assets: { directory: ".prose" },
   },
-});
-`;
-  expect(drift(old)).toEqual(["cloudflare.config.ts has no site()"]);
-  const config = `import { site } from "${CRAFTZ}/cloudflare";
-
-export default site({
-  name: "x",
-  domains: ["x.amitkaps.com"],
-  assets: { directory: ".prose" },
-});
+};
 `;
   expect(drift(config)).toEqual([]);
+  expect(drift(config.replace(COMPATIBILITY_DATE, "2026-01-01"))).toEqual([
+    `worker.compatibilityDate is "2026-01-01", not "${COMPATIBILITY_DATE}"`,
+  ]);
+  expect(drift(config.replace("    workersDev: false,\n", ""))).toEqual([
+    "worker.workersDev isn't false",
+  ]);
   expect(worker({ "cloudflare.config.ts": config })).toMatchObject({
     domain: "x.amitkaps.com",
     workersDev: false,
@@ -549,31 +548,52 @@ export default site({
   });
 });
 
-test("site() sets the date and addresses, and fails a config that sets them", () => {
-  const assets = { directory: "dist" };
-  expect(site({ name: "x", domains: [], assets })).toEqual({
+test("the fix takes site() out, and writes the Worker's date and addresses in", () => {
+  const dir = mkdtempSync(join(tmpdir(), "craftz-site-"));
+  const file = join(dir, "cloudflare.config.ts");
+  writeFileSync(
+    file,
+    `/** A comment. */
+import { site } from "${CRAFTZ}/cloudflare";
+
+export default site({
+  name: "x",
+  domains: ["x.amitkaps.com"],
+  assets: { directory: ".prose" },
+});
+`,
+  );
+  const rule = RULES.find((r) => r.id === "cloudflare-site");
+  const files = () => ({ "cloudflare.config.ts": readFileSync(file, "utf8") });
+  const repo = () => ({ files: files(), worker: worker(files()) }) as unknown as Repo;
+  expect(rule?.check(repo())?.drift).toEqual([
+    "cloudflare.config.ts calls site()",
+    `worker.compatibilityDate isn't "${COMPATIBILITY_DATE}"`,
+    "worker.workersDev isn't false",
+    "worker.previewUrls isn't false",
+  ]);
+  for (let i = 0; i < 2; i++) if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
+  expect(readFileSync(file, "utf8")).toBe(`/** A comment. */
+
+export default {
+  worker: {
     name: "x",
-    domains: [],
-    assets,
-    compatibilityDate: COMPATIBILITY_DATE,
+    domains: ["x.amitkaps.com"],
+    assets: { directory: ".prose" },
+    compatibilityDate: "${COMPATIBILITY_DATE}",
     workersDev: false,
     previewUrls: false,
-  });
-  expect(() =>
-    // The types refuse it too, so it's cast, as a JavaScript config would pass it.
-    site({ name: "x", domains: [], assets, workersDev: true } as never),
-  ).toThrow("site() sets workersDev, so cloudflare.config.ts can't");
+  },
+};
+`);
+  expect(rule?.check(repo())?.drift).toEqual([]);
 });
 
 test("a static site installs nothing of Cloudflare's, and the fix takes it out, once, but for its Vite config", () => {
   const dir = mkdtempSync(join(tmpdir(), "craftz-static-"));
-  const config = `import { site } from "${CRAFTZ}/cloudflare";
-
-export default site({
-  name: "x",
-  domains: [],
-  assets: { directory: ".prose" },
-});
+  const config = `export default {
+  worker: { name: "x", domains: [], assets: { directory: ".prose" } },
+};
 `;
   writeFileSync(join(dir, "cloudflare.config.ts"), config);
   const pkg = {

@@ -176,8 +176,8 @@ A lifecycle script, one pnpm runs on its own like `prepare` on install or `prepa
 
 A repository with a site deploys it to a Cloudflare Worker with static assets.
 
-- [`cloudflare-config`]{#cloudflare-config}: a site deploys with `cloudflare.config.ts`. It holds the Worker's name, domain and the folder it serves, and `site()` adds the rest.
-- [`cloudflare-site`]{#cloudflare-site}: a static site's config is `site()`, which `@amitkaps/craftz/cloudflare` exports. `site()` sets the compatibility date to the build date of the workerd that the reference's cf depends on, so a site moves to a newer date with craftz. It turns off `workers.dev` and preview URLs, so the site answers only on its domain. Nothing uses the other addresses, and each would serve the site outside anything that covers the domain, like Access. A config that sets any of them fails.
+- [`cloudflare-config`]{#cloudflare-config}: a site deploys with `cloudflare.config.ts`. It's written as cf's config is, `export default { worker: {…} }`, with no import, so the deploy reads nothing from craftz. It holds the Worker's name, domains and the folder it serves, as `assets.directory`. cf has no field for the folder yet, and a site keeps it there until cf does.
+- [`cloudflare-site`]{#cloudflare-site}: a static site's Worker writes out its compatibility date, the build date of the workerd that the reference's cf depends on, so a site moves to a newer date with craftz's fix. It sets `workersDev` and `previewUrls` to false, so the site answers only on its domain. Nothing uses the other addresses, and each would serve the site outside anything that covers the domain, like Access. The fix writes in what differs, and turns a config that calls `site()` into cf's.
 - **Deploys:** the Worker's Git integration (Workers Builds) builds and deploys `main`. There's no deploy step in GitHub Actions, and no API token or secret: `craftz deploy` uses the API token the Worker's build settings name, which Workers Builds sets for the deploy command. The same token is on every Worker.
 - **The Worker's settings** are the same on every Worker. Cloudflare's config has no field for them, so `align` writes them with `cf`, and `craftz settings --check` reads them. Only connecting the Worker to its repository is left to Cloudflare's dashboard.
 
@@ -197,13 +197,16 @@ Previews           off
 A static site is one folder, however it's built: by Vite from an `index.html`, by a plugin like Sitez or Pagez, or by `prose build`. `cloudflare.config.ts` names the folder as `assets.directory`, and `craftz deploy` uploads it, with Cloudflare's API, as `cf deploy` would. Nothing from Cloudflare is installed: cf, Cloudflare's plugin and wrangler bring workerd, which is most of a site's install, and a static site runs no code of its own for it to run. A prose site's config is:
 
 ```ts
-import { site } from "@amitkaps/craftz/cloudflare";
-
-export default site({
-  name: "prose",
-  domains: ["prose.amitkaps.com"],
-  assets: { directory: ".prose" },
-});
+export default {
+  worker: {
+    name: "prose",
+    domains: ["prose.amitkaps.com"],
+    assets: { directory: ".prose" },
+    compatibilityDate: "2026-10-19",
+    workersDev: false,
+    previewUrls: false,
+  },
+};
 ```
 
 - [`cloudflare-static`]{#cloudflare-static}: a static site depends on none of cf, `@cloudflare/vite-plugin` and wrangler, its `vite.config.ts` doesn't load Cloudflare's plugin, and a site with no `index.html` doesn't run `vp build`, since Vite has nothing to build. The fix removes them, and the ` && vp build` that ends `verify` or `build`.

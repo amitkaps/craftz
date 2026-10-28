@@ -1,8 +1,9 @@
 /** @prose
  * # Editing a repository's files
  *
- * The fixes that edit `vite.config.ts`, code a repository writes itself, to write in the values
- * the rules set, take out `craftz()` and add the task `verify` runs. [rules.ts](rules.ts) reads and writes the files, and keeps only the
+ * The fixes that edit `vite.config.ts` and `cloudflare.config.ts`, code a repository writes
+ * itself, to write in the values the rules set, take out `craftz()` and `site()`, and add the task
+ * `verify` runs. [rules.ts](rules.ts) reads and writes the files, and keeps only the
  * rules. CI and pnpm's settings are craftz's, written whole.
  *
  * An edit takes a file's text and gives back the fixed text. It finds where to write by parsing
@@ -10,10 +11,10 @@
  * it was. A config it can't place the edit in comes back unchanged, so its check still drifts.
  *
  * A fix that moves repositories off an old layout is deleted once every repository is past it.
- * The ones that moved a static site off Cloudflare's plugin and onto `site()` are gone, and the
- * one that takes out `craftz()` goes next.
+ * The ones that moved a static site off Cloudflare's plugin are gone, and the ones that take out
+ * `craftz()` and `site()` go next.
  */
-import { type Node, at, exported, literal, pluginCall, properties } from "./config.ts";
+import { type Node, at, exported, literal, parsed, pluginCall, properties } from "./config.ts";
 import { type Config, written } from "./ruled.ts";
 
 /** @prose
@@ -57,6 +58,33 @@ export function withoutCraftz(vite: string): string {
         ? [it.start, past(it)]
         : [before?.end ?? it.start, it.end];
   return `${text.slice(0, cut[0])}${text.slice(cut[1])}`.replace(IMPORT, "");
+}
+
+/** @prose
+ * # Leaving site()
+ *
+ * `cloudflare-site`'s fix rewrites `export default site({…})` as `export default { worker: {…} }`,
+ * cf's own layout, and takes out the import, since the package no longer exports `site()`. The
+ * Worker's keys stay as they were written, and the check's values are then written in like any
+ * other.
+ */
+
+const SITE_IMPORT = /^import \{ site \} from "[^"]+";\n/m;
+
+/** A Worker config without `site()`, its object under `worker`. */
+export function withoutSite(text: string): string {
+  const body = (parsed(text)?.["body"] ?? []) as Node[];
+  const call = body.find((node) => node.type === "ExportDefaultDeclaration")?.["declaration"] as
+    | Node
+    | undefined;
+  if (call?.type !== "CallExpression" || (call["callee"] as Node)["name"] !== "site") return text;
+  const object = (call["arguments"] as Node[])[0];
+  if (!object) return text;
+  const own = text.slice(object.start, object.end).replaceAll("\n", "\n  ");
+  return `${text.slice(0, call.start)}{\n  worker: ${own},\n}${text.slice(call.end)}`.replace(
+    SITE_IMPORT,
+    "",
+  );
 }
 
 /** @prose
