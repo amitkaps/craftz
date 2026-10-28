@@ -3,10 +3,15 @@
  *
  * Packs craftz once, before the tests run, as `pnpm publish` would, and hands the tarball's path
  * to the tests. A test that installs craftz installs this, so it gets only what the package ships,
- * not the checkout around it. `prepack` builds it first.
+ * not the checkout around it.
+ *
+ * It builds into a folder of its own, not `dist/`, since `verify` runs `build` beside the tests,
+ * and two builds into one folder clean each other's files. The folder holds what `files` names,
+ * with `package.json` and what npm always ships, and packs without `prepack`, which would build into `dist/` again.
+ * publint runs in `build`, on `dist/`, so it's off here.
  */
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { cpSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -17,9 +22,25 @@ declare module "vite-plus/test" {
 }
 
 export default function setup({ provide }: { provide: (key: "tarball", value: string) => void }) {
+  const root = resolve(import.meta.dirname, "..");
+  const staged = mkdtempSync(join(tmpdir(), "craftz-staged-"));
+  const { files = [] } = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as {
+    files?: string[];
+  };
+  for (const file of [
+    "package.json",
+    "README.md",
+    "LICENSE",
+    ...files.filter((it) => it !== "dist"),
+  ])
+    cpSync(join(root, file), join(staged, file), { recursive: true });
+  execFileSync("pnpm", ["exec", "vp", "pack", "--out-dir", join(staged, "dist"), "--no-publint"], {
+    cwd: root,
+    stdio: "pipe",
+  });
   const dir = mkdtempSync(join(tmpdir(), "craftz-pack-"));
-  execFileSync("pnpm", ["pack", "--pack-destination", dir], {
-    cwd: resolve(import.meta.dirname, ".."),
+  execFileSync("pnpm", ["pack", "--ignore-scripts", "--pack-destination", dir], {
+    cwd: staged,
     stdio: "pipe",
   });
   provide("tarball", join(dir, readdirSync(dir)[0] ?? ""));
