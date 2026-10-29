@@ -17,6 +17,9 @@
  * resolved against the site, so a rule printed outside the repository still leads somewhere.
  * This file reads only the docs, so `craftz rules` and `craftz help` load nothing else.
  *
+ * Another repository's lessons link a principle here by the page's address, which prose doesn't
+ * check. So the page's anchors are read too, and `docs-lessons` holds each such link to one.
+ *
  * The rules doc is parsed when something first asks for a rule, and only once in a run. Parsing
  * it takes about 50 ms, and `gone`, `pr` and `status` never need it, so nothing parses it when a
  * module loads.
@@ -59,7 +62,7 @@ export const craftzRules = (markdown = doc()): Rules => ({
   codes: [],
 });
 
-type Read = { stated: Stated[]; parts: string[] };
+type Read = { stated: Stated[]; parts: string[]; anchors: Set<string> };
 
 function read(markdown: string): Read {
   const tree = parse(markdown);
@@ -72,6 +75,7 @@ function read(markdown: string): Read {
       part: outline.findLast((h) => tree.start(h.node) < (at.get(id) ?? 0))?.label ?? "",
     })),
     parts: outline.map((h) => h.label),
+    anchors: new Set(at.keys()),
   };
 }
 
@@ -84,6 +88,25 @@ export const stated = (markdown?: string): Stated[] => readDoc(markdown).stated;
 
 /** The doc's parts, its second-level headings, in order. */
 export const parts = (markdown?: string): string[] => readDoc(markdown).parts;
+
+/** Every id on the rules page, a rule's or a heading's, which a link's `#` can name. */
+export const anchors = (markdown?: string): Set<string> => readDoc(markdown).anchors;
+
+/** The `#` of each link in a doc that leads to the rules page by its published address, as
+ *  another repository links it. A relative link is prose's to check. */
+export function linkedRules(markdown: string): string[] {
+  const tree = parse(markdown);
+  const found: string[] = [];
+  walk(tree, {
+    enter(node) {
+      if (tree.type(node) !== "link") return true;
+      const [page, fragment] = tree.data(node, "link").destination.split("#");
+      if (page === SITE && fragment) found.push(fragment);
+      return false;
+    },
+  });
+  return found;
+}
 
 /** The whole doc, as `craftz rules` prints it, with each link resolved against the site. */
 export function printed(markdown = doc(), site = SITE): string {

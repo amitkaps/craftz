@@ -41,7 +41,7 @@ import {
 import { type Config, PACKED, RULED, written } from "./ruled.ts";
 import { rulesetFor, writeLabels, writeRuleset } from "./settings.ts";
 import { BROWSERS, COMPATIBILITY_DATE } from "./pinned.ts";
-import { stated } from "./stated.ts";
+import { anchors, linkedRules, stated } from "./stated.ts";
 import type { BranchRule, Finding, Repo } from "./survey.ts";
 import { type Worker, workerIn } from "./worker.ts";
 
@@ -1298,6 +1298,17 @@ export const RULES: Rule[] = [
           writeFileSync(index, had.replace(/^nav:\s*\[[^\]]*\]/m, `nav: [${all}]`));
         }
       },
+    },
+  },
+  {
+    id: "docs-lessons",
+    check: ({ files }) => {
+      const known = anchors();
+      return drifted(
+        linkedRules(files["docs/lessons.md"] ?? "")
+          .filter((id) => !known.has(id))
+          .map((id) => `docs/lessons.md links rules.md#${id}, which these rules don't have`),
+      );
     },
   },
   {
