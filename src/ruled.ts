@@ -21,6 +21,7 @@ export const RULED: Config = {
     plugins: ["typescript", "unicorn", "import"],
     categories: { correctness: "error" },
     options: { typeAware: true, typeCheck: true },
+    rules: { "no-empty": "error" },
   },
 };
 
@@ -30,12 +31,16 @@ export const PACKED: Config = {
   dts: { generator: "oxc" },
 };
 
+// A key as it's written, bare when it's a name, like `typeAware`, and quoted otherwise, like
+// `"no-empty"`.
+const keyed = (key: string): string => (/^[A-Za-z_$][\w$]*$/.test(key) ? key : JSON.stringify(key));
+
 /** A value as oxfmt writes it in a config, like `{ typeAware: true, typeCheck: true }`. */
 export function written(value: unknown): string {
   if (value instanceof RegExp) return String(value);
   if (Array.isArray(value)) return `[${value.map(written).join(", ")}]`;
   if (typeof value === "object" && value !== null) {
-    const entries = Object.entries(value).map(([key, it]) => `${key}: ${written(it)}`);
+    const entries = Object.entries(value).map(([key, it]) => `${keyed(key)}: ${written(it)}`);
     return `{ ${entries.join(", ")} }`;
   }
   return JSON.stringify(value);

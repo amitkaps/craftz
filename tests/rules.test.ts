@@ -219,6 +219,7 @@ test("a config writes out the format and lint the rules set, and the fix writes 
     plugins: ["typescript", "unicorn", "import"],
     categories: { correctness: "error" },
     options: { typeAware: true, typeCheck: true },
+    rules: { "no-empty": "error" },
   },`;
   const ruled = config(`fmt: { proseWrap: "never" },\n\n  ${lint}`);
   expect(drift("toolchain-wrap", ruled)).toEqual([]);
@@ -232,11 +233,12 @@ test("a config writes out the format and lint the rules set, and the fix writes 
     'lint.categories.correctness isn\'t "error"',
     "lint.options.typeAware isn't true",
     "lint.options.typeCheck isn't true",
+    'lint.rules.no-empty isn\'t "error"',
   ]);
   // A config with neither block gains both, after its last key.
   expect(fixed(config("plugins: [sveltekit()],"))).toBe(
     config(
-      'plugins: [sveltekit()],\n\n  fmt: { proseWrap: "never" },\n\n  lint: { plugins: ["typescript", "unicorn", "import"], categories: { correctness: "error" }, options: { typeAware: true, typeCheck: true } },',
+      'plugins: [sveltekit()],\n\n  fmt: { proseWrap: "never" },\n\n  lint: { plugins: ["typescript", "unicorn", "import"], categories: { correctness: "error" }, options: { typeAware: true, typeCheck: true }, rules: { "no-empty": "error" } },',
     ),
   );
   // A block of the config's own keeps its keys, and gains the rules' after them, or has them
@@ -245,7 +247,7 @@ test("a config writes out the format and lint the rules set, and the fix writes 
     fixed(config('fmt: { ignorePatterns: generated },\n  lint: {\n    plugins: ["oxc"],\n  },')),
   ).toBe(
     config(
-      'fmt: { ignorePatterns: generated, proseWrap: "never" },\n  lint: {\n    plugins: ["typescript", "unicorn", "import"],\n    categories: { correctness: "error" },\n    options: { typeAware: true, typeCheck: true },\n  },',
+      'fmt: { ignorePatterns: generated, proseWrap: "never" },\n  lint: {\n    plugins: ["typescript", "unicorn", "import"],\n    categories: { correctness: "error" },\n    options: { typeAware: true, typeCheck: true },\n    rules: { "no-empty": "error" },\n  },',
     ),
   );
   // A block the config works out is left by hand.

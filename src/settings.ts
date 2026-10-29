@@ -160,7 +160,9 @@ export function removeClassic(repo: string): void {
       ["api", "--method", "DELETE", `repos/${OWNER}/${repo}/branches/main/protection`],
       { stdio: "ignore" },
     );
-  } catch {}
+  } catch {
+    // GitHub answers 404 where there is no classic protection, which is what this leaves.
+  }
 }
 
 /** @prose
@@ -205,7 +207,9 @@ function cfCommand(): [string, ...string[]] {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
     }).trim();
-  } catch {}
+  } catch {
+    // No cf on the PATH means fetching the reference's, as a different version does.
+  }
   command = found === want ? ["cf"] : ["pnpm", "dlx", `cf@${want}`];
   return command;
 }

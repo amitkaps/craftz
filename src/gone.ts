@@ -152,7 +152,9 @@ function mergeReady(branch: string): void {
       gh("pr", "merge", branch, "--squash");
       console.log(`Merged #${pr.number}, whose checks had passed.`);
       return;
-    } catch {}
+    } catch {
+      // A merge GitHub refuses, or one that lost a race, leaves the pull request to auto-merge.
+    }
   }
   console.log(`#${pr.number} hasn't merged yet. \`pnpm pr\` with the next title waits for it.`);
 }
