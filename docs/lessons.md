@@ -176,6 +176,7 @@ The tests run the packed command, and `align --candidate` and `--local` run a ch
 - **The tests run the packed command.** A test from source can't show what the package leaves out, which is how `new` failing to start was found. Before a release, unpack `pnpm pack`'s tarball and run the command from there, with no `node_modules`.
 - **A file craftz writes whole can't be edited to set up a test.** The tests installed the packed craftz by adding an override to the new repository's `pnpm-workspace.yaml`. Once that file had to be the reference's word for word, `craftz check` failed on the test's own edit. The test now puts the file back after the install, since pnpm only reads it then.
 - **pagez was the first repository `new` started.** CI passed on the first push. Run it without `--push` first, to read the files before they reach GitHub. A package's first push changes `package.json`, so the release workflow stops for a package npm doesn't have yet.
+- **A principle is found across repositories, not in one.** craftz's lessons, sorted by principle, filed parsing a config under Vite+ and weighing a tool under timing. Sorting markz's, prose's and pagez's beside them showed both in all four, so each became a principle in [Practice](rules.md#practice). Before writing a principle, read the other repositories' lessons for it.
 
 ## A report says what happened
 
