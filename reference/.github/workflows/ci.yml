@@ -5,6 +5,10 @@
 # site's deploy and a package's release run first too. It doesn't deploy or release, and it's
 # the same in every repository, so what a repository adds goes in `verify`. The job is named
 # `ci`, the check that branch protection requires.
+#
+# A job that runs past ten minutes is stopped, where GitHub's own limit is six hours. That's for
+# a job that hangs. A slow `verify` passes, and `craftz status` notes it, as
+# [the rules](https://craftz.amitkaps.com/docs/rules.md#ci) say.
 name: CI
 
 on:
@@ -24,6 +28,7 @@ permissions:
 jobs:
   ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       # Reads the pnpm version from package.json's `packageManager`.

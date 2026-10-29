@@ -25,7 +25,7 @@ import { deps } from "./deps.ts";
 import { gone } from "./gone.ts";
 import { pr } from "./pr.ts";
 import { release } from "./release.ts";
-import { buildLog, status, timing } from "./status.ts";
+import { buildLog, status, timing, verifyTook } from "./status.ts";
 import { CRAFTZ, OWNER, type Pkg, here } from "./reference.ts";
 import { fixFiles } from "./rules.ts";
 import { cloudflareLogin, githubLogin, hasClassic } from "./settings.ts";
@@ -133,7 +133,7 @@ async function live(dir: string, log: boolean, full: boolean, timed: boolean): P
   for (const line of lines) {
     console.log(`    ${line.ok ? "✓" : "✗"} ${line.what.padEnd(width)}  ${line.found}`);
   }
-  for (const message of await notes(pkg))
+  for (const message of await notes(pkg, undefined, verifyTook(repo)))
     console.log(`    ${finding({ tool: "craftz", level: "note", message })}`);
   if (full && release) console.log(`\n${release.body.trim()}`);
   else if (summary) console.log(`\n${summary}`);

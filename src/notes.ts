@@ -2,7 +2,8 @@
  * # Notes
  *
  * What `craftz status` says after its lines, when something is worth knowing: a newer craftz
- * than the one a repository installs, and a beta that's graduated. A note never fails `status`.
+ * than the one a repository installs, a beta that's graduated, and a `verify` over its budget. A
+ * note never fails `status`.
  *
  * Both read npm, which took 0.5 to 3 seconds, while the rules take a quarter of one. `check` once
  * printed them, in every `verify`, `pr` and CI run, where nobody read them, and align moves every
@@ -28,6 +29,9 @@ const fromNpm: Latest = async (name) => {
 };
 
 const EXACT = /^\d+\.\d+\.\d+$/;
+
+/** The seconds `verify` should take on CI, at most. */
+export const BUDGET = 10;
 const numbers = (version: string): number[] => version.split("-")[0]?.split(".").map(Number) ?? [];
 
 // Whether `a` is a later release than `b`, by its numbers.
@@ -48,10 +52,23 @@ function later(a: string, b: string): boolean {
  * A beta that `versions-beta` names has graduated once npm's latest is a release at its major or
  * later. The beta is the reference's, and only craftz's own repository hears of it, since its
  * reference moves the betas, and every other repository follows.
+ *
+ * # A slow verify
+ *
+ * `verify` has a budget of 10 seconds on CI, the same in every repository, as
+ * [the rules](../docs/rules.md#ci) say. The time is the `Verify` step of the latest CI run on
+ * `main` that passed. It's a note, not a `✗`, since a slow `verify` isn't broken.
  */
-export async function notes(pkg: Pkg, latest: Latest = fromNpm): Promise<string[]> {
+export async function notes(
+  pkg: Pkg,
+  latest: Latest = fromNpm,
+  verified?: number,
+): Promise<string[]> {
   const deps = { ...pkg.dependencies, ...pkg.devDependencies };
   const found: string[] = [];
+  if (verified !== undefined && verified > BUDGET) {
+    found.push(`verify took ${verified}s on CI, over its ${BUDGET}s budget`);
+  }
   const own = deps[CRAFTZ];
   if (own && EXACT.test(own)) {
     const newest = await latest(CRAFTZ);
