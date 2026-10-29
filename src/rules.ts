@@ -123,7 +123,9 @@ function writeJson(path: string, value: unknown): void {
   const text = JSON.stringify(value, null, 2);
   try {
     if (JSON.stringify(JSON.parse(readFileSync(path, "utf8")), null, 2) === text) return;
-  } catch {}
+  } catch {
+    // A file that's missing or isn't JSON is written whole.
+  }
   writeFileSync(path, `${text}\n`);
 }
 const writePkg = (dir: string, pkg: Pkg): void => writeJson(join(dir, "package.json"), pkg);

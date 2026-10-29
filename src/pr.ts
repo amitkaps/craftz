@@ -141,7 +141,9 @@ export async function pr(args: string[]): Promise<void> {
       found = JSON.parse(
         output("gh", "pr", "view", branch, "--json", "number,title,state,headRefOid,url"),
       ) as BranchPr & { headRefOid: string; url: string };
-    } catch {}
+    } catch {
+      // A branch with no pull request, or no `gh`, starts as a new one.
+    }
   }
   let start = startOn(branch, title, found);
   if ("stop" in start) fail(start.stop);
@@ -180,7 +182,9 @@ export async function pr(args: string[]): Promise<void> {
     let after = "0";
     try {
       after = output("git", "rev-list", "--count", `${found.headRefOid}..HEAD`);
-    } catch {}
+    } catch {
+      // A merged head git no longer has counts as nothing added after it.
+    }
     if (after !== "0") fail(`${branch} has commits made after #${found.number} merged.`);
     run("git", "fetch", "--quiet", "origin", "main");
   }
@@ -343,20 +347,23 @@ async function landed(branch: string, url: string): Promise<string> {
     if (pr.state === "MERGED") return timingOf(pr, updates);
     if (pr.state === "CLOSED") fail(`${url} was closed without merging.`);
     if (pr.mergeStateStatus === "BEHIND") {
-      // A pull request that's merging reads as behind its own merge for a moment, and then there's
-      // nothing to update, so a failed update only means asking again.
       try {
         output("gh", "pr", "update-branch", branch);
         updates++;
         console.log(`${url} fell behind main, so its branch is updated and CI runs again.`);
-      } catch {}
+      } catch {
+        // A pull request that's merging reads as behind its own merge for a moment, and then
+        // there's nothing to update, so a failed update only means asking again.
+      }
       continue;
     }
     if (pr.mergeStateStatus === "CLEAN") {
-      // Auto-merge can wait minutes after the checks pass. A merge that loses a race only means asking again.
+      // Auto-merge can wait minutes after the checks pass.
       try {
         output("gh", "pr", "merge", branch, "--squash");
-      } catch {}
+      } catch {
+        // A merge that lost a race only means asking again.
+      }
       continue;
     }
     const latest = new Map<string, Check>();

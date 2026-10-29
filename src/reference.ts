@@ -32,7 +32,9 @@ export function origin(dir: string): string | undefined {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
     }).trim();
-  } catch {}
+  } catch {
+    // A folder that isn't a git checkout, or has no `origin`, names no repository.
+  }
   return new RegExp(`github\\.com[:/]${OWNER}/([^/]+?)(?:\\.git)?$`).exec(url)?.[1];
 }
 

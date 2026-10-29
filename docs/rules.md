@@ -34,7 +34,7 @@ Formatting runs at oxfmt's defaults, but for one setting.
 
 - [`toolchain-wrap`]{#toolchain-wrap}: `fmt` sets `proseWrap: "never"`, so each Markdown paragraph is one line that the editor soft-wraps. Nobody hand-wraps, and a changed paragraph shows in a diff as one line with its changed words highlighted. `"always"` would reflow the rest of a paragraph when one word is added. `@prose` comments stay hand-wrapped at 100 characters, since no oxfmt setting wraps comment text.
 
-- [`toolchain-lint`]{#toolchain-lint}: lint is type-aware and type-checks too, so `check` covers types without a separate `tsc`.
+- [`toolchain-lint`]{#toolchain-lint}: lint is type-aware and type-checks too, so `check` covers types without a separate `tsc`. An empty block fails it, so an empty `catch` says why it takes every error, in a comment inside it, as [Silence is the failure](#silence-is-the-failure) asks.
 - [`toolchain-types`]{#toolchain-types}: every `tsconfig.json` writes out the same compiler options, extends nothing, and sets its own `include`, the folders its code is in. The options are ESNext with the DOM's types and Node's, Bundler resolution, no emit, and the strict options. Those are `strict`, `noUncheckedIndexedAccess`, `noImplicitOverride`, `noImplicitReturns`, `noFallthroughCasesInSwitch`, `verbatimModuleSyntax`, `isolatedModules` and `forceConsistentCasingInFileNames`. JavaScript is checked as TypeScript is, with `allowJs` and `checkJs`. `erasableSyntaxOnly` keeps to the TypeScript Node runs as it is, so a `.ts` script needs no build. [The reference's tsconfig.json](../reference/tsconfig.json) is the example.
 
 The lint block in `vite.config.ts`:
@@ -44,6 +44,7 @@ lint: {
   plugins: ["typescript", "unicorn", "import"],
   categories: { correctness: "error" },
   options: { typeAware: true, typeCheck: true },
+  rules: { "no-empty": "error" },
 },
 ```
 
