@@ -43,9 +43,10 @@ export function origin(dir: string): string | undefined {
  *
  * A command that judges what's live reads a file as it is on `main` on GitHub, not in the clone,
  * which can be behind ([Read what's live](../docs/rules.md#read-whats-live)). `onMain` is the one
- * way to read one, so `status`, `release` and align read alike, and a new command finds it here.
- * It reads through `gh`, so a private repository reads as a public one does, and a missing file
- * throws.
+ * way to read one.
+ *
+ * `status`, `release` and align all read through it, so a new command finds it here. It reads
+ * through `gh`, so a private repository reads as a public one does, and a missing file throws.
  */
 /** A file as it is on `main` in the owner's `repo` on GitHub: its text, and the `sha` a write to
  *  it names. */
