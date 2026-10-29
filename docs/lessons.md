@@ -188,6 +188,7 @@ The first sections are about the tools, what each does that its docs don't say. 
 
 ## Tests
 
+- **A test that writes a temporary folder has to remove it.** None did, and `new`'s and the CLI's tests each install a repository, so every `verify` left about 300 MB. After a few days of pull requests, 2,721 folders held 31 GB. A run now sets `TMPDIR` to a folder of its own and removes it at the end, so a new test can't forget.
 - **A generator copies the rules, so it's tested against them.** The tests run `craftz check` and `verify` on what `new` writes. Its first run showed oxfmt formats arrays differently from `JSON.stringify`, so `new` runs `fix` rather than copying oxfmt's rules.
 - **The tests run the packed command.** A test from source can't show what the package leaves out, which is how `new` failing to start was found. Before a release, unpack `pnpm pack`'s tarball and run the command from there, with no `node_modules`.
 - **A test can't install the version it's releasing.** The 0.1.1 release failed CI. `new` writes craftz's own version, `^0.1.1`, and the test ran `pnpm install` on it, a version npm wouldn't have until the release merged. The test now overrides the dependency with this checkout, so it tests the craftz being released. It passed locally and failed again in CI, since the checkout's exports are its build, and only the local copy had a stale one. So the test builds it first. A test of what a release writes uses the release, not the registry.
