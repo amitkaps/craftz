@@ -32,6 +32,7 @@ export const PACKED: Config = {
 
 /** A value as oxfmt writes it in a config, like `{ typeAware: true, typeCheck: true }`. */
 export function written(value: unknown): string {
+  if (value instanceof RegExp) return String(value);
   if (Array.isArray(value)) return `[${value.map(written).join(", ")}]`;
   if (typeof value === "object" && value !== null) {
     const entries = Object.entries(value).map(([key, it]) => `${key}: ${written(it)}`);

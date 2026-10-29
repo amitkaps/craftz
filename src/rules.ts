@@ -273,6 +273,11 @@ const EDITOR = [".vscode/settings.json", ".vscode/extensions.json"];
  * and the Node its `engines` asks for. A package is read as one for browsers when it packs for
  * `"neutral"` or targets a browser, so the fix keeps it there.
  *
+ * On `"neutral"`, Rolldown doesn't know Node's own modules, so it warns on each `node:` import,
+ * like a command's `node:fs`, and leaves it external anyway. So a package for browsers lists
+ * `/^node:/` in `pack.deps.neverBundle`, and the warning goes. The fix adds it to what's there.
+ * A list that holds something the parser can't read, like a variable, is left to fix by hand.
+ *
  * A site Vite bundles sets the list in `build.target`, a static site or an app. The browsers in
  * it have to be the list, with any Node left out, since an app's config is its framework's.
  */
@@ -290,6 +295,24 @@ function packFor(pkg: Pkg, vite: string): Config {
   if (!browser) return { platform: "node" };
   const floor = /^>=\s*([\d.]+)$/.exec(pkg.engines?.node ?? "")?.[1];
   return { platform: "neutral", target: [...BROWSERS, ...(floor ? [`node${floor}`] : [])] };
+}
+
+// Node's own modules, which a package for browsers leaves out of its bundle.
+const NODE = /^node:/;
+const NEVER = ["pack", "deps", "neverBundle"];
+
+// Whether `pack.deps.neverBundle` holds `NODE`.
+const holdsNode = (vite: string): boolean => {
+  const have = valueAt(vite, NEVER);
+  return Array.isArray(have) && have.some((it) => String(it) === String(NODE));
+};
+
+// `pack.deps.neverBundle` with `NODE` added, or nothing where the list can't be read whole.
+function withNode(vite: string): unknown[] | undefined {
+  const node = at(exported(vite), NEVER);
+  const have = node ? literal(node) : [];
+  const elements = (node?.["elements"] as unknown[] | undefined) ?? [];
+  return Array.isArray(have) && have.length === elements.length ? [...have, NODE] : undefined;
 }
 
 // The browsers a site Vite bundles has in `build.target`, unlike the list, or nothing.
@@ -870,6 +893,9 @@ export const RULES: Rule[] = [
         if (!pack["target"] && at(exported(vite), ["pack", "target"])) {
           drift.push("pack.target is set, for a package that runs in Node");
         }
+        if (pack["platform"] === "neutral" && !holdsNode(vite)) {
+          drift.push(`${NEVER.join(".")} doesn't hold ${String(NODE)}`);
+        }
       } else if (!site || site.directory === ".prose") return undefined;
       return { value: BROWSERS.join(" "), drift };
     },
@@ -880,7 +906,12 @@ export const RULES: Rule[] = [
         const vite = existsSync(join(dir, "vite.config.ts"))
           ? read(join(dir, "vite.config.ts"))
           : "";
-        if (!pkg.private) rule(dir, { pack: packFor(pkg, vite) });
+        if (!pkg.private) {
+          const pack = packFor(pkg, vite);
+          const never =
+            pack["platform"] === "neutral" && !holdsNode(vite) ? withNode(vite) : undefined;
+          rule(dir, { pack: never ? { ...pack, deps: { neverBundle: never } } : pack });
+        }
         if (siteDrift(vite, workerIn(dir)).length) rule(dir, { build: { target: BROWSERS } });
       },
     },

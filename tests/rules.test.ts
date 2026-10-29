@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { BROWSERS } from "../src/browsers.ts";
 import { COMPATIBILITY_DATE } from "../src/runtime.ts";
+import { valueAt } from "../src/config.ts";
 import { betas, RULES } from "../src/rules.ts";
 import { RULED, written } from "../src/ruled.ts";
 import { type FormatConfig, format } from "vite-plus/fmt";
@@ -124,11 +125,19 @@ test("a build for browsers targets this repository's browsers", () => {
     'pack.platform isn\'t "node"',
   ]);
   expect(drift("", true, { private: true }, ".prose")).toBeUndefined();
-  expect(drift(`pack: { platform: "neutral", target: ${browsers} }`, false, pkg)).toEqual([]);
+  const node = "deps: { neverBundle: [/^node:/] }";
+  expect(drift(`pack: { platform: "neutral", target: ${browsers}, ${node} }`, false, pkg)).toEqual(
+    [],
+  );
+  // On "neutral", Node's own modules are left out of the bundle, so Rolldown doesn't warn.
+  expect(drift(`pack: { platform: "neutral", target: ${browsers} }`, false, pkg)).toEqual([
+    "pack.deps.neverBundle doesn't hold /^node:/",
+  ]);
   // A package that targets a browser runs in browsers, and targets the list and its Node.
   expect(drift(`pack: { target: [${list}, "node26"] }`, false, pkg)).toEqual([
     'pack.platform isn\'t "neutral"',
     `pack.target is [${list}, "node26"], not ${browsers}`,
+    "pack.deps.neverBundle doesn't hold /^node:/",
   ]);
   expect(drift(`pack: { platform: "node", target: ["node26"] }`, false, pkg)).toEqual([
     "pack.target is set, for a package that runs in Node",
@@ -142,6 +151,24 @@ test("a build for browsers targets this repository's browsers", () => {
   expect(drift(`build: { target: ["chrome111"] }`, true)).toEqual([
     `build.target is chrome111, not ${BROWSERS.join(" ")}`,
   ]);
+});
+
+test("a package for browsers leaves Node's own modules out, and the fix adds to its list", () => {
+  const dir = mkdtempSync(join(tmpdir(), "craftz-neutral-"));
+  writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "x" }));
+  const fixed = (pack: string) => {
+    writeFileSync(join(dir, "vite.config.ts"), config(`pack: { ${pack} },`));
+    const fix = RULES.find((r) => r.id === "toolchain-browsers")?.fix;
+    if (fix?.in === "files") fix.apply(dir, here);
+    const vite = readFileSync(join(dir, "vite.config.ts"), "utf8");
+    return valueAt(vite, ["pack", "deps"]) as { neverBundle: unknown[] } | undefined;
+  };
+  expect(fixed('platform: "neutral"')?.neverBundle.map(String)).toEqual(["/^node:/"]);
+  const kept = fixed('platform: "neutral", deps: { neverBundle: ["x"] }');
+  expect(kept?.neverBundle.map(String)).toEqual(["x", "/^node:/"]);
+  // A list the parser can't read whole is left as it is.
+  expect(fixed('platform: "neutral", deps: { neverBundle: [names] }')).toEqual({ neverBundle: [] });
+  expect(fixed('platform: "node"')).toBeUndefined();
 });
 
 test("a package writes out its publint and types, and the fixes write them in", () => {

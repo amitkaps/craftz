@@ -69,8 +69,10 @@ export function at(object: Node | undefined, path: string[]): Node | undefined {
  *  it isn't. Inside an array or an object, a value that isn't read is left out. */
 export function literal(node: Node | undefined): unknown {
   switch (node?.type) {
-    case "Literal":
-      return node["value"];
+    case "Literal": {
+      const regex = node["regex"] as { pattern: string; flags: string } | undefined;
+      return regex ? new RegExp(regex.pattern, regex.flags) : node["value"];
+    }
     case "ArrayExpression":
       return nodes(node["elements"])
         .map(literal)
