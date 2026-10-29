@@ -51,10 +51,22 @@
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { finding } from "@amitkaps/markz/rules";
 
-const run = (...args: string[]): void => {
-  execFileSync("git", args, { stdio: "inherit" });
-};
+/** Runs a step of `pr` or `gone`, with its output shown. A step that fails stops the command with
+ *  one line, since its own output, above it, says why. */
+export function step(command: string, ...args: string[]): void {
+  try {
+    execFileSync(command, args, { stdio: "inherit" });
+  } catch (error) {
+    // A command that couldn't start, like a missing `gh`, has no status and no output to point to.
+    if (typeof (error as { status?: unknown }).status !== "number") throw error;
+    const message = `\`${[command, ...args].join(" ")}\` failed, and its output above says why`;
+    console.error(finding({ tool: "craftz", level: "error", message }));
+    process.exit(1);
+  }
+}
+const run = (...args: string[]): void => step("git", ...args);
 const output = (...args: string[]): string => outputIn(".", ...args);
 const outputIn = (dir: string, ...args: string[]): string =>
   execFileSync("git", args, {
@@ -179,7 +191,7 @@ export function gone({ others = false } = {}): void {
   for (const { branch, worktree } of branches) {
     if (worktree && worktree !== top) {
       try {
-        run("worktree", "remove", worktree);
+        outputIn(".", "worktree", "remove", worktree);
       } catch {
         console.log(`Kept ${branch}, with its worktree at ${worktree}.`);
         continue;

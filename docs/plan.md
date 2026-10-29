@@ -6,7 +6,7 @@ This is a package's plan, of what craftz itself does next. Each repository moves
 
 ## Next, in order
 
-Nothing is next yet.
+- [x] **A failed step says so in one line.** When `verify` or a git step failed in `pr` or `gone`, Node printed its stack trace last, which buried the output that said why. Each step now stops the command with one `craftz: error:` line that points to that output.
 
 ## Where it is
 
