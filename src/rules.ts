@@ -209,11 +209,12 @@ const behind = (value: string, want: string) =>
  * in one place. A version is a pre-release when its numbers are followed by a tag, as in
  * `1.0.0-beta.17`, behind a range or not.
  */
-export const BETA = [
-  ...(stated()
-    .find((rule) => rule.id === "versions-beta")
-    ?.text.matchAll(/`([^`]+)`/g) ?? []),
-].flatMap((match) => match[1] ?? []);
+export const betas = (): string[] =>
+  [
+    ...(stated()
+      .find((rule) => rule.id === "versions-beta")
+      ?.text.matchAll(/`([^`]+)`/g) ?? []),
+  ].flatMap((match) => match[1] ?? []);
 const PRERELEASE = /^[\^~<>=]*\d+\.\d+\.\d+-/;
 
 const node = standard.devEngines?.runtime;
@@ -784,7 +785,7 @@ export const RULES: Rule[] = [
       if (!pre.length) return undefined;
       return drifted(
         pre.flatMap(([name, value]) => {
-          if (!BETA.includes(name)) return [`${name} is on a pre-release, ${value}`];
+          if (!betas().includes(name)) return [`${name} is on a pre-release, ${value}`];
           return /^\d/.test(value) ? [] : [`${name} is ${value}, not an exact build`];
         }),
       );

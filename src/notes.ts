@@ -10,7 +10,7 @@
  * can't be reached in a few seconds, there's no note.
  */
 import { CRAFTZ, type Pkg, VERSIONS } from "./reference.ts";
-import { BETA } from "./rules.ts";
+import { betas } from "./rules.ts";
 
 /** npm's latest version of a package, or `undefined` when npm doesn't answer. */
 export type Latest = (name: string) => Promise<string | undefined>;
@@ -60,7 +60,7 @@ export async function notes(pkg: Pkg, latest: Latest = fromNpm): Promise<string[
     }
   }
   if (pkg.name === CRAFTZ) {
-    for (const name of BETA) {
+    for (const name of betas()) {
       const beta = VERSIONS[name];
       if (!beta?.includes("-")) continue;
       const newest = await latest(name);
