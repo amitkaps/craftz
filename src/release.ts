@@ -25,11 +25,11 @@
  * a pull request that a workflow's token opens, and `ci` is required.
  */
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { OWNER } from "./reference.ts";
 import { origin } from "./survey.ts";
+import { temporary } from "./temp.ts";
 
 /** Why the plan isn't ready for this version, or undefined when it is. */
 export function unready(plan: string, version: string): string | undefined {
@@ -104,7 +104,7 @@ export function release(dir: string, args: string[]): void {
   function editor(): string {
     if (!process.stdin.isTTY)
       fail(`There's no terminal for an editor, so give the summary: --notes "…"`);
-    const path = join(mkdtempSync(join(tmpdir(), "release-")), `${tag}.md`);
+    const path = join(temporary("release-"), `${tag}.md`);
     writeFileSync(path, "");
     const edit = process.env["VISUAL"] ?? process.env["EDITOR"] ?? "vi";
     console.log(`Write ${repo} ${tag}'s summary, or leave it empty, then save and close.`);

@@ -86,7 +86,7 @@ The rule is [Build only what gets used](rules.md#build-only-what-gets-used). `cr
 
 ## A run removes what it writes
 
-The rule is [A run removes what it writes](rules.md#a-run-removes-what-it-writes). `tests/temp.ts` removes the tests' folders, and align removes the clones it doesn't keep.
+The rule is [A run removes what it writes](rules.md#a-run-removes-what-it-writes). A command's folder comes from [src/temp.ts](../src/temp.ts), which removes it when the run ends, and a test fails a folder made anywhere else. `tests/temp.ts` removes the tests' folders.
 
 - **Temporary folders held tens of gigabytes.** align left every clone, 62 GB after 37 runs, and the tests left 31 GB in a few days. macOS's cleanup never took them. A run removes what it wrote, and prints a folder only when it kept something in it.
 - **A lockfile keeps what nothing installs any more.** esbuild stayed in four lockfiles after Vite+ moved to Rolldown, and `pnpm dedupe` kept it. align writes the lockfile afresh on every run. After moving toolchains by hand, remove `node_modules` and `pnpm-lock.yaml` before installing.

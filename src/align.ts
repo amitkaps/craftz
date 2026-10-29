@@ -25,8 +25,7 @@
  * compared with another run, and its settings are read and listed where they've drifted.
  */
 import { execFile, execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 import { checkSettings, writeSettings } from "./apply.ts";
@@ -35,6 +34,7 @@ import { fixFiles } from "./rules.ts";
 import { CRAFTZ, OWNER, TOOLS } from "./reference.ts";
 import { moveLine, report, row, type Row, type Step } from "./report.ts";
 import { repos } from "./survey.ts";
+import { keep, temporary } from "./temp.ts";
 import { type Run, upgrade } from "./upgrade.ts";
 import { workerIn } from "./worker.ts";
 import { cloudflareLogin, githubLogin } from "./settings.ts";
@@ -54,7 +54,7 @@ const candidate = args.includes("--candidate");
 const local = candidate || args.includes("--local");
 const named = args.filter((arg) => !arg.startsWith("--"));
 const targets = named.length ? named : await repos();
-const work = mkdtempSync(join(tmpdir(), "align-"));
+const work = temporary("align-");
 const tarball = candidate ? pack() : undefined;
 const many = targets.length > 1 ? "repositories" : "repository";
 console.log(
@@ -620,6 +620,8 @@ if (!local) {
     }
   }
 }
-if (readdirSync(work).length) console.log(`\nclones and logs in ${work}`);
-else rmSync(work, { recursive: true });
+if (readdirSync(work).length) {
+  keep(work);
+  console.log(`\nclones and logs in ${work}`);
+}
 process.exitCode = failed ? 1 : 0;
