@@ -6,7 +6,16 @@ This is a package's plan, of what craftz itself does next. Each repository moves
 
 ## Next, in order
 
-Nothing is next yet.
+The lessons of craftz, markz, prose and pagez showed the same principles learned again in each, so the next release turns them into rules, and fixes where craftz breaks them itself.
+
+- [ ] **Practice, a part of the rules.** The principles that recur across the four repositories' lessons become a part of [the rules](rules.md). Four repositories share six of them: state it once, try it on the real thing, measure before changing, silence is the failure, parse rather than use regexes, and build only what gets used. craftz adds three: a run removes what it writes, read what's live, and a step nobody runs becomes a command. A principle that can be checked gets an id and a check, and the rest are list items without one.
+- [ ] **Lessons link their rule.** Each repository's `lessons.md` groups its lessons under the rule each one led to, with a heading of its own for what's only its own. A group that links one of craftz's rules is named as the rule is. `craftz check` holds every link from `lessons.md` into the rules to an id the installed craftz has, since prose checks only relative links.
+- [ ] **craftz's lessons on the shared headings.** The groups match the Practice part, with Parse and Build only what gets used added. The lessons on names move to the rule prose words, once prose has it.
+- [ ] **What agents read names code too.** The craftz section of [AGENTS.md](../reference/AGENTS.md) says to run `pnpm craftz rules` before writing a command or a test, not only before changing the toolchain. It says where a lesson goes, which craftz's own section says now.
+- [ ] **An empty `catch` says why.** `toolchain-lint` turns on oxlint's `no-empty`, if it takes a comment as a reason, as ESLint's does. Each of craftz's 44 empty catches either catches only the error it expects or says why it takes them all.
+- [ ] **One way to make a temporary folder.** A module in [src/](../src/) hands out folders that are removed when the run ends, unless the run keeps one, as [tests/temp.ts](../tests/temp.ts) does for the tests. `release` stops leaving its notes behind, and a test fails a `mkdtemp` anywhere else in `src/`.
+- [ ] **One way to read what's on `main`.** One helper reads a file as it is on `main`, and `status` and `release` use it, where each calls GitHub its own way now, so a new command finds it before it reads the clone.
+- [ ] **`verify` says what took the time.** The note on a `verify` over its budget names its slowest step, so a slow one is measured before anyone guesses.
 
 ## Where it is
 
