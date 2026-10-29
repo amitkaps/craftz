@@ -346,21 +346,19 @@ const recommended = (json: Json): string[] =>
  * elsewhere, a step in `verify` and a setting in its own config, so no fix edits one by its lines.
  *
  * Two follow from the repository's axes. pnpm's override points `vite` at the Vite+ the
- * repository installs, so a Vite+ that's behind drifts once, in `versions-vite-plus`. An app adds
- * Svelte's editor settings, from [app/](../reference/app/README.md), since every app starts from
- * base. The editor's files are compared as JSON, since `vp fmt` lays them out.
+ * repository installs, so a Vite+ that's behind drifts once, in `versions-vite-plus`. A
+ * repository that depends on Svelte adds its editor settings, from
+ * [svelte/](../reference/svelte/README.md), whether it deploys an app or a static site. The
+ * editor's files are compared as JSON, since `vp fmt` lays them out.
  */
-type Axes = { vitePlus?: string; app: boolean };
+type Axes = { vitePlus?: string; svelte: boolean };
 
-const axesOf = (repo: Repo): Axes => ({
-  vitePlus: repo.vitePlus,
-  app: repo.worker?.deploys === "app",
-});
+const axesOf = (repo: Repo): Axes => ({ vitePlus: repo.vitePlus, svelte: !!repo.deps?.["svelte"] });
 
 function axesIn(dir: string): Axes {
   const pkg = readPkg(dir);
   const deps = { ...pkg.dependencies, ...pkg.devDependencies };
-  return { vitePlus: deps["vite-plus"], app: workerIn(dir)?.deploys === "app" };
+  return { vitePlus: deps["vite-plus"], svelte: !!deps["svelte"] };
 }
 
 // A file craftz owns, as the reference in `std` writes it for a repository with these axes.
@@ -371,9 +369,9 @@ function owned(file: string, axes: Axes, std: string): string {
     const own = axes.vitePlus;
     return own ? text.replace(/vite-plus-core@[\w.-]+/, `vite-plus-core@${own}`) : text;
   }
-  if (!EDITOR.includes(file) || !axes.app) return text;
+  if (!EDITOR.includes(file) || !axes.svelte) return text;
   const ours = JSON.parse(text) as Json;
-  const adds = readJson(join(std, "app", file));
+  const adds = readJson(join(std, "svelte", file));
   const merged = file.endsWith("extensions.json")
     ? { recommendations: [...recommended(ours), ...recommended(adds)] }
     : { ...ours, ...adds };
@@ -723,6 +721,8 @@ const commandScript = (id: string, name: string): Rule => ({
 
 // What deployed a static site through Cloudflare's plugin.
 const CLOUDFLARE_TOOLS = ["cf", "@cloudflare/vite-plugin", "wrangler"];
+// SvelteKit builds a site from `src/app.html`, where Vite alone builds from `index.html`.
+const SVELTEKIT = "@sveltejs/kit";
 
 export const RULES: Rule[] = [
   {
@@ -1140,8 +1140,9 @@ export const RULES: Rule[] = [
    * A static site's dependencies, Vite config and scripts are read for what deployed it through
    * Cloudflare's plugin.
    *
-   * The fix removes the dependencies and drops ` && vp build` from the scripts of a site with no
-   * `index.html`. A script that runs `vp build` another way is left to fix by hand, as is a Vite
+   * Vite builds a site from its `index.html`, or SvelteKit's static adapter does from
+   * `src/app.html`. The fix removes the dependencies and drops ` && vp build` from the scripts of a
+   * site that has neither. A script that runs `vp build` another way is left to fix by hand, as is a Vite
    * config that loads the plugin, since every repository has taken it out.
    */
   {
@@ -1154,10 +1155,10 @@ export const RULES: Rule[] = [
       if (files["vite.config.ts"]?.includes("@cloudflare/vite-plugin")) {
         drift.push("vite.config.ts loads Cloudflare's plugin");
       }
-      if (!files["index.html"]) {
+      if (!files["index.html"] && !deps[SVELTEKIT]) {
         for (const name of ["verify", "build"]) {
           if (/\bvp build\b/.test(pkg.scripts?.[name] ?? "")) {
-            drift.push(`${name} runs vp build, with no index.html to build`);
+            drift.push(`${name} runs vp build, with no index.html or SvelteKit to build`);
           }
         }
       }
@@ -1167,8 +1168,10 @@ export const RULES: Rule[] = [
       in: "files",
       apply: (dir) => {
         if (workerIn(dir)?.deploys !== "static") return;
-        const builds = existsSync(join(dir, "index.html"));
         const pkg = readPkg(dir);
+        const builds =
+          existsSync(join(dir, "index.html")) ||
+          !!(pkg.dependencies?.[SVELTEKIT] ?? pkg.devDependencies?.[SVELTEKIT]);
         for (const field of ["dependencies", "devDependencies"] as const) {
           for (const name of CLOUDFLARE_TOOLS) {
             if (pkg[field]?.[name]) delete pkg[field][name];
