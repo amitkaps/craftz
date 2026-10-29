@@ -258,12 +258,14 @@ Every repository has the same docs, so anyone, or any agent, finds the same thin
 | `docs/design.md` | what it is, why it's built this way, and what it isn't |
 | `docs/plan.md` | its own next steps in order, then what works now, later and open, not other repositories' |
 | `docs/development.md` | only what's its own: its extra scripts, its site, beyond these rules |
-| `docs/lessons.md` | what building it taught, each lesson what happened and what to do about it |
+| `docs/lessons.md` | what building it taught, each lesson what went wrong and what to do about it |
 | `docs/usage.md` | a package's install and use, and a section for agents |
 
 The README is the site's home page when prose builds it, so it reads as one. It says what it is, gives a short example, and lists the commands a user runs, like a package's command. The repository's own scripts, like `dev` and `verify`, are the shared ones, and are left to `development.md`, which links these rules for the shared toolchain, scripts and workflows rather than describing them.
 
 The plan opens with what's next, since that's what it's read for. Its "Where it is" holds one line per thing that works now, rewritten when a release changes it, not a line per release. A release's notes on GitHub already say what it changed, and the plan links to them rather than copying them.
+
+A lesson is for what the next change would get wrong without it, so a change that went as planned adds none. It says what went wrong and what to do, in a few sentences. What the code does now is in its `@prose`, and the story is in the pull request. Lessons are grouped under the principle in [Practice](#practice) each one shows, with headings of the repository's own for the rest, and a tool's facts under its name. A lesson its group already has gets the new case as a sentence, and its principle gets a check, a command or a line in `AGENTS.md`. A lesson is a doc, so one that reverses another rewrites it, and a fact about a tool goes once the tool changes.
 
 - [`docs-lessons`]{#docs-lessons}: a link from `docs/lessons.md` into these rules names an id or a heading they have, in the craftz a repository installs. A group of lessons links the principle in [Practice](#practice) it shows, so a principle renamed here fails where it's linked. prose checks only a relative link, and another repository links this page by its address.
 
