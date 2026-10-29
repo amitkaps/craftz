@@ -180,7 +180,8 @@ export type Finding = {
  * can't outlive its reason.
  */
 function holding(holds: Record<string, string>, it: Repo): Finding[] {
-  const findings = CHECKS.flatMap((check) => {
+  const all = checks();
+  const findings = all.flatMap((check) => {
     const finding = check.run(it);
     const reason = holds[check.name];
     if (!reason) return finding ?? [];
@@ -196,7 +197,7 @@ function holding(holds: Record<string, string>, it: Repo): Finding[] {
     }
     return { ...finding, held: reason };
   });
-  const unknown = Object.keys(holds).filter((id) => !CHECKS.some((c) => c.name === id));
+  const unknown = Object.keys(holds).filter((id) => !all.some((c) => c.name === id));
   return [
     ...findings,
     ...unknown.map((id) => ({ drift: [`${id} is held, but no rule has that id`] })),
@@ -217,10 +218,8 @@ export type Check = {
  * A rule with an id is stated in the rules and checked in [rules.ts](rules.ts). Its check here
  * is named by its id, and grouped under the part the rules state it in.
  */
-const statements = new Map(stated().map((s) => [s.id, s]));
-
 function fromRule(rule: Rule): Check {
-  const statement = statements.get(rule.id);
+  const statement = stated().find((s) => s.id === rule.id);
   return {
     name: rule.id,
     group: statement?.part ?? "",
@@ -232,11 +231,16 @@ function fromRule(rule: Rule): Check {
   };
 }
 
-// Every rule, in the order of the rules' parts, and within a part in the order rules.ts lists it.
-const order = parts();
-export const CHECKS = RULES.map(fromRule).toSorted(
-  (a, b) => order.indexOf(a.group) - order.indexOf(b.group),
-);
+let built: Check[] | undefined;
+
+/** Every rule, in the order of the rules' parts, and within a part in the order rules.ts lists
+ *  it. */
+export function checks(): Check[] {
+  if (built) return built;
+  const order = parts();
+  built = RULES.map(fromRule).toSorted((a, b) => order.indexOf(a.group) - order.indexOf(b.group));
+  return built;
+}
 
 function repoOf(files: Files): Repo {
   const pkg = JSON.parse(files["package.json"] ?? "{}") as Pkg;

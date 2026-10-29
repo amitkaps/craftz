@@ -11,13 +11,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { BROWSERS } from "../src/browsers.ts";
 import { COMPATIBILITY_DATE } from "../src/runtime.ts";
-import { BETA, RULES } from "../src/rules.ts";
+import { betas, RULES } from "../src/rules.ts";
 import { RULED, written } from "../src/ruled.ts";
 import { type FormatConfig, format } from "vite-plus/fmt";
 import { parts, printed, stated } from "../src/stated.ts";
 import { CRAFTZ, type Pkg, VERSIONS, here, standard } from "../src/reference.ts";
 import { rulesetFor } from "../src/settings.ts";
-import { CHECKS, type Repo, worker } from "../src/survey.ts";
+import { checks, type Repo, worker } from "../src/survey.ts";
 
 const checked = RULES.map((rule) => rule.id);
 const statedIds = stated().map((s) => s.id);
@@ -55,13 +55,13 @@ test("the printed doc resolves every relative link against the site", () => {
 });
 
 test("the survey runs every rule", () => {
-  const names = new Set(CHECKS.map((check) => check.name));
+  const names = new Set(checks().map((check) => check.name));
   expect(checked.filter((id) => !names.has(id))).toEqual([]);
 });
 
 test("every check is under a part of the rules", () => {
   const found = parts();
-  for (const check of CHECKS) expect(found, check.name).toContain(check.group);
+  for (const check of checks()) expect(found, check.name).toContain(check.group);
 });
 
 test("a part is its second-level heading", () => {
@@ -71,7 +71,7 @@ test("a part is its second-level heading", () => {
 test("only the rules' betas are on a pre-release, each an exact build", () => {
   const rule = RULES.find((r) => r.id === "versions-beta");
   const drift = (deps: Record<string, string>) => rule?.check({ deps } as Repo)?.drift;
-  const [beta = ""] = BETA;
+  const [beta = ""] = betas();
   expect(drift({ [beta]: "1.0.0-beta.17" })).toEqual([]);
   expect(drift({ [beta]: "^1.0.0-beta.17" })).toEqual([
     `${beta} is ^1.0.0-beta.17, not an exact build`,
@@ -670,7 +670,7 @@ export default defineConfig({
 test("the betas this repository is on are the ones the rules name", () => {
   const deps = { ...standard.dependencies, ...standard.devDependencies };
   const pre = Object.keys(deps).filter((name) => /^\d+\.\d+\.\d+-/.test(deps[name] ?? ""));
-  expect(pre.sort()).toEqual([...BETA].sort());
+  expect(pre.sort()).toEqual([...betas()].sort());
 });
 
 test("a package's ruleset requires label next to ci, and others only ci", () => {

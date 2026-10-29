@@ -16,6 +16,10 @@
  * pattern here knows its layout and an example in a code block can't state a rule. A link is
  * resolved against the site, so a rule printed outside the repository still leads somewhere.
  * This file reads only the docs, so `craftz rules` and `craftz help` load nothing else.
+ *
+ * The rules doc is parsed when something first asks for a rule, and only once in a run. Parsing
+ * it takes about 50 ms, and `gone`, `pr` and `status` never need it, so nothing parses it when a
+ * module loads.
  */
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -55,24 +59,31 @@ export const craftzRules = (markdown = doc()): Rules => ({
   codes: [],
 });
 
-/** Every rule the doc states, in order, with its part. */
-export function stated(markdown = doc()): Stated[] {
+type Read = { stated: Stated[]; parts: string[] };
+
+function read(markdown: string): Read {
   const tree = parse(markdown);
   const outline = headings(tree).filter((h) => h.depth === 2);
   const at = new Map(ids(tree).map(({ id, node }) => [id, tree.start(node)]));
-  return readRules(markdown, SITE).map(({ id, text }) => ({
-    id,
-    text,
-    part: outline.findLast((h) => tree.start(h.node) < (at.get(id) ?? 0))?.label ?? "",
-  }));
+  return {
+    stated: readRules(markdown, SITE).map(({ id, text }) => ({
+      id,
+      text,
+      part: outline.findLast((h) => tree.start(h.node) < (at.get(id) ?? 0))?.label ?? "",
+    })),
+    parts: outline.map((h) => h.label),
+  };
 }
 
+let shipped: Read | undefined;
+const readDoc = (markdown?: string): Read =>
+  markdown === undefined ? (shipped ??= read(doc())) : read(markdown);
+
+/** Every rule the doc states, in order, with its part. */
+export const stated = (markdown?: string): Stated[] => readDoc(markdown).stated;
+
 /** The doc's parts, its second-level headings, in order. */
-export function parts(markdown = doc()): string[] {
-  return headings(parse(markdown))
-    .filter((h) => h.depth === 2)
-    .map((h) => h.label);
-}
+export const parts = (markdown?: string): string[] => readDoc(markdown).parts;
 
 /** The whole doc, as `craftz rules` prints it, with each link resolved against the site. */
 export function printed(markdown = doc(), site = SITE): string {
