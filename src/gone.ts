@@ -15,6 +15,12 @@
  * The last two compare commits, so a branch with a commit made after its merge is kept. The
  * merged pull requests come from `gh`, and without it only the other two count.
  *
+ * The branch you're on may have a pull request that's ready but not yet merged, since GitHub's
+ * auto-merge can take minutes after the checks pass. So when its checks passed on an up-to-date
+ * branch, `gone` merges it first, as `pr`'s wait does ([pr.ts](pr.ts#waiting-for-the-merge)).
+ * When they haven't, it says the pull request is still open, so nobody polls GitHub for it. The
+ * next `pnpm pr` waits for it.
+ *
  * A squash merge puts a new commit on `main`, so git can't tell the branch merged, and it's
  * deleted with `--force`. When the branch you're on is one of them, it switches to `main` and
  * pulls first, and on `main` it pulls too. So `gone` before a change starts it from what's live,
@@ -127,10 +133,35 @@ function mergedIn(dir: string): Gone[] {
   );
 }
 
+// Merges the open pull request of `branch` once its checks pass, or says it's still open. Without
+// `gh`, or with no pull request, it does nothing.
+function mergeReady(branch: string): void {
+  const gh = (...args: string[]): string =>
+    execFileSync("gh", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  let pr: { number: number; state: string; mergeStateStatus: string };
+  try {
+    pr = JSON.parse(
+      gh("pr", "view", branch, "--json", "number,state,mergeStateStatus"),
+    ) as typeof pr;
+  } catch {
+    return;
+  }
+  if (pr.state !== "OPEN") return;
+  if (pr.mergeStateStatus === "CLEAN") {
+    try {
+      gh("pr", "merge", branch, "--squash");
+      console.log(`Merged #${pr.number}, whose checks had passed.`);
+      return;
+    } catch {}
+  }
+  console.log(`#${pr.number} hasn't merged yet. \`pnpm pr\` with the next title waits for it.`);
+}
+
 /** Deletes each local branch that merged, and pulls `main` when it's on it. With `others`, the branch you're on stays, and a
  *  run that deletes nothing prints nothing. */
 export function gone({ others = false } = {}): void {
   const current = output("branch", "--show-current");
+  if (!others && current !== "main") mergeReady(current);
   const branches = mergedIn(".").filter(({ branch }) => !(others && branch === current));
   if (branches.some(({ branch }) => branch === current)) {
     run("switch", "--quiet", "main");

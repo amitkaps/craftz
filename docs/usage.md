@@ -94,7 +94,7 @@ pnpm craftz deploy
 ## Pull requests
 
 - [`craftz pr "<title>" [--label <label>] [--body <text>] [--wait]`]{#pr}: opens a pull request that merges itself once CI passes.
-- [`craftz gone`]{#gone}: deletes the local branches that merged, ends on `main`, pulled, and writes `outline.md`.
+- [`craftz gone`]{#gone}: merges the branch's pull request if its checks passed, deletes the local branches that merged, ends on `main`, pulled, and writes `outline.md`.
 
 ```sh
 pnpm pr "<title>" --label added   # commit, verify, push, and merge once CI passes
