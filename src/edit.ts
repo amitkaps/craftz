@@ -106,10 +106,14 @@ const leaves = (value: unknown, path: string[] = []): [string[], unknown][] =>
     ? Object.entries(value).flatMap(([key, it]) => leaves(it, [...path, key]))
     : [[path, value]];
 
+// A value as text to compare, with a regex as it's written, since JSON has none.
+const compared = (value: unknown): string | undefined =>
+  JSON.stringify(value, (_, it: unknown) => (it instanceof RegExp ? String(it) : it));
+
 /** Each value in `values` that a config sets otherwise, or not at all, by its path. */
 export const unlike = (vite: string, values: Config): [string[], unknown][] =>
   leaves(values).filter(
-    ([path, value]) => JSON.stringify(literal(at(exported(vite), path))) !== JSON.stringify(value),
+    ([path, value]) => compared(literal(at(exported(vite), path))) !== compared(value),
   );
 
 // Adds `key: value` to an object node, after its last key, or as its only one.
