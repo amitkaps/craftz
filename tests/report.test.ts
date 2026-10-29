@@ -9,7 +9,7 @@
  * repositories under Moved that no pull request moved.
  */
 import { expect, test } from "vite-plus/test";
-import { moveLine, report, row, type Row } from "../src/report.ts";
+import { leftByHand, moveLine, report, row, type Row } from "../src/report.ts";
 
 const prose = { name: "@amitkaps/prose", from: "0.8.0", to: "0.9.0" };
 const markz = { name: "@amitkaps/markz", from: "0.7.0", to: "0.8.0" };
@@ -82,4 +82,34 @@ test("what's left by hand and what failed are listed and counted, and moved noth
 test("a move reads as the pull request lists it", () => {
   expect(moveLine(prose)).toBe("@amitkaps/prose 0.9.0, from 0.8.0");
   expect(moveLine({ name: "esbuild", from: "0.25.0" })).toBe("esbuild removed");
+});
+
+// prose's lint, as align's run for 0.13.0 printed it, where the report listed only its `Found`
+// line, once for each step that ran it.
+const lint = `x eslint(no-empty): Unexpected empty block statements
+    ,-[src/page/mode.js:11:9]
+ 10 |   }
+ 11 | } catch {}
+    \`----
+  x eslint(no-empty): Unexpected empty block statements
+     ,-[tests/build.test.ts:108:13]
+ 108 |     } catch {}
+     \`----
+Found 2 errors and 0 warnings in 55 files (4.1s, 8 threads)`;
+
+test("what's left by hand names each lint error's rule and line, once", () => {
+  expect(leftByHand(`${lint}\n${lint.replace("4.1s", "2.8s")}`)).toEqual([
+    "no-empty: src/page/mode.js:11",
+    "no-empty: tests/build.test.ts:108",
+  ]);
+  expect(
+    leftByHand(
+      [
+        "    craftz: warning: versions-markz: 0.7.0, not 0.8.0",
+        "    craftz: warning: versions-beta: cf; held: a beta",
+        "Found 1 error and 0 warnings in 9 files (1.2s, 8 threads)",
+        "Found 1 error and 0 warnings in 9 files (3.0s, 8 threads)",
+      ].join("\n"),
+    ),
+  ).toEqual(["versions-markz: 0.7.0, not 0.8.0", "Found 1 error and 0 warnings in 9 files"]);
 });

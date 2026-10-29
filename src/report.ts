@@ -51,6 +51,39 @@ export const row = (repo: string): Row => ({
   settings: [],
 });
 
+/** @prose
+ * # What's left by hand
+ *
+ * A step that fails leaves craftz check's warnings that aren't held, and oxlint's errors, each as
+ * its rule and where it is, like `no-empty: test/vendor.ts:340`. So the report names the line a
+ * release's notes ask to change.
+ *
+ * Output with no error oxlint frames, like a type error, gives its `Found` line without the time
+ * it took. The time differs on each run, so each step that ran the lint would list it again.
+ */
+export function leftByHand(output: string): string[] {
+  const found: string[] = [];
+  let rule: string | undefined;
+  let framed = false;
+  for (const line of output.split("\n")) {
+    const warning = /^ {4}craftz: warning: (.*)/.exec(line);
+    const error = /^\s*[x×] [\w-]+\(([\w/-]+)\):/.exec(line);
+    const at = /^\s*,-\[(.+):(\d+):\d+\]/.exec(line);
+    if (warning && !line.includes("; held: ")) found.push(warning[1]!);
+    if (error) rule = error[1];
+    if (at && rule) {
+      found.push(`${rule}: ${at[1]}:${at[2]}`);
+      rule = undefined;
+      framed = true;
+    }
+  }
+  if (!framed) {
+    const count = output.split("\n").find((line) => /^Found \d+ errors?/.test(line));
+    if (count) found.push(count.replace(/ \(.*\)$/, ""));
+  }
+  return [...new Set(found)];
+}
+
 /** A move as one line, as the pull request lists it. */
 export function moveLine({ name, from, to }: Move): string {
   return to ? `${name} ${to}, from ${from ?? "nothing"}` : `${name} removed`;

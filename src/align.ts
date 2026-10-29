@@ -32,7 +32,7 @@ import { checkSettings, writeSettings } from "./apply.ts";
 import { catchUp } from "./gone.ts";
 import { fixFiles } from "./rules.ts";
 import { CRAFTZ, OWNER, TOOLS, onMain } from "./reference.ts";
-import { moveLine, report, row, type Row, type Step } from "./report.ts";
+import { leftByHand, moveLine, report, row, type Row, type Step } from "./report.ts";
 import { repos } from "./survey.ts";
 import { keep, temporary } from "./temp.ts";
 import { type Run, upgrade } from "./upgrade.ts";
@@ -239,9 +239,9 @@ function versionsIn(dir: string, repo: string): Deps {
   };
 }
 
-// What a failed step leaves by hand: craftz check's warnings that aren't held, and the count of lint and type
-// errors, or the step's first line when it printed neither. A candidate's own version is a
-// tarball, which versions-craftz names in every repository, so it's left out.
+// What a failed step leaves by hand, read from its output by `leftByHand`, or the step's first line
+// when it printed none. A candidate's own version is a tarball, which versions-craftz names in
+// every repository, so it's left out.
 function findings(error: unknown): string[] {
   const {
     stdout = "",
@@ -252,15 +252,9 @@ function findings(error: unknown): string[] {
     stderr?: string;
     message?: string;
   };
-  const found = `${stdout}\n${stderr}`
-    .split("\n")
-    .filter(
-      (line) =>
-        (line.startsWith("    craftz: warning: ") && !line.includes("; held: ")) ||
-        /^Found \d+ errors?/.test(line),
-    )
-    .map((line) => line.trim().replace(/^craftz: warning: /, ""))
-    .filter((line) => !(candidate && line.startsWith("versions-craftz:")));
+  const found = leftByHand(`${stdout}\n${stderr}`).filter(
+    (line) => !(candidate && line.startsWith("versions-craftz:")),
+  );
   return found.length || candidate ? found : [message.split("\n")[0] ?? ""];
 }
 
