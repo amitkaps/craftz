@@ -218,7 +218,13 @@ async function alignTo(dir: string, repo: string, log: string[], byHand: Run): P
  * The repositories clone and install side by side, but `verify` runs one at a time. markz's
  * timing tests failed when five ran at once, since they measured a busy machine, not the code.
  */
-type State = Row & { dir: string; log: string[]; before: Deps; updates?: number };
+type State = Row & {
+  dir: string;
+  log: string[];
+  before: Deps;
+  updates?: number;
+  superseded?: boolean;
+};
 
 const PACKAGE_FILES = ["package.json", "pnpm-lock.yaml", "reference/package.json"];
 
@@ -470,11 +476,28 @@ let failed = states.some((state) => state.status !== "verified" && state.status 
  * since adding a label starts a new run that cancels the old one. One that falls behind `main` has
  * its branch updated, and one that's ready is merged, as `pnpm pr --wait` does. The report after says so, since that update's CI
  * is the wait that's left. A pull request that fails or closes is reported and not waited for.
+ *
+ * One that conflicts with `main` is never merged, so it isn't waited for either. When `main`
+ * already installs the craftz it moves to, another pull request moved the repository while the
+ * run did, like one opened by hand. Its own is closed then, and the report says so rather than
+ * counting a failure. Any other conflict fails the repository, to be read by hand.
  */
 type Check = { name?: string; conclusion?: string; startedAt?: string };
 const FAILED = ["FAILURE", "CANCELLED", "TIMED_OUT", "ACTION_REQUIRED"];
 
-async function merge(url: string, updated: () => void): Promise<string | undefined> {
+// The craftz that `main` installs, read from GitHub, since the clone is from before the run.
+async function craftzOnMain(repo: string): Promise<string | undefined> {
+  const { stdout } = await run("gh", [
+    "api",
+    `repos/${OWNER}/${repo}/contents/package.json`,
+    "-H",
+    "Accept: application/vnd.github.raw",
+  ]);
+  return depsOf(JSON.parse(stdout) as Pkg)[CRAFTZ];
+}
+
+async function merge(state: State): Promise<string | undefined> {
+  const url = state.pr ?? "";
   for (;;) {
     await new Promise((resolve) => setTimeout(resolve, 10_000));
     const { stdout } = await run("gh", [
@@ -494,8 +517,21 @@ async function merge(url: string, updated: () => void): Promise<string | undefin
     if (pr.mergeStateStatus === "BEHIND") {
       // A pull request that's merging reads as behind its own merge for a moment, so a failed update
       // only means asking again.
-      await run("gh", ["pr", "update-branch", url]).then(updated, () => undefined);
+      await run("gh", ["pr", "update-branch", url]).then(
+        () => (state.updates = (state.updates ?? 0) + 1),
+        () => undefined,
+      );
       continue;
+    }
+    if (pr.mergeStateStatus === "DIRTY") {
+      const want = state.moved.find((move) => move.name === CRAFTZ)?.to;
+      if (!want || (await craftzOnMain(state.repo).catch(() => undefined)) !== want) {
+        return `${url} conflicts with main`;
+      }
+      const comment = `main already installs craftz ${want}, from another pull request.`;
+      await run("gh", ["pr", "close", url, "--delete-branch", "--comment", comment]);
+      state.superseded = true;
+      return undefined;
     }
     if (pr.mergeStateStatus === "CLEAN") {
       // As in `pnpm pr --wait`, it merges a pull request that's ready rather than wait on auto-merge.
@@ -514,7 +550,7 @@ async function merge(url: string, updated: () => void): Promise<string | undefin
 
 const opened = states.filter((state) => state.pr);
 await phase("merging", undefined, opened, async (state) => {
-  const problem = await merge(state.pr ?? "", () => (state.updates = (state.updates ?? 0) + 1));
+  const problem = await merge(state);
   if (problem) throw new Error(problem);
 });
 const problems = opened
@@ -526,13 +562,17 @@ const behind = opened
     const times = updates > 1 ? `, ${updates} times` : "";
     return `↻ ${repo} fell behind main, so CI ran again${times}`;
   });
+const superseded = opened
+  .filter((state) => state.superseded)
+  .map(({ repo }) => `↷ ${repo} moved on main another way, so its pull request closed`);
 if (opened.length) {
   console.log(
     [
       "",
       ...behind,
+      ...superseded,
       ...problems,
-      `${problems.length ? "✗" : "✓"} ${opened.length - problems.length} merged`,
+      `${problems.length ? "✗" : "✓"} ${opened.length - problems.length - superseded.length} merged`,
     ].join("\n"),
   );
 }
