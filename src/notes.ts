@@ -12,6 +12,7 @@
  */
 import { CRAFTZ, type Pkg, VERSIONS } from "./reference.ts";
 import { betas } from "./rules.ts";
+import type { Verified } from "./status.ts";
 
 /** npm's latest version of a package, or `undefined` when npm doesn't answer. */
 export type Latest = (name: string) => Promise<string | undefined>;
@@ -57,17 +58,21 @@ function later(a: string, b: string): boolean {
  *
  * `verify` has a budget of 10 seconds on CI, the same in every repository, as
  * [the rules](../docs/rules.md#ci) say. The time is the `Verify` step of the latest CI run on
- * `main` that passed. It's a note, not a `✗`, since a slow `verify` isn't broken.
+ * `main` that passed. It's a note, not a `✗`, since a slow `verify` isn't broken. It names the
+ * step that ended last ([The slowest step](status.ts#the-slowest-step)), so a slow one is measured
+ * before anyone guesses at it.
  */
 export async function notes(
   pkg: Pkg,
   latest: Latest = fromNpm,
-  verified?: number,
+  verified?: Verified,
 ): Promise<string[]> {
   const deps = { ...pkg.dependencies, ...pkg.devDependencies };
   const found: string[] = [];
-  if (verified !== undefined && verified > BUDGET) {
-    found.push(`verify took ${verified}s on CI, over its ${BUDGET}s budget`);
+  if (verified && verified.seconds > BUDGET) {
+    const { step, at } = verified.slowest ?? {};
+    const slowest = step ? `, and its slowest step, ${step}, ended ${at}s in` : "";
+    found.push(`verify took ${verified.seconds}s on CI, over its ${BUDGET}s budget${slowest}`);
   }
   const own = deps[CRAFTZ];
   if (own && EXACT.test(own)) {
