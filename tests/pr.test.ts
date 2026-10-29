@@ -5,7 +5,7 @@
  * running git. The fix that moves a repository onto them is tested too, since it deletes files.
  * Writing the outline runs in a new repository, once with prose installed and once without.
  */
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import {
   chmodSync,
   existsSync,
@@ -16,6 +16,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { expect, test } from "vite-plus/test";
 import { goneIn, keptBecause, writeOutline } from "../src/gone.ts";
 import { branchOf, joined, labelsIn, startOn, timingOf, titled, took } from "../src/pr.ts";
@@ -150,4 +151,17 @@ test("a checkout is caught up on main or a merged branch, and kept with changes 
   expect(keptBecause("", "done", merged)).toBeUndefined();
   expect(keptBecause(" M src/a.ts", "main", merged)).toBe("kept, with uncommitted changes");
   expect(keptBecause("", "work", merged)).toBe("kept, on work, which hasn't merged");
+});
+
+// A step exits the process, so it runs in one of its own. Before, a failed `verify` ended in Node's
+// stack trace, which hid the output that said why.
+test("a step that fails stops with one line, not a stack trace", () => {
+  const gone = pathToFileURL(join(import.meta.dirname, "../src/gone.ts")).href;
+  const script = `import { step } from "${gone}"; step(process.execPath, "-e", "process.exit(3)");`;
+  const run = spawnSync(process.execPath, ["--input-type=module", "-e", script], {
+    encoding: "utf8",
+  });
+  expect(run.status).toBe(1);
+  expect(run.stderr.trim().split("\n")).toHaveLength(1);
+  expect(run.stderr).toContain("failed, and its output above says why");
 });

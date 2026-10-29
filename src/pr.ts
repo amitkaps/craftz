@@ -26,16 +26,13 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
-import { gone, writeOutline } from "./gone.ts";
+import { gone, step, writeOutline } from "./gone.ts";
 
 function fail(message: string): never {
   console.error(message);
   process.exit(1);
 }
 
-const run = (command: string, ...args: string[]): void => {
-  execFileSync(command, args, { stdio: "inherit" });
-};
 const output = (command: string, ...args: string[]): string =>
   execFileSync(command, args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
 
@@ -156,7 +153,7 @@ export async function pr(args: string[]): Promise<void> {
     if (into) {
       branch = into.headRefName;
       console.log(`"${title}" is open, so the change goes into ${branch}.`);
-      run("git", "fetch", "--quiet", "origin", branch);
+      step("git", "fetch", "--quiet", "origin", branch);
       let local = true;
       try {
         output("git", "rev-parse", "--verify", "--quiet", `refs/heads/${branch}`);
@@ -164,9 +161,9 @@ export async function pr(args: string[]): Promise<void> {
         local = false;
       }
       if (local) {
-        run("git", "switch", "--quiet", branch);
-        run("git", "merge", "--quiet", "--ff-only", `origin/${branch}`);
-      } else run("git", "switch", "--quiet", "--track", `origin/${branch}`);
+        step("git", "switch", "--quiet", branch);
+        step("git", "merge", "--quiet", "--ff-only", `origin/${branch}`);
+      } else step("git", "switch", "--quiet", "--track", `origin/${branch}`);
       start = { from: "here" };
     }
   }
@@ -186,26 +183,26 @@ export async function pr(args: string[]): Promise<void> {
       // A merged head git no longer has counts as nothing added after it.
     }
     if (after !== "0") fail(`${branch} has commits made after #${found.number} merged.`);
-    run("git", "fetch", "--quiet", "origin", "main");
+    step("git", "fetch", "--quiet", "origin", "main");
   }
   if (start.from !== "here") {
     branch = branchOf(title);
     const base = start.from === "origin" ? ["origin/main"] : [];
-    run("git", "switch", "--create", branch, ...base);
+    step("git", "switch", "--create", branch, ...base);
   }
 
   if (output("git", "status", "--porcelain")) {
-    run("git", "add", "--all");
-    run("git", "commit", "--quiet", "--message", title);
+    step("git", "add", "--all");
+    step("git", "commit", "--quiet", "--message", title);
   }
-  run("git", "fetch", "--quiet", "origin", "main");
+  step("git", "fetch", "--quiet", "origin", "main");
   if (!newOnMain()) fail(`${branch} has nothing that isn't on main.`);
 
   writeOutline();
   const verifying = Date.now();
-  run("pnpm", "run", "verify");
+  step("pnpm", "run", "verify");
   const verified = took(Date.now() - verifying);
-  run("git", "push", "--quiet", "--set-upstream", "origin", branch);
+  step("git", "push", "--quiet", "--set-upstream", "origin", branch);
 
   const open = (): string => {
     try {
@@ -228,7 +225,7 @@ export async function pr(args: string[]): Promise<void> {
     const labels = label ? ["--label", label] : [];
     url = output("gh", "pr", "create", "--title", title, "--body", values.body, ...labels);
   }
-  run("gh", "pr", "merge", branch, "--auto", "--squash");
+  step("gh", "pr", "merge", branch, "--auto", "--squash");
   console.log(`${url}, after verify took ${verified}`);
   if (values.wait) await merged(branch, url);
 }
@@ -381,13 +378,13 @@ async function merged(branch: string, url: string): Promise<void> {
   console.log(timing ? `Merged, ${timing}.` : "Merged.");
   const elsewhere = mainElsewhere();
   if (elsewhere) {
-    run("git", "fetch", "--quiet", "--prune", "origin", "main");
-    run("git", "switch", "--quiet", "--detach", "origin/main");
+    step("git", "fetch", "--quiet", "--prune", "origin", "main");
+    step("git", "switch", "--quiet", "--detach", "origin/main");
   } else {
-    run("git", "switch", "--quiet", "main");
-    run("git", "pull", "--quiet", "--prune");
+    step("git", "switch", "--quiet", "main");
+    step("git", "pull", "--quiet", "--prune");
   }
-  run("git", "branch", "--quiet", "--delete", "--force", branch);
+  step("git", "branch", "--quiet", "--delete", "--force", branch);
   writeOutline();
   console.log(
     elsewhere
