@@ -20,7 +20,7 @@
   },
   "devDependencies": {
     "@amitkaps/markz": "0.9.0",
-    "@amitkaps/prose": "0.11.0",
+    "@amitkaps/prose": "0.11.1",
     "@types/node": "26.6.5",
     "cf": "1.0.0-beta.21",
     "publint": "0.3.25",

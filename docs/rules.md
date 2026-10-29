@@ -173,6 +173,10 @@ Text the repository didn't write, like a test corpus or a fixture that's wrong o
 
 A lifecycle script, one pnpm runs on its own like `prepare` on install or `prepack` before packing, only does what another step needs first. base's `prepare` generates the types SvelteKit and the Worker need, so a fresh clone type-checks. A package's `prepack` is `pnpm run build`, so a tarball never ships a stale `dist/`. Neither builds a site or deploys.
 
+### A run removes what it writes
+
+A temporary folder, a clone or a stale lockfile entry outlived the run that made it, and each held tens of gigabytes before anyone looked. So a run removes what it wrote when it ends, and keeps only what it says it kept, and where. Nothing in a repository's files shows it, so it has no id. craftz's own commands take each folder from one module, and a test fails a folder made anywhere else.
+
 ## Cloudflare
 
 A repository with a site deploys it to a Cloudflare Worker with static assets.
@@ -336,43 +340,67 @@ GitHub Actions runs one job, named `ci`, on pull requests and on `main`. It inst
 
 ## Practice
 
-How a repository's code is written, from what its lessons taught. Each principle here was learned more than once, often in another repository, before it was written down. A repository's `lessons.md` groups each lesson under the principle it shows, and links it here, so the next lesson of the same kind shows the principle needs a check. A principle with a check has an id under it, and the rest are for an agent to read before writing code.
+How a repository's code is written, from what its lessons taught. Each principle here was learned in more than one repository before it was written down. There are ten, for three moments of a change: before the code, while writing it, and after it runs.
 
-### State it once
+A repository's `lessons.md` groups each lesson under the principle it shows, and links it here, so the next lesson of the same kind shows the principle needs a check. A principle with a check has an id under it, and the rest are for an agent to read before writing code.
 
-A list, a rule, a command or a file stated in two places drifts in one. So each is stated once, and the rest link to it or are checked against it. A rule or a command that code acts on is a list item with an id in one doc. It's read with markz's reader, and a test holds the code to the ids, both ways, as craftz's rules, prose's codes and pagez's errors are. Prose's own rule is [Stated once](https://prose.amitkaps.com/docs/usage.md#stated-once).
+### Before
 
-### Try it on the real thing
+What's right, where it stops, and where the cost is now, each settled before the code that changes it.
 
-A check, a fix or a design that passed on examples failed on a real repository, a real page or the package as it ships. So run a change where it will run before it lands. That means a fix on each repository's files, a command from the packed tarball, a build on the largest site at hand, and a claim about another tool through that tool. Choose a new test input for what it reaches that the others don't, not for being one more of the same kind.
+#### Write the spec first
 
-### Measure before changing
+Code written before what it should do was judged by what it happened to do. So what's right is written first, as a grammar, a rule, a command in usage or a test that fails. The code then meets it, and a test holds the two together. The spec can be wrong too. A disagreement is settled by naming the rule that decides it, and fixing whichever side is wrong, never by loosening the check.
 
-A guess at what's slow, big or needed was wrong more often than not. So time each part before changing one, and judge a change by the same measure, beside what it replaces. Timing needs a warm engine, the best of several runs and inputs big enough to measure, since one run on a busy machine can differ by a third.
+#### Draw the boundaries first
 
-### Silence is the failure
+What a thing wasn't going to do was decided late, by whatever got built first. So before the code, write down where it stops. That's what's out of scope, and the limit on each cost a reader or a run pays, like a package's size or `verify`'s time. A ruled-out idea is written down with its reason, so it isn't built again. A limit is measured in every pull request, and over it, the code gets smaller, or the lessons say why it stays over.
 
-A warning nobody has to read is never read, and a catch that takes every error hides the one that mattered. So a check fails where it can't be sure, and a tool warns only where a rewrite would help. A run says everything it found and what it didn't check. Catch only the error you expect, beside the call that throws it.
+#### Measure before changing
 
-### Parse, don't match text
+A guess at what's slow, big or needed was wrong more often than not. So time each part before changing one, and change the part the measure points to. Timing needs a warm engine, the best of several runs and inputs big enough to measure, since one run on a busy machine can differ by a third.
+
+### During
+
+How the code is written, so it stays one thing and does only what's needed.
+
+#### Don't repeat yourself
+
+A rule, a value, a piece of work or a step done in two places drifts in one, or gets skipped in one. So each is written once, in text, in code and in what's run. craftz is this principle across repositories.
+
+- **In docs,** the rest link to it. A rule or a command that code acts on is a list item with an id, read with markz's reader.
+- **In code,** the second place that does the same work calls the first, like making a temporary folder or running a rule. Share it when the second copy appears, not before.
+- **In what's run,** a script an agent writes again, or a step a doc asks for, becomes a command in the repository. It goes into the command that's already run at that moment, like `pr` running `gone` and `verify`, since a step nobody is made to notice gets skipped. A command prints what agents would otherwise work out from its output, and never waits on input an agent can't give.
+
+Where it can, a test holds the one place to its users, as craftz's rules, prose's codes and pagez's errors are held by id.
+
+#### One name, one meaning
+
+A name, a flag or a type that meant two things broke on the case where they differed, and two names for one thing read as two things. So each concept has one name, in code and in docs alike, and each name means one concept. Name a thing for what it does, not where it began, so an error, a warning code or a flag reads right without its docs. When a name starts to mean a second thing, split it, rather than teaching its readers the cases.
+
+#### Parse, don't match text
 
 A regular expression over a config, a doc or code read keys from comments and missed what was laid out another way. So a file is read with the parser for its language, like oxc for code and config, and markz for Markdown, and a value is found by where it sits. Read only what's written as a literal, and treat the rest as unknown.
 
-### Build only what gets used
+#### Build only what gets used
 
 The first views, plugins and channels were most of the work, and few were opened. So build the smallest thing that gets read, and watch whether it is. Weigh a tool by what a repository runs of it, not by what it's for. Improve what every agent already reads, `AGENTS.md`, before adding a channel.
 
-### A run removes what it writes
+### After
 
-A temporary folder, a clone or a stale lockfile entry outlives the run that made it. Each held tens of gigabytes before anyone looked. So a run removes what it wrote when it ends, and keeps only what it says it kept, and where.
+How a change shows it worked, before it lands.
 
-### Read what's live
+#### Try it on the real thing
 
-A clone, a lockfile, a registry tag or a summary of a page can be behind what it stands for. So a command reads what it judges from the source of it, at the moment it judges. That means `main` on GitHub, the installed version of a tool and its own types, and the files a pull request will hold.
+A check, a fix or a design that passed on examples failed on a real repository, a real page or the package as it ships. So run a change where it will run before it lands. That means a fix on each repository's files, a command from the packed tarball, a build on the largest site at hand, and a claim about another tool through that tool. Read what it's judged on from the source, at that moment, like `main` on GitHub or a tool's installed types, never a clone or a summary. Choose a new test input for what it reaches that the others don't, not for being one more of the same kind.
 
-### A step nobody runs becomes a command
+#### Have a way to verify
 
-A step that a doc asks for, at a moment nobody is made to notice, gets skipped, by an agent most of all. So the step goes into the command that's already run at that moment, like `pr` running `gone` and `verify`. A command an agent runs never waits on input it can't give.
+A change that only a person could check was made slowly, and broke what nobody looked at. A change a machine can check is cheap to make, and to make again. So each thing that matters has a check that runs on every change. That's a test against the spec, a limit, or a second implementation run on the same input, like micromark for markz or shiki for prose. A rewrite is checked against what it replaces, with each difference that's meant listed and every other one a bug. Where nothing can check it yet, build the check before the change.
+
+#### Silence is the failure
+
+A warning nobody has to read is never read, and a catch that takes every error hides the one that mattered. So a check fails where it can't be sure, and a tool warns only where a rewrite would help. A run says everything it found and what it didn't check. A check that can't fail isn't a check, so fix it or remove it. Catch only the error you expect, beside the call that throws it.
 
 ## Repositories
 
