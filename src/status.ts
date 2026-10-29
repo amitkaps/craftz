@@ -22,8 +22,8 @@
  *   [Access](settings.ts#access) says. Either is fine, and saying which means a site meant to be
  *   internal doesn't go public unseen. An Access application with no policy is marked.
  *
- * The [notes](notes.ts) follow the lines: a newer craftz, and in craftz's own repository a beta
- * that's graduated.
+ * The [notes](notes.ts) follow the lines: a newer craftz, a `verify` over its budget, and in
+ * craftz's own repository a beta that's graduated.
  *
  * `--log` prints the latest build's log after, which is where a failed deploy says why, and
  * `--notes` prints the latest release's notes in full. `--timing` prints what the last pull
@@ -258,6 +258,39 @@ function latestRelease(repo: string): Release | undefined {
       "tagName,publishedAt,body",
     );
     return JSON.parse(json) as Release;
+  } catch {
+    return undefined;
+  }
+}
+
+/** The seconds the `Verify` step took in the latest CI run on `main` that passed, or `undefined`
+ *  when there's none or GitHub can't be read. */
+export function verifyTook(repo: string): number | undefined {
+  try {
+    const [run] = JSON.parse(
+      gh(
+        "run",
+        "list",
+        "-R",
+        `${OWNER}/${repo}`,
+        "--workflow",
+        "ci.yml",
+        "--branch",
+        "main",
+        "--status",
+        "success",
+        "--limit",
+        "1",
+        "--json",
+        "databaseId",
+      ),
+    ) as { databaseId: number }[];
+    if (!run) return undefined;
+    const { jobs } = JSON.parse(
+      gh("api", `repos/${OWNER}/${repo}/actions/runs/${run.databaseId}/jobs`),
+    ) as { jobs: { steps: { name: string; started_at: string; completed_at: string }[] }[] };
+    const step = jobs.flatMap((job) => job.steps).find((s) => s.name === "Verify");
+    return step && Math.round((Date.parse(step.completed_at) - Date.parse(step.started_at)) / 1000);
   } catch {
     return undefined;
   }
