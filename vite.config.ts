@@ -8,6 +8,13 @@
  * [pinned.ts](src/pinned.ts) says. browser-compat-data, where the browsers come from, stays out
  * of the bundle.
  *
+ * markz is bundled, though it's a devDependency, so a repository's install doesn't carry it for
+ * the few lines `cli.ts` prints findings with. It's the only dependency the build may take in,
+ * so another one bundled by mistake fails the build. Rolldown names a chunk that several others
+ * import after one module in it, and the one `cli.ts` and `new.ts` share read as if `gone.ts`
+ * were 186 kB. So a shared chunk is named `shared`, and only a chunk loaded by `import()` keeps
+ * its module's name.
+ *
  * The format, lint and pack are the ones [the rules](docs/rules.md#toolchain-wrap) ask every
  * config to write out. craftz's site is its docs, the folder `prose build` writes, which
  * [cloudflare.config.ts](cloudflare.config.ts) names, so Vite doesn't build it.
@@ -47,7 +54,10 @@ export default defineConfig({
     clean: true,
     fixedExtension: false,
     define: { __PINNED__: JSON.stringify({ browsers: BROWSERS, date: COMPATIBILITY_DATE }) },
-    deps: { neverBundle: ["@mdn/browser-compat-data"] },
+    deps: { neverBundle: ["@mdn/browser-compat-data"], onlyBundle: ["@amitkaps/markz"] },
+    outputOptions: {
+      chunkFileNames: (chunk) => (chunk.isDynamicEntry ? "[name]-[hash].js" : "shared-[hash].js"),
+    },
   },
 
   test: {
