@@ -265,6 +265,8 @@ The README is the site's home page when prose builds it, so it reads as one. It 
 
 The plan opens with what's next, since that's what it's read for. Its "Where it is" holds one line per thing that works now, rewritten when a release changes it, not a line per release. A release's notes on GitHub already say what it changed, and the plan links to them rather than copying them.
 
+- [`docs-lessons`]{#docs-lessons}: a link from `docs/lessons.md` into these rules names an id or a heading they have, in the craftz a repository installs. A group of lessons links the principle in [Practice](#practice) it shows, so a principle renamed here fails where it's linked. prose checks only a relative link, and another repository links this page by its address.
+
 - [`docs-plan`]{#docs-plan}: each step in the plan's Next is a task, `- [ ]`, ticked as the pull request that finishes it merges. Before a release, the ticked steps move into "Where it is" and the summary names the version. `craftz release` stops until both are done, so the plan is current before each release, not after. The fix turns a numbered or plain step into a task.
 
 A site has no `usage.md`, since the site is what people use, unless it has commands to run. Any other doc is the repository's own, like markz's grammar, and goes in the `nav` too. `development.md` links to these rules for what's shared rather than repeating it. `docs-files`'s fix writes a first version of each one that's missing, and adds it to the `nav`, so `new` starts with all of them.

@@ -571,6 +571,19 @@ test("each step in the plan's Next is a task, and the fix turns a numbered step 
   expect(check()).toEqual([]);
 });
 
+test("a lesson's link into the rules names an id they have", () => {
+  const rule = RULES.find((r) => r.id === "docs-lessons");
+  const check = (text: string) =>
+    rule?.check({ files: { "docs/lessons.md": text } } as unknown as Repo)?.drift;
+  const site = "https://craftz.amitkaps.com/docs/rules.md";
+  expect(check(`See [it](${site}#measure-before-changing) and [that](${site}#docs-plan).`)).toEqual(
+    [],
+  );
+  expect(
+    check(`[Gone](${site}#measure-first), [here](rules.md#nowhere), [page](${site}).`),
+  ).toEqual(["docs/lessons.md links rules.md#measure-first, which these rules don't have"]);
+});
+
 test("a site's Worker is written as cf's config is, which the survey reads with its folder", () => {
   const drift = (text: string) => {
     const files = { "cloudflare.config.ts": text };
