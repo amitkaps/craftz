@@ -42,7 +42,7 @@ export function origin(dir: string): string | undefined {
  * # What's on main
  *
  * A command that judges what's live reads a file as it is on `main` on GitHub, not in the clone,
- * which can be behind ([Read what's live](../docs/rules.md#read-whats-live)). `onMain` is the one
+ * which can be behind ([Try it on the real thing](../docs/rules.md#try-it-on-the-real-thing)). `onMain` is the one
  * way to read one.
  *
  * `status`, `release` and align all read through it, so a new command finds it here. It reads
