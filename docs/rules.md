@@ -1,6 +1,6 @@
 # Rules
 
-How every repository builds, checks, deploys and releases. There's one way to do each thing. Each repository's `craftz check` lists where it has drifted from these rules, `craftz settings --check` does the same for its settings, and `align` brings every repository back in line. [Usage](usage.md) says how to run them.
+How every repository builds, checks, deploys and releases, and the practice its code follows. There's one way to do each thing. Each repository's `craftz check` lists where it has drifted from these rules, `craftz settings --check` does the same for its settings, and `align` brings every repository back in line. [Usage](usage.md) says how to run them.
 
 The repositories are the owner's public ones with the GitHub topic `craftz`, which [src/survey.ts](../src/survey.ts) finds. Where this page gives a version, the real value is in [the reference](../reference/README.md), and `craftz check` reads it from there.
 
@@ -328,6 +328,46 @@ The next merge that changes `package.json` finds that version on npm with no tag
 GitHub Actions runs one job, named `ci`, on pull requests and on `main`. It installs with `pnpm install --frozen-lockfile` and runs `pnpm run verify`, and nothing else. What a package adds, like publint or a size budget, runs in `verify`, so CI is the same in every repository. It doesn't check the label, or run again when one changes, so a pull request opened with its label runs `verify` once. In a package, a second workflow, `label`, checks the pull request has one [release-notes label](#release-notes), and runs again when a label changes, without installing anything. The `main` ruleset requires `ci`, and a package's `label` too. Cloudflare's own check on each commit isn't required, since it runs after the merge.
 
 `verify` takes 10 seconds or less on CI, in every repository. `pnpm pr` waits on it, and under 10 seconds the change is still in mind when it's done. It's one budget, measured the same way everywhere. A repository with more to check makes its checks faster, rather than taking a larger budget. A slow `verify` never fails CI, since a runner's time varies from run to run, and the change that crosses the line is rarely the one that made it slow. `craftz status` notes one over the budget, and a repository that stays over says why in its lessons. Moving slow tests out of `verify`, to a nightly run, is ruled out, since CI would then differ by repository, and a regression would show a day late. The job stops at 10 minutes, which is for a job that hangs, not a budget.
+
+## Practice
+
+How a repository's code is written, from what its lessons taught. Each principle here was learned more than once, often in another repository, before it was written down. A repository's `lessons.md` groups each lesson under the principle it shows, and links it here, so the next lesson of the same kind shows the principle needs a check. A principle with a check has an id under it, and the rest are for an agent to read before writing code.
+
+### State it once
+
+A list, a rule, a command or a file stated in two places drifts in one. So each is stated once, and the rest link to it or are checked against it. A rule or a command that code acts on is a list item with an id in one doc. It's read with markz's reader, and a test holds the code to the ids, both ways, as craftz's rules, prose's codes and pagez's errors are. Prose's own rule is [Stated once](https://prose.amitkaps.com/docs/usage.md#stated-once).
+
+### Try it on the real thing
+
+A check, a fix or a design that passed on examples failed on a real repository, a real page or the package as it ships. So run a change where it will run before it lands. That means a fix on each repository's files, a command from the packed tarball, a build on the largest site at hand, and a claim about another tool through that tool. Choose a new test input for what it reaches that the others don't, not for being one more of the same kind.
+
+### Measure before changing
+
+A guess at what's slow, big or needed was wrong more often than not. So time each part before changing one, and judge a change by the same measure, beside what it replaces. Timing needs a warm engine, the best of several runs and inputs big enough to measure, since one run on a busy machine can differ by a third.
+
+### Silence is the failure
+
+A warning nobody has to read is never read, and a catch that takes every error hides the one that mattered. So a check fails where it can't be sure, and a tool warns only where a rewrite would help. A run says everything it found and what it didn't check. Catch only the error you expect, beside the call that throws it.
+
+### Parse, don't match text
+
+A regular expression over a config, a doc or code read keys from comments and missed what was laid out another way. So a file is read with the parser for its language, like oxc for code and config, and markz for Markdown, and a value is found by where it sits. Read only what's written as a literal, and treat the rest as unknown.
+
+### Build only what gets used
+
+The first views, plugins and channels were most of the work, and few were opened. So build the smallest thing that gets read, and watch whether it is. Weigh a tool by what a repository runs of it, not by what it's for. Improve what every agent already reads, `AGENTS.md`, before adding a channel.
+
+### A run removes what it writes
+
+A temporary folder, a clone or a stale lockfile entry outlives the run that made it. Each held tens of gigabytes before anyone looked. So a run removes what it wrote when it ends, and keeps only what it says it kept, and where.
+
+### Read what's live
+
+A clone, a lockfile, a registry tag or a summary of a page can be behind what it stands for. So a command reads what it judges from the source of it, at the moment it judges. That means `main` on GitHub, the installed version of a tool and its own types, and the files a pull request will hold.
+
+### A step nobody runs becomes a command
+
+A step that a doc asks for, at a moment nobody is made to notice, gets skipped, by an agent most of all. So the step goes into the command that's already run at that moment, like `pr` running `gone` and `verify`. A command an agent runs never waits on input it can't give.
 
 ## Repositories
 
