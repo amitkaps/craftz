@@ -27,7 +27,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { OWNER } from "./reference.ts";
+import { OWNER, onMain } from "./reference.ts";
 import { origin } from "./survey.ts";
 import { temporary } from "./temp.ts";
 
@@ -73,11 +73,8 @@ export function release(dir: string, args: string[]): void {
     }
   };
 
-  const file = JSON.parse(gh("api", `${api}/contents/package.json`)) as {
-    sha: string;
-    content: string;
-  };
-  const text = Buffer.from(file.content, "base64").toString("utf8");
+  const file = onMain(repo, "package.json");
+  const text = file.text;
   const pkg = JSON.parse(text) as { private?: boolean; version?: string };
 
   if (pkg.private) fail(`${repo} is private, so it isn't released`);
@@ -86,7 +83,7 @@ export function release(dir: string, args: string[]): void {
 
   let plan = "";
   try {
-    plan = gh("api", `${api}/contents/docs/plan.md`, "-H", "Accept: application/vnd.github.raw");
+    plan = onMain(repo, "docs/plan.md").text;
   } catch {
     fail(`${repo} has no docs/plan.md on main.`);
   }

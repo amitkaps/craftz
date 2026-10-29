@@ -31,7 +31,7 @@ import { promisify } from "node:util";
 import { checkSettings, writeSettings } from "./apply.ts";
 import { catchUp } from "./gone.ts";
 import { fixFiles } from "./rules.ts";
-import { CRAFTZ, OWNER, TOOLS } from "./reference.ts";
+import { CRAFTZ, OWNER, TOOLS, onMain } from "./reference.ts";
 import { moveLine, report, row, type Row, type Step } from "./report.ts";
 import { repos } from "./survey.ts";
 import { keep, temporary } from "./temp.ts";
@@ -485,15 +485,14 @@ let failed = states.some((state) => state.status !== "verified" && state.status 
 type Check = { name?: string; conclusion?: string; startedAt?: string };
 const FAILED = ["FAILURE", "CANCELLED", "TIMED_OUT", "ACTION_REQUIRED"];
 
-// The craftz that `main` installs, read from GitHub, since the clone is from before the run.
-async function craftzOnMain(repo: string): Promise<string | undefined> {
-  const { stdout } = await run("gh", [
-    "api",
-    `repos/${OWNER}/${repo}/contents/package.json`,
-    "-H",
-    "Accept: application/vnd.github.raw",
-  ]);
-  return depsOf(JSON.parse(stdout) as Pkg)[CRAFTZ];
+// The craftz that `main` installs, read from GitHub, since the clone is from before the run. A
+// `main` that can't be read installs none.
+function craftzOnMain(repo: string): string | undefined {
+  try {
+    return depsOf(JSON.parse(onMain(repo, "package.json").text) as Pkg)[CRAFTZ];
+  } catch {
+    return undefined;
+  }
 }
 
 async function merge(state: State): Promise<string | undefined> {
@@ -525,7 +524,7 @@ async function merge(state: State): Promise<string | undefined> {
     }
     if (pr.mergeStateStatus === "DIRTY") {
       const want = state.moved.find((move) => move.name === CRAFTZ)?.to;
-      if (!want || (await craftzOnMain(state.repo).catch(() => undefined)) !== want) {
+      if (!want || craftzOnMain(state.repo) !== want) {
         return `${url} conflicts with main`;
       }
       const comment = `main already installs craftz ${want}, from another pull request.`;

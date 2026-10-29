@@ -38,6 +38,28 @@ export function origin(dir: string): string | undefined {
   return new RegExp(`github\\.com[:/]${OWNER}/([^/]+?)(?:\\.git)?$`).exec(url)?.[1];
 }
 
+/** @prose
+ * # What's on main
+ *
+ * A command that judges what's live reads a file as it is on `main` on GitHub, not in the clone,
+ * which can be behind ([Read what's live](../docs/rules.md#read-whats-live)). `onMain` is the one
+ * way to read one.
+ *
+ * `status`, `release` and align all read through it, so a new command finds it here. It reads
+ * through `gh`, so a private repository reads as a public one does, and a missing file throws.
+ */
+/** A file as it is on `main` in the owner's `repo` on GitHub: its text, and the `sha` a write to
+ *  it names. */
+export function onMain(repo: string, path: string): { text: string; sha: string } {
+  const file = JSON.parse(
+    execFileSync("gh", ["api", `repos/${OWNER}/${repo}/contents/${path}?ref=main`], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    }),
+  ) as { content: string; sha: string };
+  return { text: Buffer.from(file.content, "base64").toString("utf8"), sha: file.sha };
+}
+
 export type Pkg = {
   name?: string;
   description?: string;

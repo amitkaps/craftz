@@ -36,7 +36,7 @@
 import { execFileSync } from "node:child_process";
 import { accessDrift, cf, cloudflareLogin, workerTag } from "./settings.ts";
 import { took } from "./pr.ts";
-import { OWNER, type Pkg } from "./reference.ts";
+import { OWNER, onMain, type Pkg } from "./reference.ts";
 import type { Worker } from "./worker.ts";
 
 /** One line of the status: what it is, what was found, and whether it's fine. */
@@ -206,14 +206,7 @@ export async function status(
       const latest = response.ok
         ? ((await response.json()) as { version: string }).version
         : undefined;
-      const main = JSON.parse(
-        gh(
-          "api",
-          `repos/${OWNER}/${repo}/contents/package.json?ref=main`,
-          "-H",
-          "Accept: application/vnd.github.raw",
-        ),
-      ) as { version?: string };
+      const main = JSON.parse(onMain(repo, "package.json").text) as { version?: string };
       lines.push(npmIn(latest, main.version));
     } catch (error) {
       lines.push({
