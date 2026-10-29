@@ -53,7 +53,7 @@ The `fmt` and `lint` blocks are written out in each config, beside the repositor
 
 ### The editor
 
-- [`toolchain-editor`]{#toolchain-editor}: every repository has the reference's [.vscode/settings.json](../reference/.vscode/settings.json), the one Vite+ writes, and its [.vscode/extensions.json](../reference/.vscode/extensions.json), the same content, read as JSON. An app adds [app/](../reference/app/README.md)'s, which format `.svelte` files and recommend Svelte's extension, since every app starts from base. The fix writes both whole.
+- [`toolchain-editor`]{#toolchain-editor}: every repository has the reference's [.vscode/settings.json](../reference/.vscode/settings.json), the one Vite+ writes, and its [.vscode/extensions.json](../reference/.vscode/extensions.json), the same content, read as JSON. A repository that depends on Svelte adds [svelte/](../reference/svelte/README.md)'s, which format `.svelte` files and recommend Svelte's extension. The fix writes both whole.
 
 The settings make oxc the formatter, on save, with its fixes. The extensions recommended are oxc's and Vitest's, by name, rather than Vite+'s extension pack, which only wraps the two and could add more without a change to these rules. The oxc extension then runs the repository's own `vp fmt` and `vp lint`, so the editor formats with the oxfmt Vite+ pins and the `fmt` block in `vite.config.ts`, the same as `check`.
 
@@ -209,9 +209,9 @@ export default {
 };
 ```
 
-- [`cloudflare-static`]{#cloudflare-static}: a static site depends on none of cf, `@cloudflare/vite-plugin` and wrangler, its `vite.config.ts` doesn't load Cloudflare's plugin, and a site with no `index.html` doesn't run `vp build`, since Vite has nothing to build. The fix removes them, and the ` && vp build` that ends `verify` or `build`.
+- [`cloudflare-static`]{#cloudflare-static}: a static site depends on none of cf, `@cloudflare/vite-plugin` and wrangler, and its `vite.config.ts` doesn't load Cloudflare's plugin. A site with no `index.html` doesn't run `vp build` unless SvelteKit builds it, since Vite has nothing else to build. The fix removes them, and the ` && vp build` that ends `verify` or `build`.
 
-A site with an `index.html` is Vite's own build, and serves `dist`. A prose site's `verify` ends with `pnpm prose build`, and anything that adds to the site, like markz's Quality page, runs after it. `ship` is `craftz deploy`.
+A site with an `index.html` is Vite's own build, and serves `dist`. A SvelteKit app that runs only in the browser builds with the static adapter, and serves `build`. A prose site's `verify` ends with `pnpm prose build`, and anything that adds to the site, like markz's Quality page, runs after it. `ship` is `craftz deploy`.
 
 ### An app
 

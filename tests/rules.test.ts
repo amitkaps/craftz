@@ -381,30 +381,30 @@ test("the files craftz owns are its own word for word, and the fix writes them w
   expect(rules.map((rule) => rule.check(repo() as unknown as Repo)?.drift)).toEqual([[], []]);
 });
 
-test("the editor's settings are compared as JSON, and an app's add Svelte's", () => {
+test("the editor's settings are compared as JSON, and a repository on Svelte adds Svelte's", () => {
   const settings = ".vscode/settings.json";
   const extensions = ".vscode/extensions.json";
   const read = (file: string) => JSON.parse(readFileSync(join(here, file), "utf8")) as object;
   const rule = RULES.find((r) => r.id === "toolchain-editor");
-  const repo = (files: object, deploys?: string) =>
-    ({ pkg: {}, files, worker: deploys && { deploys } }) as unknown as Repo;
+  const repo = (files: object, svelte?: boolean) =>
+    ({ pkg: {}, files, deps: svelte ? { svelte: "5.0.0" } : {} }) as unknown as Repo;
   // Laid out otherwise, as `vp fmt` can, it's still the reference's.
   const spread = {
     [settings]: JSON.stringify(read(settings), null, 4),
     [extensions]: JSON.stringify(read(extensions), null, 4),
   };
   expect(rule?.check(repo(spread))?.drift).toEqual([]);
-  expect(rule?.check(repo(spread, "app"))?.drift).toEqual([
+  expect(rule?.check(repo(spread, true))?.drift).toEqual([
     `${settings} differs from craftz's`,
     `${extensions} differs from craftz's`,
   ]);
   const app = {
-    [settings]: JSON.stringify({ ...read(settings), ...read(`app/${settings}`) }),
+    [settings]: JSON.stringify({ ...read(settings), ...read(`svelte/${settings}`) }),
     [extensions]: JSON.stringify({
       recommendations: ["oxc.oxc-vscode", "vitest.explorer", "svelte.svelte-vscode"],
     }),
   };
-  expect(rule?.check(repo(app, "app"))?.drift).toEqual([]);
+  expect(rule?.check(repo(app, true))?.drift).toEqual([]);
 });
 
 test("check runs prose check and craftz check after a framework's checker, and the fix adds them once", () => {
@@ -688,10 +688,39 @@ export default defineConfig({
     "depends on cf, which a static site doesn't use",
     "depends on @cloudflare/vite-plugin, which a static site doesn't use",
     "vite.config.ts loads Cloudflare's plugin",
-    "verify runs vp build, with no index.html to build",
+    "verify runs vp build, with no index.html or SvelteKit to build",
   ]);
   for (let i = 0; i < 2; i++) if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
   expect(drift()).toEqual(["vite.config.ts loads Cloudflare's plugin"]);
+});
+
+test("a static site SvelteKit builds keeps vp build, and the fix leaves it", () => {
+  const dir = mkdtempSync(join(tmpdir(), "craftz-sveltekit-"));
+  const config = `export default {
+  worker: { name: "x", domains: [], assets: { directory: "build" } },
+};
+`;
+  writeFileSync(join(dir, "cloudflare.config.ts"), config);
+  const verify = "vp run --log grouped all";
+  const pkg = {
+    scripts: { build: "vp build", verify },
+    devDependencies: { "@sveltejs/kit": "3.0.0", wrangler: "4.0.0" },
+  };
+  writeFileSync(join(dir, "package.json"), JSON.stringify(pkg));
+  const rule = RULES.find((r) => r.id === "cloudflare-static");
+  const own = () => JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as Pkg;
+  const files = { "cloudflare.config.ts": config };
+  const drift = () =>
+    rule?.check({
+      pkg: own(),
+      files,
+      deps: own().devDependencies,
+      worker: worker(files),
+    } as unknown as Repo)?.drift;
+  expect(drift()).toEqual(["depends on wrangler, which a static site doesn't use"]);
+  if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
+  expect(drift()).toEqual([]);
+  expect(own().scripts).toEqual({ build: "vp build", verify });
 });
 
 test("the betas this repository is on are the ones the rules name", () => {
