@@ -28,5 +28,5 @@ Every file in this repository with its summary, which `pnpm pr` and `pnpm gone` 
 
 - A rule is worded once, in [docs/rules.md](docs/rules.md), as a list item that opens with its id. Its check and its fix are in [src/rules.ts](src/rules.ts), under the same id. `pnpm craftz rules <id>` prints one.
 - [reference/](reference/) holds the files the rules compare against, laid out as a repository has them. Change a file there, not a copy of it elsewhere.
-- What a change taught goes in [docs/lessons.md](docs/lessons.md), in the same change.
+- What a change taught goes in [docs/lessons.md](docs/lessons.md), in the same change, under the principle it shows. A lesson that repeats one already there means that principle needs a check, a command or a line here.
 - Never name a private repository in the docs, code, commits or pull requests. This repository is public. Say "a private repository" and describe what it is instead.
