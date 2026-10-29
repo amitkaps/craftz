@@ -75,7 +75,7 @@ function read(markdown: string): Read {
       part: outline.findLast((h) => tree.start(h.node) < (at.get(id) ?? 0))?.label ?? "",
     })),
     parts: outline.map((h) => h.label),
-    anchors: new Set([...at.keys()]),
+    anchors: new Set(at.keys()),
   };
 }
 
