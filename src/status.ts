@@ -34,6 +34,7 @@
  * rather than taken as fine.
  */
 import { execFileSync } from "node:child_process";
+import { stripVTControlCharacters } from "node:util";
 import { accessDrift, cf, cloudflareLogin, workerTag } from "./settings.ts";
 import { took } from "./pr.ts";
 import { OWNER, onMain, type Pkg } from "./reference.ts";
@@ -256,9 +257,35 @@ function latestRelease(repo: string): Release | undefined {
   }
 }
 
-/** The seconds the `Verify` step took in the latest CI run on `main` that passed, or `undefined`
- *  when there's none or GitHub can't be read. */
-export function verifyTook(repo: string): number | undefined {
+/** How long `verify` took on CI, and the step that ended last in it, with how far in it ended. */
+export type Verified = { seconds: number; slowest?: { step: string; at: number } };
+
+/** @prose
+ * # The slowest step
+ *
+ * The note on a slow `verify` names the step that ended last, read from the times on CI's log.
+ *
+ * `vp run --log grouped` prints each step's output as one group when the step ends, under a line
+ * like `── [@amitkaps/craftz#test] ──`. GitHub stamps each line of a job's log with its time. So
+ * the last group's time, less the `Verify` step's start, is when the slowest step ended. The steps
+ * start together, so that's its time, unless it waits for another, whose time it includes too.
+ */
+/** The step that ended last in a CI job's `log`, and how many seconds after `start` it ended. The
+ *  `all` task that waits for the rest isn't a step. */
+export function slowestIn(log: string, start: string): Verified["slowest"] {
+  let slowest: Verified["slowest"];
+  for (const line of stripVTControlCharacters(log).split("\n")) {
+    const group = /^(\S+Z) ── \[(?:[^\]#]*#)?([^\]]+)\] ──/.exec(line);
+    if (!group?.[1] || !group[2] || group[2] === "all") continue;
+    const at = Math.round((Date.parse(group[1]) - Date.parse(start)) / 1000);
+    if (!slowest || at >= slowest.at) slowest = { step: group[2], at };
+  }
+  return slowest;
+}
+
+/** What the `Verify` step took in the latest CI run on `main` that passed, or `undefined` when
+ *  there's none or GitHub can't be read. A log that can't be read leaves out the slowest step. */
+export function verifyTook(repo: string): Verified | undefined {
   try {
     const [run] = JSON.parse(
       gh(
@@ -281,9 +308,30 @@ export function verifyTook(repo: string): number | undefined {
     if (!run) return undefined;
     const { jobs } = JSON.parse(
       gh("api", `repos/${OWNER}/${repo}/actions/runs/${run.databaseId}/jobs`),
-    ) as { jobs: { steps: { name: string; started_at: string; completed_at: string }[] }[] };
-    const step = jobs.flatMap((job) => job.steps).find((s) => s.name === "Verify");
-    return step && Math.round((Date.parse(step.completed_at) - Date.parse(step.started_at)) / 1000);
+    ) as {
+      jobs: { id: number; steps: { name: string; started_at: string; completed_at: string }[] }[];
+    };
+    const job = jobs.find((it) => it.steps.some((s) => s.name === "Verify"));
+    const step = job?.steps.find((s) => s.name === "Verify");
+    if (!job || !step) return undefined;
+    const seconds = Math.round(
+      (Date.parse(step.completed_at) - Date.parse(step.started_at)) / 1000,
+    );
+    let slowest: Verified["slowest"];
+    try {
+      const log = gh(
+        "api",
+        "--allow-escape-sequences",
+        `repos/${OWNER}/${repo}/actions/jobs/${job.id}/logs`,
+      );
+      slowest = slowestIn(log, step.started_at);
+    } catch {
+      // A log GitHub has dropped, or a gh without the flag, still leaves the time.
+    }
+    // The step's times are whole seconds and the log's aren't, so a step can't end after it.
+    return slowest
+      ? { seconds, slowest: { ...slowest, at: Math.min(slowest.at, seconds) } }
+      : { seconds };
   } catch {
     return undefined;
   }

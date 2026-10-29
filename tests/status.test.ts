@@ -6,7 +6,7 @@
  * Cloudflare is left to running it.
  */
 import { expect, test } from "vite-plus/test";
-import { buildIn, npmIn, releaseIn, runsIn, timingIn } from "../src/status.ts";
+import { buildIn, npmIn, releaseIn, runsIn, slowestIn, timingIn } from "../src/status.ts";
 
 const run = (workflowName: string, status: string, conclusion: string, headSha = "abcdef123") => ({
   workflowName,
@@ -114,4 +114,19 @@ test("timing gives the spread, and the first reason each slow pull request fits"
   ]);
   expect(lines[3]).toBe("    beside another  0 of 6");
   expect(timingIn([], [])).toEqual(["No merged pull requests to time."]);
+});
+
+test("the slowest step in verify is the last group its log prints", () => {
+  // Lines as GitHub stamps them, from a CI run of craftz's verify, colours and all.
+  const log = [
+    "2026-10-29T15:21:00.6439714Z ##[group]Run pnpm run verify",
+    "2026-10-29T15:21:03.0225602Z \x1b[1m── [@amitkaps/craftz#site] ──\x1b[0m",
+    "2026-10-29T15:21:03.0899096Z ── [@amitkaps/craftz#build] ──",
+    "2026-10-29T15:21:05.5441141Z ── [@amitkaps/craftz#check] ──",
+    "2026-10-29T15:21:11.5358288Z ── [@amitkaps/craftz#test] ──",
+    "2026-10-29T15:21:11.5376465Z [@amitkaps/craftz#all] $ true ⊘ cache disabled",
+    "2026-10-29T15:21:11.6000000Z ── [@amitkaps/craftz#all] ──",
+  ].join("\n");
+  expect(slowestIn(log, "2026-10-29T15:21:00Z")).toEqual({ step: "test", at: 12 });
+  expect(slowestIn("no groups here", "2026-10-29T15:21:00Z")).toBeUndefined();
 });
