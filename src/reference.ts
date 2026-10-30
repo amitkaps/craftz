@@ -17,6 +17,7 @@ export const OWNER = "amitkaps";
 export const TOPIC = "craftz";
 
 export const CRAFTZ = "@amitkaps/craftz";
+export const isCraftz = (pkg: Pkg): boolean => pkg.name === CRAFTZ;
 
 export const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -134,7 +135,7 @@ export function versionsIn(dir: string): Record<string, string | undefined> {
  */
 function craftzAt(dir: string): Record<string, string> {
   const pkg = JSON.parse(read(join(dir, "package.json")) || "{}") as Pkg & { version?: string };
-  return pkg.name === CRAFTZ && pkg.version ? { [CRAFTZ]: pkg.version } : {};
+  return isCraftz(pkg) && pkg.version ? { [CRAFTZ]: pkg.version } : {};
 }
 
 export const VERSIONS = versionsIn(here);

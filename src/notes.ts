@@ -10,7 +10,7 @@
  * repository to a new craftz anyway. `status` already reads npm, and is run on purpose. When npm
  * can't be reached in a few seconds, there's no note.
  */
-import { CRAFTZ, type Pkg, VERSIONS } from "./reference.ts";
+import { CRAFTZ, type Pkg, VERSIONS, isCraftz } from "./reference.ts";
 import { betas } from "./rules.ts";
 import type { Verified } from "./status.ts";
 
@@ -81,7 +81,7 @@ export async function notes(
       found.push(`craftz ${newest} is out, and this is on ${own}: run pnpm craftz upgrade`);
     }
   }
-  if (pkg.name === CRAFTZ) {
+  if (isCraftz(pkg)) {
     for (const name of betas()) {
       const beta = VERSIONS[name];
       if (!beta?.includes("-")) continue;

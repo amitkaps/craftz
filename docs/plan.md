@@ -11,7 +11,7 @@ A whole-repository audit for reuse, simplification, efficiency and altitude foun
 - [x] **Remove dead code.** `fixGitHub` and `SHARED` in `src/rules.ts` and `rebuild` in `src/settings.ts` are exported and used nowhere. The comment on `rebuild` says align uses it, which it doesn't.
 - [x] **One `gh` and one command runner.** `status.ts`, `settings.ts`, `gone.ts`, `release.ts` and `survey.ts` each wrap `gh` by hand, and `pr.ts`, `gone.ts`, `align.ts` and `reference.ts` each run a command and trim its output. Export one of each, and have `survey.ts` call `githubLogin()` for the token.
 - [x] **One reader for `package.json` and JSON.** `readPkg` and `readJson` are in `src/reference.ts`, and `align.ts`, `cli.ts` and `rules.ts` use them. `moveOn` in `cli.ts` no longer parses the file inline.
-- [ ] **One `isCraftz(pkg)`.** It replaces the inline name checks in `notes.ts`, `reference.ts` and `cli.ts`, and the `"craftz"` literal in `rules.ts` that `CRAFTZ` names.
+- [x] **One `isCraftz(pkg)`.** It replaces the inline name checks in `notes.ts`, `reference.ts` and `cli.ts`, and the `"craftz"` literal in `rules.ts` that `CRAFTZ` names.
 - [ ] **One `tmp(prefix)` in `tests/temp.ts`.** It replaces about 25 `mkdtempSync` calls in the tests.
 - [ ] **Run independent work together.** `status`, `addresses`, the beta lookups in `notes.ts` and the lookups in `apply.ts` await calls one after another that don't depend on each other. Use `Promise.all`, and fetch each repository's branch rules and labels once per `settle`.
 - [ ] **Don't read or encode a file twice.** `deploy.ts` encodes each asset to hash it and again to upload it, and `new.ts` formats files one at a time and reads back what it just wrote. `snapshot` in `rules.ts` reads the whole tree.

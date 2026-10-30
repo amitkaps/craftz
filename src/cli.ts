@@ -26,7 +26,7 @@ import { gone } from "./gone.ts";
 import { pr } from "./pr.ts";
 import { release } from "./release.ts";
 import { buildLog, status, timing, verifyTook } from "./status.ts";
-import { CRAFTZ, OWNER, type Pkg, here, read, readPkg } from "./reference.ts";
+import { CRAFTZ, OWNER, type Pkg, here, isCraftz, read, readPkg } from "./reference.ts";
 import { fixFiles } from "./rules.ts";
 import { cloudflareLogin, githubLogin, hasClassic } from "./settings.ts";
 import { upgrade } from "./upgrade.ts";
@@ -151,7 +151,7 @@ async function moveOn(dir: string): Promise<number> {
     console.error(`craftz upgrade: ${dir} has no package.json.`);
     return 1;
   }
-  if (readPkg(dir).name === CRAFTZ) {
+  if (isCraftz(readPkg(dir))) {
     console.error(
       "craftz upgrade: craftz checks itself from source, and pnpm bump moves its reference.",
     );
