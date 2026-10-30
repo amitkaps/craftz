@@ -24,6 +24,12 @@ export const here = join(root, "reference");
 
 export const read = (file: string): string => (existsSync(file) ? readFileSync(file, "utf8") : "");
 
+/** A JSON file's value, typed by the caller. A missing or malformed file throws. */
+export const readJson = <T>(file: string): T => JSON.parse(readFileSync(file, "utf8")) as T;
+
+/** A folder's `package.json`. */
+export const readPkg = (dir: string): Pkg => readJson<Pkg>(join(dir, "package.json"));
+
 /** Runs a command and returns its output. Its own error goes in the thrown one, not on the terminal. */
 export const capture = (command: string, args: string[], cwd?: string): string =>
   execFileSync(command, args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
