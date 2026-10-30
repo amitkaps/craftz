@@ -24,6 +24,13 @@ export const here = join(root, "reference");
 
 export const read = (file: string): string => (existsSync(file) ? readFileSync(file, "utf8") : "");
 
+/** Runs a command and returns its output. Its own error goes in the thrown one, not on the terminal. */
+export const capture = (command: string, args: string[], cwd?: string): string =>
+  execFileSync(command, args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+
+/** Runs `gh` with `capture`. */
+export const gh = (...args: string[]): string => capture("gh", args);
+
 /** The repository the folder's `origin` names, when it's the owner's on GitHub. */
 export function origin(dir: string): string | undefined {
   let url = "";
@@ -51,12 +58,10 @@ export function origin(dir: string): string | undefined {
 /** A file as it is on `main` in the owner's `repo` on GitHub: its text, and the `sha` a write to
  *  it names. */
 export function onMain(repo: string, path: string): { text: string; sha: string } {
-  const file = JSON.parse(
-    execFileSync("gh", ["api", `repos/${OWNER}/${repo}/contents/${path}?ref=main`], {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-    }),
-  ) as { content: string; sha: string };
+  const file = JSON.parse(gh("api", `repos/${OWNER}/${repo}/contents/${path}?ref=main`)) as {
+    content: string;
+    sha: string;
+  };
   return { text: Buffer.from(file.content, "base64").toString("utf8"), sha: file.sha };
 }
 

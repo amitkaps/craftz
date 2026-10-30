@@ -31,7 +31,7 @@ import { promisify } from "node:util";
 import { checkSettings, writeSettings } from "./apply.ts";
 import { catchUp } from "./gone.ts";
 import { fixFiles } from "./rules.ts";
-import { CRAFTZ, OWNER, TOOLS, onMain } from "./reference.ts";
+import { CRAFTZ, OWNER, TOOLS, capture, onMain } from "./reference.ts";
 import { leftByHand, moveLine, report, row, type Row, type Step } from "./report.ts";
 import { repos } from "./survey.ts";
 import { keep, temporary } from "./temp.ts";
@@ -582,7 +582,7 @@ failed ||= problems.length > 0;
  * report says so. `--local` merges nothing, so it leaves them alone.
  */
 if (!local) {
-  const root = execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim();
+  const root = capture("git", ["rev-parse", "--show-toplevel"]).trim();
   const checkouts = targets
     .map((repo) => ({ repo, dir: repo === SELF ? root : join(dirname(root), repo) }))
     .filter(({ dir }) => existsSync(join(dir, ".git")));
