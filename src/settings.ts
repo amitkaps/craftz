@@ -12,7 +12,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { OWNER, type Pkg, TOPIC, VERSIONS, here, nodeMajor } from "./reference.ts";
+import { OWNER, type Pkg, TOPIC, VERSIONS, gh, here, nodeMajor } from "./reference.ts";
 import type { BranchRule, Worker } from "./survey.ts";
 
 const json = (file: string): unknown => JSON.parse(readFileSync(join(here, file), "utf8"));
@@ -37,10 +37,6 @@ export function githubLogin(): string | undefined {
     return undefined;
   }
 }
-
-// gh's own error goes in the thrown one, not on the terminal.
-const gh = (...args: string[]): string =>
-  execFileSync("gh", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 
 const merging = json(".github/settings.json") as Record<string, unknown>;
 const labels = json(".github/labels.json") as {

@@ -7,9 +7,9 @@
  * Each repository is compared with the files in [reference/](../reference/), so there's no second
  * copy of them to keep in step. [The rules](../docs/rules.md) say what each check means.
  */
-import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { type Rule, RULES } from "./rules.ts";
+import { githubLogin } from "./settings.ts";
 import { parts, stated } from "./stated.ts";
 import { OWNER, TOPIC, type Pkg, origin, read } from "./reference.ts";
 import { type Worker, worker } from "./worker.ts";
@@ -29,7 +29,7 @@ export { type Worker, origin, worker };
  */
 export async function repos(): Promise<string[]> {
   const q = `topic:${TOPIC} user:${OWNER} archived:false`;
-  const token = process.env["GITHUB_TOKEN"] ?? ghToken();
+  const token = githubLogin();
   const res = await fetch(
     `https://api.github.com/search/repositories?q=${encodeURIComponent(q)}&per_page=100`,
     { headers: token ? { authorization: `Bearer ${token}` } : {} },
@@ -40,14 +40,6 @@ export async function repos(): Promise<string[]> {
     .map((it) => it.name)
     .filter((name) => name !== "craftz")
     .sort();
-}
-
-function ghToken(): string | undefined {
-  try {
-    return execFileSync("gh", ["auth", "token"], { encoding: "utf8" }).trim() || undefined;
-  } catch {
-    return undefined;
-  }
 }
 
 const FILES = [
@@ -110,7 +102,7 @@ class RateLimit extends Error {
 
 async function github(path: string): Promise<unknown> {
   try {
-    const token = process.env["GITHUB_TOKEN"];
+    const token = githubLogin();
     const res = await fetch(`https://api.github.com/repos/${OWNER}/${path}`, {
       headers: token ? { authorization: `Bearer ${token}` } : {},
     });

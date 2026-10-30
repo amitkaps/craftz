@@ -23,18 +23,17 @@
  * It stops before pushing a branch that has nothing new for `main`, as
  * [Nothing new](#nothing-new) says.
  */
-import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 import { gone, step, writeOutline } from "./gone.ts";
+import { capture } from "./reference.ts";
 
 function fail(message: string): never {
   console.error(message);
   process.exit(1);
 }
 
-const output = (command: string, ...args: string[]): string =>
-  execFileSync(command, args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+const output = (command: string, ...args: string[]): string => capture(command, args).trim();
 
 /** The labels CI accepts, read from the notes config the way the label workflow reads them. */
 export const labelsIn = (notes: string): string[] =>

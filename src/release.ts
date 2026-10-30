@@ -27,7 +27,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { OWNER, onMain } from "./reference.ts";
+import { OWNER, gh, onMain } from "./reference.ts";
 import { origin } from "./survey.ts";
 import { temporary } from "./temp.ts";
 
@@ -63,7 +63,6 @@ export function release(dir: string, args: string[]): void {
   const api = `repos/${OWNER}/${repo}`;
   const tag = `v${version}`;
   const branch = `release-${version}`;
-  const gh = (...a: string[]): string => execFileSync("gh", a, { encoding: "utf8" });
   const exists = (path: string): boolean => {
     try {
       execFileSync("gh", ["api", path], { stdio: "ignore" });

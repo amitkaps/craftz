@@ -52,6 +52,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { finding } from "@amitkaps/markz/rules";
+import { capture, gh } from "./reference.ts";
 
 /** Runs a step of `pr` or `gone`, with its output shown. A step that fails stops the command with
  *  one line, since its own output, above it, says why. */
@@ -68,12 +69,7 @@ export function step(command: string, ...args: string[]): void {
 }
 const run = (...args: string[]): void => step("git", ...args);
 const output = (...args: string[]): string => outputIn(".", ...args);
-const outputIn = (dir: string, ...args: string[]): string =>
-  execFileSync("git", args, {
-    cwd: dir,
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-  }).trim();
+const outputIn = (dir: string, ...args: string[]): string => capture("git", args, dir).trim();
 
 /** Writes `outline.md` in the checkout at `dir` with the prose it installs, if it installs prose. */
 export function writeOutline(dir = "."): void {
@@ -148,8 +144,6 @@ function mergedIn(dir: string): Gone[] {
 // Merges the open pull request of `branch` once its checks pass, or says it's still open. Without
 // `gh`, or with no pull request, it does nothing.
 function mergeReady(branch: string): void {
-  const gh = (...args: string[]): string =>
-    execFileSync("gh", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
   let pr: { number: number; state: string; mergeStateStatus: string };
   try {
     pr = JSON.parse(

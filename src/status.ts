@@ -33,11 +33,10 @@
  * [Which cf runs](settings.ts#which-cf-runs) says. What can't be read is said, and marked `✗`,
  * rather than taken as fine.
  */
-import { execFileSync } from "node:child_process";
 import { stripVTControlCharacters } from "node:util";
 import { accessDrift, cf, cloudflareLogin, workerTag } from "./settings.ts";
 import { took } from "./pr.ts";
-import { OWNER, onMain, type Pkg } from "./reference.ts";
+import { OWNER, gh, onMain, type Pkg } from "./reference.ts";
 import type { Worker } from "./worker.ts";
 
 /** One line of the status: what it is, what was found, and whether it's fine. */
@@ -52,9 +51,6 @@ type Build = {
   created_on: string;
   build_trigger_metadata?: { commit_hash?: string; deploy_command?: string };
 };
-
-const gh = (...args: string[]): string =>
-  execFileSync("gh", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 
 const short = (sha = ""): string => sha.slice(0, 7);
 
