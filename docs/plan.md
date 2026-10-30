@@ -8,7 +8,7 @@ This is a package's plan, of what craftz itself does next. Each repository moves
 
 A whole-repository audit for reuse, simplification, efficiency and altitude found these. Each step is its own pull request.
 
-- [ ] **Remove dead code.** `fixGitHub` and `SHARED` in `src/rules.ts` and `rebuild` in `src/settings.ts` are exported and used nowhere. The comment on `rebuild` says align uses it, which it doesn't.
+- [x] **Remove dead code.** `fixGitHub` and `SHARED` in `src/rules.ts` and `rebuild` in `src/settings.ts` are exported and used nowhere. The comment on `rebuild` says align uses it, which it doesn't.
 - [ ] **One `gh` and one command runner.** `status.ts`, `settings.ts`, `gone.ts`, `release.ts` and `survey.ts` each wrap `gh` by hand, and `pr.ts`, `gone.ts`, `align.ts` and `reference.ts` each run a command and trim its output. Export one of each, and have `survey.ts` call `githubLogin()` for the token.
 - [ ] **One reader for `package.json` and JSON.** Export `readPkg` and `readJson` from `src/reference.ts`, and use them in `align.ts`, `cli.ts`, `rules.ts`, `new.ts` and the tests. `moveOn` in `cli.ts` reads the file once. One `isCraftz(pkg)` replaces the inline name checks. A `tmp(prefix)` helper in `tests/temp.ts` replaces about 25 `mkdtempSync` calls.
 - [ ] **Run independent work together.** `status`, `addresses`, the beta lookups in `notes.ts` and the lookups in `apply.ts` await calls one after another that don't depend on each other. Use `Promise.all`, and fetch each repository's branch rules and labels once per `settle`.

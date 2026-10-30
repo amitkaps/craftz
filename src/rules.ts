@@ -65,22 +65,6 @@ export type Rule = {
 const pnpm = standard.packageManager?.replace(/^pnpm@/, "");
 const standardScripts = standard.scripts ?? {};
 
-/** The shared script names, in the order the rules list them. */
-export const SHARED = [
-  "dev",
-  "build",
-  "preview",
-  "check",
-  "fix",
-  "test",
-  "verify",
-  "ship",
-  "prose",
-  "outline",
-  "site",
-  "pr",
-  "gone",
-];
 const BUILT = ["dev", "build"];
 const REQUIRED = ["check", "fix", "verify", "prose"];
 const PNPM_COMMANDS = ["deploy", "publish", "audit", "ci", "pipeline", "pack"];
@@ -1461,9 +1445,4 @@ export function fixFiles(dir: string, std: string): string[] {
   return [...new Set([...before.keys(), ...after.keys()])]
     .filter((file) => before.get(file) !== after.get(file))
     .toSorted();
-}
-
-/** Applies every fix that's written on GitHub, for `pnpm align` and `pnpm new --push`. */
-export function fixGitHub(repo: string, pkg: Pkg): void {
-  for (const rule of RULES) if (rule.fix?.in === "github") rule.fix.apply(repo, pkg);
 }
