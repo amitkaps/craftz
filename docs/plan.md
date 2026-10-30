@@ -6,7 +6,18 @@ This is a package's plan, of what craftz itself does next. Each repository moves
 
 ## Next, in order
 
-Nothing is next yet.
+A whole-repository audit for reuse, simplification, efficiency and altitude found these. Each step is its own pull request.
+
+- [ ] **Remove dead code.** `fixGitHub` and `SHARED` in `src/rules.ts` and `rebuild` in `src/settings.ts` are exported and used nowhere. The comment on `rebuild` says align uses it, which it doesn't.
+- [ ] **One `gh` and one command runner.** `status.ts`, `settings.ts`, `gone.ts`, `release.ts` and `survey.ts` each wrap `gh` by hand, and `pr.ts`, `gone.ts`, `align.ts` and `reference.ts` each run a command and trim its output. Export one of each, and have `survey.ts` call `githubLogin()` for the token.
+- [ ] **One reader for `package.json` and JSON.** Export `readPkg` and `readJson` from `src/reference.ts`, and use them in `align.ts`, `cli.ts`, `rules.ts`, `new.ts` and the tests. `moveOn` in `cli.ts` reads the file once. One `isCraftz(pkg)` replaces the inline name checks. A `tmp(prefix)` helper in `tests/temp.ts` replaces about 25 `mkdtempSync` calls.
+- [ ] **Run independent work together.** `status`, `addresses`, the beta lookups in `notes.ts` and the lookups in `apply.ts` await calls one after another that don't depend on each other. Use `Promise.all`, and fetch each repository's branch rules and labels once per `settle`.
+- [ ] **Don't read or encode a file twice.** `deploy.ts` encodes each asset to hash it and again to upload it, and `new.ts` formats files one at a time and reads back what it just wrote. `snapshot` in `rules.ts` reads the whole tree.
+- [ ] **State is a field, not a string prefix.** `writeSettings` and `checkSettings` return `{ text, fixed }`, so `cli.ts` and `new.ts` stop testing `startsWith("fixed: ")`. `leftByHand` in `report.ts` reads oxlint's JSON output, not its printed frames.
+- [ ] **Parse arguments once.** `cli.ts` parses `process.argv` into a command, flags and directories, and a table says which flags each command takes.
+- [ ] **One idea of a beta.** `align.ts` and `notes.ts` share a helper for a prerelease, and one that reads `1.0.0-rc.1+build` correctly.
+
+Three larger changes are decisions of their own, and wait under Later.
 
 ## Where it is
 
@@ -30,6 +41,11 @@ Nothing is next yet.
 
 ## Later
 
+- `src/rules.ts` is 1469 lines of checks and fixes in one table. Splitting it by topic, and deriving each fix from its check, would also end the cases where a check and its fix disagree, like `cloudflare-static`.
+- `worker.ts` reads `wrangler.toml` with regexes, and `directory` matches under any table. A real parser or dropping `wrangler.toml` fixes it, and the choice depends on when the app leaves wrangler.
+- `status --timing` guesses that a pull request fell behind from a merge commit's title and attributes runs by a 60-second window. GitHub's timeline events state both.
+- Cloudflare's error `[12040]` is matched in a message in `settings.ts`. A small client with typed errors would hold every code's meaning in one place.
+- `cli.ts` imports every command at startup, though only `new` loads lazily. It waits until startup time is a cost someone feels.
 - The beta packages that [`versions-beta`](rules.md#versions-beta) names move to their releases when they graduate, which align reports.
 - The app moves to cf when SvelteKit's adapter writes cf's Build Output, and wrangler leaves the reference with it.
 - The app moves to TypeScript 7 when svelte-check's peer range takes it.
