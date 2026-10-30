@@ -15,3 +15,6 @@ export default function setup(): () => void {
   process.env["TMPDIR"] = dir;
   return () => rmSync(dir, { recursive: true, force: true });
 }
+
+/** A folder inside the run's own, named by what it's for. */
+export const tmp = (prefix: string): string => mkdtempSync(join(tmpdir(), prefix));

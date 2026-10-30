@@ -14,15 +14,15 @@
  * `craftz new` runs from the package too, so the files it writes from have to be in it, and
  * `craftz help` reads usage from it.
  */
+import { tmp } from "./temp.ts";
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeAll, expect, inject, test } from "vite-plus/test";
 import { write } from "../src/new.ts";
 import { usePacked } from "./packed.ts";
 
-const dir = join(mkdtempSync(join(tmpdir(), "craftz-cli-")), "example");
+const dir = join(tmp("craftz-cli-"), "example");
 const craftz = (...args: string[]) =>
   spawnSync(join(dir, "node_modules/.bin/craftz"), args, { cwd: dir, encoding: "utf8" });
 

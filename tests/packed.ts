@@ -10,9 +10,9 @@
  * with `package.json` and what npm always ships, and packs without `prepack`, which would build into `dist/` again.
  * publint runs in `build`, on `dist/`, so it's off here.
  */
+import { tmp } from "./temp.ts";
 import { execFileSync } from "node:child_process";
-import { cpSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { cpSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 declare module "vite-plus/test" {
@@ -23,7 +23,7 @@ declare module "vite-plus/test" {
 
 export default function setup({ provide }: { provide: (key: "tarball", value: string) => void }) {
   const root = resolve(import.meta.dirname, "..");
-  const staged = mkdtempSync(join(tmpdir(), "craftz-staged-"));
+  const staged = tmp("craftz-staged-");
   const { files = [] } = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as {
     files?: string[];
   };
@@ -38,7 +38,7 @@ export default function setup({ provide }: { provide: (key: "tarball", value: st
     cwd: root,
     stdio: "pipe",
   });
-  const dir = mkdtempSync(join(tmpdir(), "craftz-pack-"));
+  const dir = tmp("craftz-pack-");
   execFileSync("pnpm", ["pack", "--ignore-scripts", "--pack-destination", dir], {
     cwd: staged,
     stdio: "pipe",

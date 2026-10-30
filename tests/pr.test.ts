@@ -5,16 +5,9 @@
  * running git. The fix that moves a repository onto them is tested too, since it deletes files.
  * Writing the outline runs in a new repository, once with prose installed and once without.
  */
+import { tmp } from "./temp.ts";
 import { execFileSync, spawnSync } from "node:child_process";
-import {
-  chmodSync,
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  writeFileSync,
-} from "node:fs";
-import { tmpdir } from "node:os";
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { expect, test } from "vite-plus/test";
@@ -51,7 +44,7 @@ test("a branch whose last commit merged is deleted, with or without an upstream"
 });
 
 test("the outline is written only where prose is installed", () => {
-  const dir = mkdtempSync(join(tmpdir(), "craftz-outline-"));
+  const dir = tmp("craftz-outline-");
   execFileSync("git", ["init", "--quiet"], { cwd: dir });
   writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "x" }));
   writeOutline(dir);
@@ -65,7 +58,7 @@ test("the outline is written only where prose is installed", () => {
 });
 
 test("the fix runs the commands and deletes the copied scripts", () => {
-  const dir = mkdtempSync(join(tmpdir(), "craftz-pr-"));
+  const dir = tmp("craftz-pr-");
   const scripts = { pr: "node scripts/pr.ts", gone: "node scripts/gone.ts" };
   writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "x", scripts }));
   mkdirSync(join(dir, "scripts"));
@@ -79,7 +72,7 @@ test("the fix runs the commands and deletes the copied scripts", () => {
 });
 
 test("a scripts folder with the repository's own scripts stays", () => {
-  const dir = mkdtempSync(join(tmpdir(), "craftz-pr-"));
+  const dir = tmp("craftz-pr-");
   writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "x" }));
   mkdirSync(join(dir, "scripts"));
   for (const file of ["pr.ts", "own.ts"]) writeFileSync(join(dir, "scripts", file), "");
