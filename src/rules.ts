@@ -20,6 +20,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync
 import { dirname, join, relative } from "node:path";
 import {
   CRAFTZ,
+  isCraftz,
   OWNER,
   type Pkg,
   VERSIONS,
@@ -129,7 +130,7 @@ function pin(dir: string, std: string, name: string): void {
 // craftz in the dev dependencies, and no `craftz()` in the Vite config, as edit.ts says.
 function useCraftz(dir: string, std: string): void {
   const pkg = readPkg(dir);
-  const want = ownCraftz(pkg) ? undefined : versionsIn(std)[CRAFTZ];
+  const want = isCraftz(pkg) ? undefined : versionsIn(std)[CRAFTZ];
   if (want && !pkg.dependencies?.[CRAFTZ] && !pkg.devDependencies?.[CRAFTZ]) {
     const deps = { ...pkg.devDependencies, [CRAFTZ]: want };
     pkg.devDependencies = Object.fromEntries(
@@ -668,7 +669,6 @@ const onVitePlus = (pkg: Pkg): boolean =>
  * those copies, and the folder too when nothing of the repository's own is left in it.
  */
 const COMMAND_SCRIPTS = ["pr", "gone"];
-const ownCraftz = (pkg: Pkg): boolean => pkg.name === CRAFTZ;
 
 function leaveScripts(dir: string): void {
   const folder = join(dir, "scripts");
@@ -685,7 +685,7 @@ const commandScript = (id: string, name: string): Rule => ({
   check: ({ pkg, files }) => {
     const drift: string[] = [];
     const own = name === "craftz" ? "node src/cli.ts" : `node src/cli.ts ${name}`;
-    const want = ownCraftz(pkg) ? own : standardScripts[name];
+    const want = isCraftz(pkg) ? own : standardScripts[name];
     const script = pkg.scripts?.[name];
     if (script !== want)
       drift.push(script ? `${name} is ${script}, not ${want}` : `no ${name} script`);
@@ -699,7 +699,7 @@ const commandScript = (id: string, name: string): Rule => ({
     in: "files",
     apply: (dir, std) => {
       leaveScripts(dir);
-      setScript(dir, std, name, (pkg) => !ownCraftz(pkg));
+      setScript(dir, std, name, (pkg) => !isCraftz(pkg));
     },
   },
 });
@@ -861,7 +861,7 @@ export const RULES: Rule[] = [
     check: ({ pkg, files, deps, vitePlus: own }) => {
       if (!own) return undefined;
       const drift: string[] = [];
-      if (!ownCraftz(pkg) && !deps[CRAFTZ]) drift.push(`doesn't depend on ${CRAFTZ}`);
+      if (!isCraftz(pkg) && !deps[CRAFTZ]) drift.push(`doesn't depend on ${CRAFTZ}`);
       if (usesCraftz(files["vite.config.ts"] ?? "")) drift.push("vite.config.ts calls craftz()");
       return drifted(drift);
     },
@@ -1074,12 +1074,12 @@ export const RULES: Rule[] = [
       const ship = pkg.scripts?.ship;
       // A site without one is scripts-required's, and a folder with no site has nothing to ship.
       if (!site || !ship) return undefined;
-      const want = ownCraftz(pkg) ? "node src/cli.ts deploy" : standardScripts.ship;
+      const want = isCraftz(pkg) ? "node src/cli.ts deploy" : standardScripts.ship;
       return drifted(ship === want ? [] : [`ship is ${ship}, not ${want}`]);
     },
     fix: {
       in: "files",
-      apply: (dir, std) => setScript(dir, std, "ship", (pkg) => !ownCraftz(pkg) && !!workerIn(dir)),
+      apply: (dir, std) => setScript(dir, std, "ship", (pkg) => !isCraftz(pkg) && !!workerIn(dir)),
     },
   },
   {
