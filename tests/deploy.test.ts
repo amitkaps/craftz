@@ -4,9 +4,9 @@
  * Deploys a small site to a stand-in for Cloudflare's API, which answers as Cloudflare does and
  * keeps each call, so the test reads what [deploy.ts](../src/deploy.ts) sent, in order.
  */
+import { tmp } from "./temp.ts";
 import { expect, test } from "vite-plus/test";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { COMPATIBILITY_DATE } from "../src/runtime.ts";
 import { contentType, deploy, manifest } from "../src/deploy.ts";
@@ -17,7 +17,7 @@ const REFUSED = { code: 10000, message: "Authentication error", status: 403 };
 const now = async (): Promise<void> => {};
 
 function siteIn(): string {
-  const dir = mkdtempSync(join(tmpdir(), "craftz-deploy-"));
+  const dir = tmp("craftz-deploy-");
   writeFileSync(
     join(dir, "cloudflare.config.ts"),
     `export default {

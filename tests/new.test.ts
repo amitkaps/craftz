@@ -21,9 +21,9 @@
  * The reference holds `.gitignore` as `gitignore`, since npm leaves the dotted one out of a
  * package, and it has to stay craftz's own.
  */
+import { tmp } from "./temp.ts";
 import { execFile } from "node:child_process";
-import { mkdtempSync, readFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { expect, inject, test } from "vite-plus/test";
@@ -48,7 +48,7 @@ const shapes: [string, Start][] = [
 
 // Writes a shape the way `new` does, into a folder of its own.
 async function started(start: Start): Promise<string> {
-  const dir = join(mkdtempSync(join(tmpdir(), "craftz-new-")), "example");
+  const dir = join(tmp("craftz-new-"), "example");
   await write(dir, "example", start, "An example, from craftz's test.");
   return dir;
 }

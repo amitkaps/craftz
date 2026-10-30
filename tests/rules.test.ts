@@ -5,9 +5,9 @@
  * can't be stated without a check, or checked without being stated. Every check, with an id or
  * not yet, is under one of the doc's parts.
  */
+import { tmp } from "./temp.ts";
 import { expect, test } from "vite-plus/test";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { BROWSERS } from "../src/browsers.ts";
 import { COMPATIBILITY_DATE } from "../src/runtime.ts";
@@ -95,7 +95,7 @@ test("our own package is exact and at least the reference's, and its fix only ra
   expect(drift(`^${want}`)).toEqual([`${name} is ^${want}, not an exact version`]);
 
   const fixed = (value: string) => {
-    const dir = mkdtempSync(join(tmpdir(), "craftz-"));
+    const dir = tmp("craftz-");
     writeFileSync(
       join(dir, "package.json"),
       JSON.stringify({ devDependencies: { [name]: value } }),
@@ -154,7 +154,7 @@ test("a build for browsers targets this repository's browsers", () => {
 });
 
 test("a package for browsers leaves Node's own modules out, and the fix adds to its list", () => {
-  const dir = mkdtempSync(join(tmpdir(), "craftz-neutral-"));
+  const dir = tmp("craftz-neutral-");
   writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "x" }));
   const fixed = (pack: string) => {
     writeFileSync(join(dir, "vite.config.ts"), config(`pack: { ${pack} },`));
@@ -172,7 +172,7 @@ test("a package for browsers leaves Node's own modules out, and the fix adds to 
 });
 
 test("a package writes out its publint and types, and the fixes write them in", () => {
-  const dir = mkdtempSync(join(tmpdir(), "craftz-pack-"));
+  const dir = tmp("craftz-pack-");
   writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "x", files: ["dist"] }));
   writeFileSync(
     join(dir, "vite.config.ts"),
@@ -205,7 +205,7 @@ test("a config writes out the format and lint the rules set, and the fix writes 
       vitePlus: "1",
     } as unknown as Repo)?.drift;
   const fixed = (vite: string) => {
-    const dir = mkdtempSync(join(tmpdir(), "craftz-ruled-"));
+    const dir = tmp("craftz-ruled-");
     writeFileSync(join(dir, "vite.config.ts"), vite);
     for (let i = 0; i < 2; i++) {
       for (const id of ["toolchain-wrap", "toolchain-lint"]) {
@@ -308,7 +308,7 @@ test("craftz's version is its own, exactly", () => {
 
 test("the fix adds craftz, and takes craftz() and its import out", () => {
   const fixed = (vite: string) => {
-    const dir = mkdtempSync(join(tmpdir(), "craftz-use-"));
+    const dir = tmp("craftz-use-");
     writeFileSync(
       join(dir, "package.json"),
       JSON.stringify({ name: "x", devDependencies: { "vite-plus": "1.3.0" } }),
@@ -358,7 +358,7 @@ test("the files craftz owns are its own word for word, and the fix writes them w
   const workspace = read("pnpm-workspace.yaml");
   // A Vite+ that's behind keeps its override, so only versions-vite-plus says it's behind.
   const held = workspace.replace(/vite-plus-core@[\w.-]+/, "vite-plus-core@1.0.0");
-  const dir = mkdtempSync(join(tmpdir(), "craftz-owned-"));
+  const dir = tmp("craftz-owned-");
   const pkg = { name: "x", devDependencies: { "vite-plus": "1.0.0" } };
   writeFileSync(join(dir, "package.json"), JSON.stringify(pkg));
   mkdirSync(join(dir, ".github/workflows"), { recursive: true });
@@ -410,7 +410,7 @@ test("the editor's settings are compared as JSON, and a repository on Svelte add
 });
 
 test("check runs prose check and craftz check after a framework's checker, and the fix adds them once", () => {
-  const dir = mkdtempSync(join(tmpdir(), "craftz-check-"));
+  const dir = tmp("craftz-check-");
   const file = join(dir, "package.json");
   const check = "svelte-kit sync && vp check && svelte-check";
   writeFileSync(
@@ -451,7 +451,7 @@ export default defineConfig({
 `;
 
 test("a chained verify moves to the all task, and the fix moves it once", () => {
-  const dir = mkdtempSync(join(tmpdir(), "craftz-verify-"));
+  const dir = tmp("craftz-verify-");
   const scripts = { check: "vp check", test: "vp test --run", build: "vp pack" };
   writeFileSync(
     join(dir, "package.json"),
@@ -496,7 +496,7 @@ test("a chained verify moves to the all task, and the fix moves it once", () => 
 
 // A verify the fix moves as far as it can, with what the check says of the steps it leaves.
 function leftByHand(verify: string) {
-  const dir = mkdtempSync(join(tmpdir(), "craftz-verify-"));
+  const dir = tmp("craftz-verify-");
   writeFileSync(
     join(dir, "package.json"),
     JSON.stringify({ scripts: { verify }, devDependencies: { "vite-plus": "0.0.0" } }),
@@ -539,7 +539,7 @@ test("a step that ran after one it may need is named, and left in the chain", ()
 });
 
 test(".gitignore lists outline.md, and the fix adds it once", () => {
-  const dir = mkdtempSync(join(tmpdir(), "craftz-outline-"));
+  const dir = tmp("craftz-outline-");
   const file = join(dir, ".gitignore");
   writeFileSync(file, "node_modules\n");
   const rule = RULES.find((r) => r.id === "agents-outline");
@@ -554,7 +554,7 @@ test(".gitignore lists outline.md, and the fix adds it once", () => {
 });
 
 test("each step in the plan's Next is a task, and the fix turns a numbered step into one", () => {
-  const dir = mkdtempSync(join(tmpdir(), "craftz-plan-"));
+  const dir = tmp("craftz-plan-");
   mkdirSync(join(dir, "docs"));
   const file = join(dir, "docs", "plan.md");
   writeFileSync(
@@ -620,7 +620,7 @@ test("a site's Worker is written as cf's config is, which the survey reads with 
 });
 
 test("the fix takes site() out, and writes the Worker's date and addresses in", () => {
-  const dir = mkdtempSync(join(tmpdir(), "craftz-site-"));
+  const dir = tmp("craftz-site-");
   const file = join(dir, "cloudflare.config.ts");
   writeFileSync(
     file,
@@ -661,7 +661,7 @@ export default {
 });
 
 test("a static site installs nothing of Cloudflare's, and the fix takes it out, once, but for its Vite config", () => {
-  const dir = mkdtempSync(join(tmpdir(), "craftz-static-"));
+  const dir = tmp("craftz-static-");
   const config = `export default {
   worker: { name: "x", domains: [], assets: { directory: ".prose" } },
 };
@@ -710,7 +710,7 @@ export default defineConfig({
 });
 
 test("a static site SvelteKit builds keeps vp build, and the fix leaves it", () => {
-  const dir = mkdtempSync(join(tmpdir(), "craftz-sveltekit-"));
+  const dir = tmp("craftz-sveltekit-");
   const config = `export default {
   worker: { name: "x", domains: [], assets: { directory: "build" } },
 };
@@ -756,7 +756,7 @@ test("a package's ruleset requires label next to ci, and others only ci", () => 
 });
 
 test("a tsconfig writes out the reference's options and its own include, and the fix writes it so", () => {
-  const dir = mkdtempSync(join(tmpdir(), "craftz-tsconfig-"));
+  const dir = tmp("craftz-tsconfig-");
   const file = join(dir, "tsconfig.json");
   const rule = RULES.find((r) => r.id === "toolchain-types");
   const drift = () =>
