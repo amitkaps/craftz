@@ -16,7 +16,7 @@
  * Each says how it works where it's written. What runs in this file has its own block below.
  */
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { type Target, checkSettings, writeSettings } from "./apply.ts";
@@ -26,7 +26,7 @@ import { gone } from "./gone.ts";
 import { pr } from "./pr.ts";
 import { release } from "./release.ts";
 import { buildLog, status, timing, verifyTook } from "./status.ts";
-import { CRAFTZ, OWNER, type Pkg, here } from "./reference.ts";
+import { CRAFTZ, OWNER, type Pkg, here, read, readPkg } from "./reference.ts";
 import { fixFiles } from "./rules.ts";
 import { cloudflareLogin, githubLogin, hasClassic } from "./settings.ts";
 import { upgrade } from "./upgrade.ts";
@@ -79,9 +79,7 @@ function target(dir: string): Target {
     console.error(`craftz: ${dir} has no origin on GitHub under ${OWNER}.`);
     process.exit(1);
   }
-  const file = (name: string): string =>
-    existsSync(join(dir, name)) ? readFileSync(join(dir, name), "utf8") : "";
-  const pkg = JSON.parse(file("package.json") || "{}") as Pkg;
+  const pkg = JSON.parse(read(join(dir, "package.json")) || "{}") as Pkg;
   const site = workerIn(dir);
   return { repo, pkg, site, noCloudflare: site && cloudflareLogin() };
 }
@@ -146,14 +144,14 @@ async function live(dir: string, log: boolean, full: boolean, timed: boolean): P
 // returns the check's exit code.
 async function moveOn(dir: string): Promise<number> {
   const versionOf = (): string | undefined => {
-    const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as Pkg;
+    const pkg = readPkg(dir);
     return pkg.devDependencies?.[CRAFTZ] ?? pkg.dependencies?.[CRAFTZ];
   };
   if (!existsSync(join(dir, "package.json"))) {
     console.error(`craftz upgrade: ${dir} has no package.json.`);
     return 1;
   }
-  if ((JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as Pkg).name === CRAFTZ) {
+  if (readPkg(dir).name === CRAFTZ) {
     console.error(
       "craftz upgrade: craftz checks itself from source, and pnpm bump moves its reference.",
     );

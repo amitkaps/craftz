@@ -25,6 +25,8 @@ import {
   VERSIONS,
   here,
   read,
+  readJson,
+  readPkg,
   standard,
   versionsIn,
 } from "./reference.ts";
@@ -99,8 +101,6 @@ export function unread(error: Error): Finding {
   return drifted([`GitHub couldn't be read: ${error.message}`]);
 }
 
-const readPkg = (dir: string): Pkg =>
-  JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as Pkg;
 // A JSON file is written only when its value changes, so one the formatter laid out stays as it
 // is, and a second fix changes nothing.
 function writeJson(path: string, value: unknown): void {
@@ -320,7 +320,6 @@ function editFile(file: string, edit: (text: string) => string): void {
 }
 
 type Json = Record<string, unknown>;
-const readJson = (file: string): Json => JSON.parse(readFileSync(file, "utf8")) as Json;
 const recommended = (json: Json): string[] =>
   Array.isArray(json.recommendations) ? (json.recommendations as string[]) : [];
 
@@ -357,7 +356,7 @@ function owned(file: string, axes: Axes, std: string): string {
   }
   if (!EDITOR.includes(file) || !axes.svelte) return text;
   const ours = JSON.parse(text) as Json;
-  const adds = readJson(join(std, "svelte", file));
+  const adds = readJson<Json>(join(std, "svelte", file));
   const merged = file.endsWith("extensions.json")
     ? { recommendations: [...recommended(ours), ...recommended(adds)] }
     : { ...ours, ...adds };

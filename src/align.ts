@@ -31,7 +31,7 @@ import { promisify } from "node:util";
 import { checkSettings, writeSettings } from "./apply.ts";
 import { catchUp } from "./gone.ts";
 import { fixFiles } from "./rules.ts";
-import { CRAFTZ, OWNER, TOOLS, capture, onMain } from "./reference.ts";
+import { CRAFTZ, OWNER, TOOLS, capture, onMain, readJson, readPkg } from "./reference.ts";
 import { leftByHand, moveLine, report, row, type Row, type Step } from "./report.ts";
 import { repos } from "./survey.ts";
 import { keep, temporary } from "./temp.ts";
@@ -68,7 +68,6 @@ type Pkg = {
 };
 type Deps = Record<string, string>;
 
-const readJson = <T>(file: string): T => JSON.parse(readFileSync(file, "utf8")) as T;
 const depsOf = (pkg: Pkg): Deps => ({ ...pkg.dependencies, ...pkg.devDependencies });
 
 // Runs a command in a clone, with its output kept in the repository's log.
@@ -159,7 +158,7 @@ async function updateReference(dir: string, log: string[]): Promise<string[]> {
 async function moveReference(dir: string, log: string[]): Promise<string[]> {
   await sh(dir, log, "pnpm", "install", "--ignore-scripts");
   const majors = await update(dir, log, []);
-  const vitePlus = depsOf(readJson<Pkg>(join(dir, "package.json")))["vite-plus"];
+  const vitePlus = depsOf(readPkg(dir))["vite-plus"];
   const workspace = join(dir, "pnpm-workspace.yaml");
   writeFileSync(
     workspace,
@@ -230,7 +229,7 @@ const PACKAGE_FILES = ["package.json", "pnpm-lock.yaml", "reference/package.json
 
 // The versions a repository moves, and in craftz, the reference's too, which is what bump moves.
 function versionsIn(dir: string, repo: string): Deps {
-  const own = depsOf(readJson<Pkg>(join(dir, "package.json")));
+  const own = depsOf(readPkg(dir));
   if (repo !== SELF) return own;
   const reference = depsOf(readJson<Pkg>(join(dir, "reference", "package.json")));
   return {
@@ -394,7 +393,7 @@ if (!local) await phase("opening", undefined, going(), open);
 
 async function open(state: State): Promise<void> {
   const { dir, log } = state;
-  const pkg = readJson<Pkg>(join(dir, "package.json"));
+  const pkg = readPkg(dir);
   const body = [
     "Brings this repository in line with craftz's rules, from `pnpm align`.",
     "",
@@ -445,7 +444,7 @@ async function open(state: State): Promise<void> {
  */
 async function settings(repo: string): Promise<string[]> {
   const dir = join(work, repo);
-  const pkg = existsSync(join(dir, "package.json")) ? readJson<Pkg>(join(dir, "package.json")) : {};
+  const pkg = existsSync(join(dir, "package.json")) ? readPkg(dir) : {};
   // align says once, at the start, why the Workers aren't written.
   const site = noCloudflare ? undefined : workerIn(dir);
   return local ? checkSettings({ repo, pkg, site }) : writeSettings({ repo, pkg, site }, true);
