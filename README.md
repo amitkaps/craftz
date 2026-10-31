@@ -18,6 +18,7 @@ Every repository makes the same choices, like its toolchain, versions, workflows
 | [`craftz gone`](docs/usage.md#gone) | deletes the local branches that merged |
 | [`craftz release`](docs/usage.md#release) | opens the pull request that releases a package |
 | [`craftz deps`](docs/usage.md#deps) | says what the install holds, and which dependency brings it |
+| [`craftz shot`](docs/usage.md#shot) | saves a page as a PNG, with the repository's Playwright |
 | [`craftz rules`](docs/usage.md#rules) | prints the rules, or one rule or part, from the installed version |
 | [`craftz help`](docs/usage.md#help) | lists the commands, or prints what one does |
 | [`craftz new`](docs/usage.md#new) | starts a repository that already follows the rules |

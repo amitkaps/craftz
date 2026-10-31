@@ -170,5 +170,6 @@ export const VERSION_RULES: Rule[] = [
   },
   version("versions-wrangler", "wrangler"),
   version("versions-publint", "publint"),
+  version("versions-playwright", "@playwright/test"),
   owns("versions-workspace", [WORKSPACE]),
 ];
