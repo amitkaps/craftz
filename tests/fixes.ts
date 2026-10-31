@@ -1,19 +1,19 @@
 /** @prose
- * # The fixes' test
+ * # Breaking a repository to hold its fixes
  *
- * Holds each rule's fix to its check, so a check can't promise what its fix doesn't do.
+ * Holds each rule's fix to its check, so a check can't promise what its fix doesn't do. The tests
+ * for [a package with a site](fixes-package.test.ts), [scripts](fixes-scripts.test.ts) and
+ * [an internal site](fixes-internal.test.ts) each run `holdFixes` for one shape, in files of
+ * their own so they run side by side.
  *
- * A new repository of each shape is broken one way at a time, by deleting a file, emptying it, or
- * dropping a key from a JSON file or one of its tables. Then every fix runs, and no rule that has
- * one may still find drift.
- *
- * A few gaps are left by hand on purpose, and each says why in `byHand`.
+ * A new repository is broken one way at a time, by deleting a file, emptying it, or dropping a
+ * key from a JSON file or one of its tables. Then every fix runs, and no rule that has one may
+ * still find drift. A few gaps are left by hand on purpose, and each says why in `byHand`.
  */
 import { tmp } from "./temp.ts";
 import { cpSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
-import { expect, test } from "vite-plus/test";
-import { write } from "../src/new.ts";
+import { type Start, write } from "../src/new.ts";
 import { here } from "../src/reference.ts";
 import { fixFiles, RULES } from "../src/rules.ts";
 import { checkFolder } from "../src/survey.ts";
@@ -36,22 +36,6 @@ const byHand: [broken: RegExp, rule: string, why: string][] = [
 ];
 const unreadable = /^(delete|empty) package\.json$/;
 
-const shapes = {
-  "a package with a site": { package: true, site: true, private: false, internal: false },
-  "scripts in a private repository": {
-    package: false,
-    site: false,
-    private: true,
-    internal: false,
-  },
-  "an internal site in a private repository": {
-    package: false,
-    site: true,
-    private: true,
-    internal: true,
-  },
-};
-
 const fixable = new Set(RULES.filter((rule) => rule.fix?.in === "files").map((rule) => rule.id));
 const drift = async (dir: string): Promise<[rule: string, text: string][]> =>
   (await checkFolder(dir)).findings.flatMap((finding) =>
@@ -71,17 +55,19 @@ const files = (root: string, dir = root, found: string[] = []): string[] => {
 
 const json = (path: string) => JSON.parse(readFileSync(path, "utf8")) as Record<string, any>;
 
-for (const [what, shape] of Object.entries(shapes)) {
-  test(`${what}: every fix closes what its check finds`, async () => {
+/** Breaks a new repository of the shape one way at a time, and answers what no fix closed. */
+export async function holdFixes(shape: Start): Promise<string[]> {
+  {
     const base = join(tmp("craftz-fixes-"), "example");
     await write(base, "example", shape, "An example, from craftz's test.");
-    expect(await drift(base)).toEqual([]);
+    const started = await drift(base);
+    if (started.length) return started.map(([rule, text]) => `new: ${rule}: ${text}`);
 
-    type Break = [label: string, apply: (dir: string) => void];
+    type Break = [label: string, file: string, apply: (dir: string) => void];
     const breaks: Break[] = [];
     for (const file of files(base)) {
-      breaks.push([`delete ${file}`, (dir) => rmSync(join(dir, file))]);
-      breaks.push([`empty ${file}`, (dir) => writeFileSync(join(dir, file), "")]);
+      breaks.push([`delete ${file}`, file, (dir) => rmSync(join(dir, file))]);
+      breaks.push([`empty ${file}`, file, (dir) => writeFileSync(join(dir, file), "")]);
       if (!file.endsWith(".json")) continue;
       const parsed = json(join(base, file));
       const drop = (path: string[]) => (dir: string) => {
@@ -91,29 +77,43 @@ for (const [what, shape] of Object.entries(shapes)) {
         writeFileSync(join(dir, file), JSON.stringify(doc, null, 2));
       };
       for (const [key, value] of Object.entries(parsed)) {
-        breaks.push([`${file} drop ${key}`, drop([key])]);
+        breaks.push([`${file} drop ${key}`, file, drop([key])]);
         if (value && typeof value === "object" && !Array.isArray(value)) {
           for (const inner of Object.keys(value)) {
-            breaks.push([`${file} drop ${key}.${inner}`, drop([key, inner])]);
+            breaks.push([`${file} drop ${key}.${inner}`, file, drop([key, inner])]);
           }
         }
       }
     }
 
+    // One folder is broken and put back for each break, from what the new repository wrote, so
+    // the copy is only of the files the break and the fixes touched.
+    const dir = join(tmp("craftz-fixes-"), "example");
+    cpSync(base, dir, { recursive: true });
+    const original = new Map(files(base).map((file) => [file, readFileSync(join(base, file))]));
+    const restore = (touched: string[]) => {
+      for (const file of touched) {
+        const was = original.get(file);
+        if (was) writeFileSync(join(dir, file), was);
+        else rmSync(join(dir, file), { force: true });
+      }
+    };
     const stuck: string[] = [];
-    for (const [label, apply] of breaks) {
-      const dir = join(tmp("craftz-fixes-"), "example");
-      cpSync(base, dir, { recursive: true });
+    for (const [label, file, apply] of breaks) {
       apply(dir);
-      if (unreadable.test(label)) continue;
-      fixFiles(dir, here);
+      if (unreadable.test(label)) {
+        restore([file]);
+        continue;
+      }
+      const changed = fixFiles(dir, here);
       for (const [rule, text] of await drift(dir)) {
         const kept = byHand.some(
           ([broken, id]) => broken.test(label) && new RegExp(`^${id}`).test(rule),
         );
         if (!kept) stuck.push(`${label}: ${rule}: ${text}`);
       }
+      restore([file, ...changed]);
     }
-    expect(stuck).toEqual([]);
-  }, 120_000);
+    return stuck;
+  }
 }
