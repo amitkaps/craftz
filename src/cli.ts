@@ -271,6 +271,12 @@ if (command === "rules" && !rest.length) {
     process.cwd(),
     [arg, ...rest].filter((it) => it !== undefined),
   );
+} else if (command === "shot") {
+  const { shot } = await import("./shot.ts");
+  process.exitCode = await shot(
+    process.cwd(),
+    [arg, ...rest].filter((it) => it !== undefined),
+  );
 } else if (command === "gone" && !arg) {
   gone();
 } else if (command === "new") {

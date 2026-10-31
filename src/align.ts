@@ -165,7 +165,8 @@ async function updateReference(dir: string, log: string[]): Promise<string[]> {
 
 async function moveReference(dir: string, log: string[]): Promise<string[]> {
   await sh(dir, log, "pnpm", "install", "--ignore-scripts");
-  const majors = await update(dir, log, []);
+  // `@playwright/test` is held to the version whose Chromium the cloud image ships.
+  const majors = await update(dir, log, ["@playwright/test"]);
   const vitePlus = depsOf(readPkg(dir))["vite-plus"];
   const workspace = join(dir, "pnpm-workspace.yaml");
   writeFileSync(

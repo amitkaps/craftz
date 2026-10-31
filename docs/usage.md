@@ -36,6 +36,17 @@ pnpm craftz rules scripts         # one part, and Practice after it
 
 `craftz rules` prints [the rules](rules.md) from the installed version, so a repository reads the rules it's checked against, and nothing is fetched. Its links lead to the site, so they work outside the repository. A finding names its rule by id, so `craftz rules <id>` prints the rule it drifted from. A part is a second-level heading of the rules, named by its first word in lower case. It costs a fifth of the whole, so an agent reads the part it works in.
 
+## Looking at a page
+
+- [`craftz shot <url> <file.png> [--width <pixels>]`]{#shot}: saves a page as a PNG, with the repository's Playwright.
+
+```sh
+pnpm craftz shot http://localhost:3000 page.png
+pnpm craftz shot http://localhost:3000 phone.png --width 390
+```
+
+An agent looks at a page it built with this, then reads the PNG. It uses the repository's `@playwright/test`, at [the reference's version](rules.md#versions-playwright), whose Chromium the cloud image ships. So it downloads nothing, and an agent has no reason to install a browser tool of its own. The page has to be running already. The file is full height, and 1280 pixels wide unless `--width` says otherwise.
+
 ## Checking one repository
 
 - [`craftz check [dir]`]{#check}: runs every rule on a folder, the current one by default.

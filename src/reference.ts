@@ -114,6 +114,7 @@ export const nodeMajor = /\d+/.exec(standard.engines?.node ?? "")?.[0];
  */
 export const TOOLS = [
   "@types/node",
+  "@playwright/test",
   "typescript",
   "@amitkaps/prose",
   "@amitkaps/markz",

@@ -11,7 +11,7 @@ The parts are `axes`, `toolchain`, `pnpm`, `other` (versions), `holds`, `scripts
 - Before starting a change, run `pnpm gone`. It switches to `main`, pulls, and deletes the branches that merged, so the change starts from what's live.
 - Open a pull request with `pnpm pr "<title>"`, and add `--label <label>` in a package. It commits, runs `pnpm run verify`, pushes and turns on auto-merge, so don't run verify first. When verify fails, fix what it found and run `pnpm pr` again. Don't wait for the merge, and add `--wait` to a session's last change. Nobody pushes to `main`.
 - `pnpm craftz status` says what's live. `pnpm <tool> help <command>` says what a command does, for the version installed.
-- Run tools through `pnpm run …` and `pnpm exec`, not global installs.
+- Run tools through `pnpm run …` and `pnpm exec`, not global installs. To see a page you built, run `pnpm craftz shot <url> <file.png>` and read the PNG, rather than installing a browser tool.
 - A lesson in `docs/lessons.md` is for what the next change would get wrong without it, so a change that went as planned adds none. Read its group first. When a lesson there says it already, add this case to it, and give the principle a check or a rule.
 
 ## Prose
