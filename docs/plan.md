@@ -43,7 +43,7 @@ Three larger changes are decisions of their own, and wait under Later.
 
 ## Later
 
-- `src/rules.ts` is being split by the part of the rules each id starts with, into [src/rules/](../src/rules/), which `rules.ts` joins in the doc's order. The versions, the toolchain, the scripts, Cloudflare, GitHub, agents and what the groups share are out. Docs and releases are left, each in its own pull request. Deriving each fix from its check would also end the cases where they disagree, like `cloudflare-static`.
+- `src/rules.ts` is being split by the part of the rules each id starts with, into [src/rules/](../src/rules/), which `rules.ts` joins in the doc's order. The versions, the toolchain, the scripts, Cloudflare, GitHub, agents, docs and what the groups share are out. Releases are left, in its own pull request. Deriving each fix from its check would also end the cases where they disagree, like `cloudflare-static`.
 - `worker.ts` reads `wrangler.toml` with regexes, and `directory` matches under any table. A real parser or dropping `wrangler.toml` fixes it, and the choice depends on when the app leaves wrangler.
 - `status --timing` guesses that a pull request fell behind from a merge commit's title and attributes runs by a 60-second window. GitHub's timeline events state both.
 - Cloudflare's error `[12040]` is matched in a message in `settings.ts`. A small client with typed errors would hold every code's meaning in one place.
