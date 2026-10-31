@@ -18,12 +18,7 @@ Explanations go in `@prose` comments, and every Markdown file is prose too.
 
 - Run `pnpm prose rules` once before your first edit to a `@prose` comment or a `.md` file, and again after the conversation is summarized. A code change counts only when it changes what the comment states, so a rename or a lint fix doesn't.
 - After writing prose, run `pnpm prose style <files>` on those files, and take its advice where it reads better. It's advice and never fails. `prose check` runs in `verify` and does, like a folder with no `README.md`.
-
-## Outline
-
-Every file in this repository with its summary, which `pnpm pr` and `pnpm gone` write. Run `pnpm outline` when it's missing.
-
-@outline.md
+- `outline.md` is the repository as a tree, each file with its `@prose` summary. `pnpm pr` and `pnpm gone` write it. Before you search for code by what it does, read the part of it for the folder you expect it in.
 
 ## This repository
 

@@ -17,7 +17,9 @@ import { drifted } from "./shared.ts";
  * sections over a repository's own, or puts them before its first section when they're
  * missing, and leaves the rest of the file alone.
  */
-const SECTIONS = ["craftz", "Prose", "Outline"];
+const SECTIONS = ["craftz", "Prose"];
+// A section that was shared once, and that the fix removes from a repository that still has it.
+const RETIRED = ["Outline"];
 const OUTLINE = "outline.md";
 // Whether a .gitignore names a root file, as `name` or `/name`.
 const ignores = (text: string, name: string): boolean =>
@@ -41,6 +43,9 @@ export const AGENTS_RULES: Rule[] = [
           ? []
           : [`${heading} section differs from craftz's`];
       });
+      for (const heading of RETIRED) {
+        if (section(text, heading)) drift.push(`${heading} section, which craftz no longer shares`);
+      }
       if (files["CLAUDE.md"]?.trim() !== "@AGENTS.md") drift.push("CLAUDE.md isn't @AGENTS.md");
       return drifted(drift);
     },
@@ -63,6 +68,7 @@ export const AGENTS_RULES: Rule[] = [
             at < 0 ? `${text.trimEnd()}\n\n${block}` : text.slice(0, at) + block + text.slice(end);
           after = (at < 0 ? text.length - block.length : at) + block.length;
         }
+        for (const heading of RETIRED) text = text.replace(sectionOf(heading), "");
         writeFileSync(path, `${text.trimEnd()}\n`);
         writeFileSync(join(dir, "CLAUDE.md"), "@AGENTS.md\n");
       },
