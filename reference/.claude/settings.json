@@ -1,0 +1,36 @@
+{
+  "autoCompactWindow": 200000,
+  "modelSettings": {
+    "claude-haiku-5-5": { "autoCompactWindow": 100000 }
+  },
+  "env": {
+    "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet",
+    "ENABLE_CLAUDEAI_MCP_SERVERS": "false"
+  },
+  "permissions": {
+    "deny": ["Artifact"]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session-start.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/suggest-clear.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
