@@ -12,5 +12,8 @@ pnpm install
 # repository's own Playwright expects, which an environment's setup script can't know, and it
 # does nothing when that revision is there.
 if grep -Eq '"(@playwright/test|playwright|playwright-core)"' package.json; then
-  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=0 pnpm exec playwright install chromium
+  # `@playwright/test` and `playwright` have the `playwright` command, `playwright-core` its own.
+  bin=playwright
+  [ -e node_modules/.bin/playwright ] || bin=playwright-core
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=0 pnpm exec "$bin" install chromium
 fi
