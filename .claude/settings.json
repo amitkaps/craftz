@@ -1,0 +1,12 @@
+{
+  "autoCompactWindow": 150000,
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "date > /tmp/hook-test-marker" }
+        ]
+      }
+    ]
+  }
+}
