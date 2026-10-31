@@ -200,7 +200,7 @@ export const DOCS_RULES: Rule[] = [
         const had = read(index);
         mkdirSync(join(dir, "docs"), { recursive: true });
         for (const [file, text] of Object.entries(first)) {
-          if (!existsSync(join(dir, file))) writeFileSync(join(dir, file), text);
+          if (!read(join(dir, file))) writeFileSync(join(dir, file), text);
         }
         // An index that was there keeps its words, and gains the docs its nav was missing.
         const listed = nav(had);

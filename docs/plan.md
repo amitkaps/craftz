@@ -6,7 +6,7 @@ This is a package's plan, of what craftz itself does next. Each repository moves
 
 ## Next, in order
 
-Nothing is queued. Deriving each rule's fix from its check is a decision of its own, and waits under Later.
+Nothing is queued.
 
 ## Where it is
 
@@ -31,7 +31,7 @@ Nothing is queued. Deriving each rule's fix from its check is a decision of its 
 
 ## Later
 
-- Each rule's fix in [src/rules/](../src/rules/) is written beside its check, and the two can disagree, like `cloudflare-static`. Deriving the fix from the check would end that. Try it on one part first, like [cloudflare.ts](../src/rules/cloudflare.ts).
+- Each rule's fix in [src/rules/](../src/rules/) is written beside its check, and the two could disagree. [fixes.test.ts](../tests/fixes.test.ts) breaks a new repository of each shape one way at a time and fails any rule whose fix leaves its check drifting, bar a short list left by hand. It found six gaps, of which four were left on purpose and two closed. Deriving every fix from its check would be a rewrite of about 1,500 lines for gaps that small, so it waits until that test finds many.
 - `worker.ts` reads `wrangler.toml` with regexes, and `directory` matches under any table. A real parser or dropping `wrangler.toml` fixes it, and the choice depends on when the app leaves wrangler.
 - Cloudflare's error `[12040]` is matched in a message in `settings.ts`. A small client with typed errors would hold every code's meaning in one place.
 - `cli.ts` imports every command at startup, though only `new` loads lazily. It waits until startup time is a cost someone feels.
