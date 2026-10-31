@@ -1,5 +1,8 @@
 {
   "autoCompactWindow": 150000,
+  "modelSettings": {
+    "claude-haiku-5-5": { "autoCompactWindow": 80000 }
+  },
   "hooks": {
     "SessionStart": [
       {
