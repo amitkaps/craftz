@@ -27,6 +27,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 import { gone, step, writeOutline } from "./gone.ts";
 import {
+  addLabel,
   autoMerge,
   checksOn,
   createPull,
@@ -41,6 +42,15 @@ import { capture } from "./reference.ts";
 function fail(message: string): never {
   console.error(message);
   process.exit(1);
+}
+
+/** Runs a call to GitHub, and stops with its message in one line if it fails. */
+function onGitHub<T>(call: () => T): T {
+  try {
+    return call();
+  } catch (error) {
+    return fail(error instanceof Error ? error.message : String(error));
+  }
 }
 
 const output = (command: string, ...args: string[]): string => capture(command, args).trim();
@@ -207,10 +217,15 @@ export async function pr(args: string[]): Promise<void> {
   const verified = took(Date.now() - verifying);
   step("git", "push", "--quiet", "--set-upstream", "origin", branch);
 
-  const existing = pullFrom(branch);
-  const opened =
-    existing?.state === "OPEN" ? existing : createPull(branch, title, values.body, label);
-  autoMerge(opened.number);
+  // A failed call says so in a line. A pull request that opened but couldn't be labelled is
+  // labelled again by the next run, which finds it open.
+  const opened = onGitHub(() => {
+    const existing = pullFrom(branch);
+    if (existing?.state !== "OPEN") return createPull(branch, title, values.body, label);
+    if (label) addLabel(existing.number, label);
+    return existing;
+  });
+  onGitHub(() => autoMerge(opened.number));
   console.log(`${opened.url}, after verify took ${verified}`);
   if (values.wait) await merged(branch, opened.number, opened.url);
 }

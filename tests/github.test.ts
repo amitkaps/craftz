@@ -39,9 +39,11 @@ test("a pull request's merge state is upper case, and unknown until GitHub has w
   expect(pullOf(raw).mergeStateStatus).toBe("UNKNOWN");
 });
 
-test("pr, gone and status stay off GraphQL, which a cloud session's proxy refuses", () => {
-  for (const file of ["pr", "gone", "status"]) {
+test("what runs in a cloud session stays off GraphQL, which its proxy refuses", () => {
+  for (const file of ["pr", "gone", "status", "release"]) {
     const source = readFileSync(new URL(`../src/${file}.ts`, import.meta.url), "utf8");
-    expect(source, file).not.toMatch(/graphql|"pr",\s*"(view|list|create|merge|update-branch)"/);
+    expect(source, file).not.toMatch(
+      /graphql|"pr",\s*"(view|list|create|merge|edit|close|update-branch)"/,
+    );
   }
 });

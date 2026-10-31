@@ -29,7 +29,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { autoMerge, createPull } from "./github.ts";
+import { api, autoMerge, createPull } from "./github.ts";
 import { OWNER, onMain } from "./reference.ts";
 import { origin } from "./survey.ts";
 import { temporary } from "./temp.ts";
@@ -49,6 +49,26 @@ export function unready(plan: string, version: string): string | undefined {
 function fail(message: string): never {
   console.error(message);
   process.exit(1);
+}
+
+/** The author of the release commit: the folder's own git identity, or else the login's. */
+function author(): NodeJS.ProcessEnv {
+  const set = (key: string): boolean => {
+    try {
+      return !!execFileSync("git", ["config", key], { encoding: "utf8" }).trim();
+    } catch {
+      return false;
+    }
+  };
+  if (set("user.name") && set("user.email")) return {};
+  const { login, id } = api<{ login: string; id: number }>("GET", "user");
+  const email = `${id}+${login}@users.noreply.github.com`;
+  return {
+    GIT_AUTHOR_NAME: login,
+    GIT_AUTHOR_EMAIL: email,
+    GIT_COMMITTER_NAME: login,
+    GIT_COMMITTER_EMAIL: email,
+  };
 }
 
 /** Opens the pull request that releases the folder's package at a version. */
@@ -112,13 +132,25 @@ export function release(dir: string, args: string[]): void {
   }
   const notes = given ?? editor();
 
-  const git = (args: string[], env: NodeJS.ProcessEnv = {}): string =>
-    execFileSync("git", args, {
-      cwd: dir,
-      encoding: "utf8",
-      env: { ...process.env, ...env },
-      stdio: ["ignore", "pipe", "pipe"],
-    }).trim();
+  const git = (args: string[], env: NodeJS.ProcessEnv = {}, input?: string): string => {
+    try {
+      return execFileSync("git", ["-c", "commit.gpgsign=false", ...args], {
+        cwd: top,
+        encoding: "utf8",
+        env: { ...process.env, ...env },
+        input,
+        stdio: ["pipe", "pipe", "pipe"],
+      }).trim();
+    } catch (error) {
+      const said = String((error as { stderr?: unknown }).stderr ?? error).trim();
+      return fail(`git ${args[0]}: ${said.split("\n")[0]}`);
+    }
+  };
+  // The paths below are from the repository's root, wherever the folder is inside it.
+  const top = execFileSync("git", ["rev-parse", "--show-toplevel"], {
+    cwd: dir,
+    encoding: "utf8",
+  }).trim();
   git(["fetch", "--quiet", "origin", "main"]);
   const [mode, , blob] = git(["ls-tree", "origin/main", "package.json"]).split(/\s+/);
   if (blob !== file.sha)
@@ -126,19 +158,23 @@ export function release(dir: string, args: string[]): void {
 
   // A commit built apart from the folder's index, so what the folder has changed stays as it is.
   const apart = { GIT_INDEX_FILE: join(temporary("release-"), "index") };
-  const bumpedBlob = execFileSync("git", ["hash-object", "-w", "--stdin"], {
-    cwd: dir,
-    encoding: "utf8",
-    input: bumped,
-  }).trim();
+  const bumpedBlob = git(["hash-object", "-w", "--stdin"], {}, bumped);
   git(["read-tree", "origin/main"], apart);
   git(["update-index", "--cacheinfo", `${mode},${bumpedBlob},package.json`], apart);
-  const commit = git(["commit-tree", git(["write-tree"], apart), "-p", "origin/main", "-m", tag]);
+  const commit = git(
+    ["commit-tree", git(["write-tree"], apart), "-p", "origin/main", "-m", tag],
+    author(),
+  );
   git(["push", "--quiet", "origin", `${commit}:refs/heads/${branch}`]);
 
   const where = { cwd: dir, repo: `${OWNER}/${repo}` };
-  const made = createPull(branch, tag, notes, "internal", where);
-  autoMerge(made.number, where);
+  let made;
+  try {
+    made = createPull(branch, tag, notes, "internal", where);
+    autoMerge(made.number, where);
+  } catch (error) {
+    return fail(error instanceof Error ? error.message : String(error));
+  }
 
   console.log(`✓ ${made.url}`);
   console.log(

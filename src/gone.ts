@@ -49,7 +49,7 @@
  * doesn't fail the command, since the branches are already where they should be.
  */
 import { execFileSync } from "node:child_process";
-import { type Pull, pages, pullFrom, pullNumber, squashMerge } from "./github.ts";
+import { type Pull, api, pullFrom, settledPull, squashMerge } from "./github.ts";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { finding } from "@amitkaps/markz/rules";
@@ -104,11 +104,13 @@ export const goneIn = (refs: string, merged: (commit: string) => boolean = () =>
     })
     .map(([branch = "", , worktree]) => (worktree ? { branch, worktree } : { branch }));
 
-// The last commits of the merged pull requests, or none without `gh`.
+// The last commits of the 100 pull requests closed most recently that merged, or none without `gh`.
 function mergedHeads(dir = "."): Set<string> {
   try {
-    const closed = pages<{ merged_at: string | null; head: { sha: string } }>(
-      "repos/{repo}/pulls?state=closed&per_page=100",
+    const closed = api<{ merged_at: string | null; head: { sha: string } }[]>(
+      "GET",
+      "repos/{repo}/pulls?state=closed&sort=updated&direction=desc&per_page=100",
+      undefined,
       { cwd: dir },
     );
     return new Set(closed.filter((pr) => pr.merged_at).map((pr) => pr.head.sha));
@@ -147,7 +149,7 @@ function mergeReady(branch: string): void {
   let pr: Pull | undefined;
   try {
     pr = pullFrom(branch);
-    if (pr?.state === "OPEN") pr = pullNumber(pr.number);
+    if (pr?.state === "OPEN") pr = settledPull(pr.number);
   } catch {
     return;
   }

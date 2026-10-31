@@ -35,7 +35,7 @@
  */
 import { stripVTControlCharacters } from "node:util";
 import { accessDrift, cf, cloudflareLogin, workerTag } from "./settings.ts";
-import { api, pages } from "./github.ts";
+import { api, pages, pagesAsync } from "./github.ts";
 import { took } from "./pr.ts";
 import { OWNER, gh, onMain, type Pkg } from "./reference.ts";
 import type { Worker } from "./worker.ts";
@@ -357,7 +357,7 @@ export function buildLog(uuid: string): string[] {
  * A run belongs to a pull request when it ran on one of its commits. A pull request fell behind
  * when it holds a commit with two parents after it opened, which is GitHub's update from `main`. Both are read from GitHub's REST API, not guessed from titles and times.
  */
-/** A merged pull request, as `gh pr list` gives it. */
+/** A merged pull request, as REST gives it. */
 export type Merged = {
   number: number;
   createdAt: string;
@@ -434,7 +434,7 @@ type Closed = { number: number; created_at: string; merged_at: string | null };
 type Commit = { sha: string; commit: { committer: { date: string } }; parents: unknown[] };
 
 /** Reads the last 30 merged pull requests and their runs, and times them. */
-export function timing(repo: string): string[] {
+export async function timing(repo: string): Promise<string[]> {
   const where = { repo: `${OWNER}/${repo}` };
   const closed = api<Closed[]>(
     "GET",
@@ -442,18 +442,25 @@ export function timing(repo: string): string[] {
     undefined,
     where,
   );
-  const prs: Merged[] = closed
+  const merged = closed
     .filter((pr) => pr.merged_at)
     .slice(0, 30)
-    .reverse()
-    .map((pr) => ({
+    .reverse();
+  // Each pull request's commits are read side by side, since they don't depend on each other.
+  const prs: Merged[] = await Promise.all(
+    merged.map(async (pr) => ({
       number: pr.number,
       createdAt: pr.created_at,
       mergedAt: pr.merged_at ?? "",
-      commits: pages<Commit>(`repos/{repo}/pulls/${pr.number}/commits?per_page=100`, where).map(
-        (c) => ({ oid: c.sha, committedDate: c.commit.committer.date, parents: c.parents.length }),
-      ),
-    }));
+      commits: (
+        await pagesAsync<Commit>(`repos/{repo}/pulls/${pr.number}/commits?per_page=100`, where)
+      ).map((c) => ({
+        oid: c.sha,
+        committedDate: c.commit.committer.date,
+        parents: c.parents.length,
+      })),
+    })),
+  );
   const runs = JSON.parse(
     gh(
       "run",
