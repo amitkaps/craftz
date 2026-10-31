@@ -27,6 +27,6 @@ Every file in this repository with its summary, which `pnpm pr` and `pnpm gone` 
 
 ## This repository
 
-- A rule is worded once, in [docs/rules.md](docs/rules.md), as a list item that opens with its id. Its check and its fix are in [src/rules.ts](src/rules.ts), under the same id. `pnpm craftz rules <id>` prints one.
+- A rule is worded once, in [docs/rules.md](docs/rules.md), as a list item that opens with its id. Its check and its fix are in [src/rules/](src/rules/), under the same id. `pnpm craftz rules <id>` prints one.
 - [reference/](reference/) holds the files the rules compare against, laid out as a repository has them. Change a file there, not a copy of it elsewhere.
 - Never name a private repository in the docs, code, commits or pull requests. This repository is public. Say "a private repository" and describe what it is instead.

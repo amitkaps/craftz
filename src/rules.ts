@@ -23,12 +23,6 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 import { type Pkg, readPkg } from "./reference.ts";
-import {} from "./config.ts";
-import {} from "./edit.ts";
-import {} from "./ruled.ts";
-import {} from "./settings.ts";
-import {} from "./pinned.ts";
-import {} from "./stated.ts";
 import { AGENTS_RULES } from "./rules/agents.ts";
 import { CLOUDFLARE_RULES } from "./rules/cloudflare.ts";
 import { DOCS_RULES } from "./rules/docs.ts";
