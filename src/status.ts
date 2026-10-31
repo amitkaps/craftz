@@ -354,19 +354,21 @@ export function buildLog(uuid: string): string[] {
  * Each that took over five minutes is listed with the first reason that fits. A check failed, it
  * fell behind, work was added after it opened, or the merge came minutes after the checks passed,
  * which is GitHub's auto-merge. Otherwise it was left open a while.
+ *
+ * A run belongs to a pull request when it ran on one of its commits. A pull request fell behind
+ * when it holds a commit with two parents after it opened, which is GitHub's update from `main`. Both are read from GitHub's GraphQL API, not guessed from titles and times.
  */
 /** A merged pull request, as `gh pr list` gives it. */
 export type Merged = {
   number: number;
   createdAt: string;
   mergedAt: string;
-  headRefName: string;
-  commits: { committedDate: string; messageHeadline: string }[];
+  commits: { oid: string; committedDate: string; parents: number }[];
 };
 /** A workflow run on a pull request, as `gh run list` gives it. */
 export type PrRun = {
   workflowName: string;
-  headBranch: string;
+  headSha: string;
   conclusion: string;
   startedAt: string;
   updatedAt: string;
@@ -399,16 +401,12 @@ export function timingIn(prs: Merged[], runs: PrRun[]): string[] {
   const slow = prs
     .filter((pr) => open(pr) > SLOW)
     .map((pr) => {
-      // A run is the pull request's when it's on its branch while it was open.
-      const own = runs.filter(
-        (run) =>
-          run.headBranch === pr.headRefName &&
-          at(run.startedAt) >= at(pr.createdAt) - 60_000 &&
-          at(run.startedAt) <= at(pr.mergedAt),
-      );
+      // A run is the pull request's when it ran on one of its commits.
+      const shas = new Set(pr.commits.map((commit) => commit.oid));
+      const own = runs.filter((run) => shas.has(run.headSha));
       const later = pr.commits.filter((commit) => at(commit.committedDate) > at(pr.createdAt));
-      // An update from main is GitHub's merge commit, not work.
-      const updated = later.some((commit) => commit.messageHeadline.startsWith("Merge branch"));
+      // An update from main is a commit with two parents, not work.
+      const updated = later.some((commit) => commit.parents > 1);
       const passed = Math.max(0, ...own.map((run) => at(run.updatedAt)));
       const why = own.some((run) => run.conclusion === "failure")
         ? "a check failed"
@@ -433,22 +431,46 @@ export function timingIn(prs: Merged[], runs: PrRun[]): string[] {
   ];
 }
 
+const MERGED = `query($owner: String!, $name: String!) {
+  repository(owner: $owner, name: $name) {
+    pullRequests(states: MERGED, last: 30, orderBy: { field: UPDATED_AT, direction: ASC }) {
+      nodes {
+        number createdAt mergedAt
+        commits(first: 100) { nodes { commit { oid committedDate parents { totalCount } } } }
+      }
+    }
+  }
+}`;
+
 /** Reads the last 30 merged pull requests and their runs, and times them. */
 export function timing(repo: string): string[] {
-  const prs = JSON.parse(
-    gh(
-      "pr",
-      "list",
-      "-R",
-      `${OWNER}/${repo}`,
-      "--state",
-      "merged",
-      "--limit",
-      "30",
-      "--json",
-      "number,createdAt,mergedAt,headRefName,commits",
-    ),
-  ) as Merged[];
+  const found = JSON.parse(
+    gh("api", "graphql", "-f", `query=${MERGED}`, "-f", `owner=${OWNER}`, "-f", `name=${repo}`),
+  ) as {
+    data: {
+      repository: {
+        pullRequests: {
+          nodes: (Omit<Merged, "commits"> & {
+            commits: {
+              nodes: {
+                commit: { oid: string; committedDate: string; parents: { totalCount: number } };
+              }[];
+            };
+          })[];
+        };
+      };
+    };
+  };
+  const prs: Merged[] = found.data.repository.pullRequests.nodes.map((pr) => ({
+    number: pr.number,
+    createdAt: pr.createdAt,
+    mergedAt: pr.mergedAt,
+    commits: pr.commits.nodes.map(({ commit }) => ({
+      oid: commit.oid,
+      committedDate: commit.committedDate,
+      parents: commit.parents.totalCount,
+    })),
+  }));
   const runs = JSON.parse(
     gh(
       "run",
@@ -460,7 +482,7 @@ export function timing(repo: string): string[] {
       "--limit",
       "200",
       "--json",
-      "workflowName,headBranch,conclusion,startedAt,updatedAt",
+      "workflowName,headSha,conclusion,startedAt,updatedAt",
     ),
   ) as PrRun[];
   return timingIn(prs, runs);
