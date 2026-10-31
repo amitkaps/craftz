@@ -71,7 +71,7 @@ The rule is [Build only what gets used](rules.md#build-only-what-gets-used). `cr
 - **An app that ran only in the browser deployed a Worker.** A private repository started from base for a backend it hadn't built, so every request rendered a page the browser ran anyway. Start a site on the deploy it needs now, and move to an app when there's server code.
 - **A tool that does more than the job brings more than it needs.** Void deploys a folder in one command, on 304 packages, a database toolkit and its own state. It was tried at 1.1.11 and left, since Vite and craftz already do the job.
 - **What every agent reads is `AGENTS.md`.** prose shipped its rules as an agent skill, which took an approval in each workspace and a fallback for agents without skills. One line in `AGENTS.md` does the same.
-- **An import loaded what no agent opened.** `AGENTS.md` imported `outline.md`, 6k tokens in craftz and 20k in visframe, in every session. 21 sessions that added a chart, a rule or an option found the same files with it loaded, left out or named in a bullet, and none opened it unprompted. Name a file an agent can open, and import one only when a run shows it changes what the agent does.
+- **An import loaded what no agent opened.** `AGENTS.md` imported `outline.md`, 6k tokens in craftz and 20k in visframe, in every session. 21 sessions that added a chart, a rule or an option found the same files with it loaded, left out or named in a bullet, and none opened it unprompted. The rules were the same, with all 13k tokens read for a change in one part. Name a file an agent can open, and import one only when a run shows it changes what the agent does.
 
 ## Try it on the real thing
 

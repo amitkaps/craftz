@@ -31,7 +31,7 @@ import { fixFiles } from "./rules.ts";
 import { cloudflareLogin, githubLogin, hasClassic } from "./settings.ts";
 import { upgrade } from "./upgrade.ts";
 import { finding, printOne } from "@amitkaps/markz/rules";
-import { craftzRules, help, helpOn, printed } from "./stated.ts";
+import { craftzRules, help, helpOn, printed, printedPart } from "./stated.ts";
 import { notes } from "./notes.ts";
 import { type Finding, checkFolder, origin } from "./survey.ts";
 import { workerIn } from "./worker.ts";
@@ -225,9 +225,9 @@ if (command === "rules" && !rest.length) {
   if (!arg) {
     process.stdout.write(printed());
   } else {
-    const rule = printOne([craftzRules()], arg);
+    const rule = printOne([craftzRules()], arg) ?? printedPart(arg);
     if (!rule) {
-      const message = `no rule \`${arg}\`, and \`craftz rules\` prints every one`;
+      const message = `no rule or part \`${arg}\`, and \`craftz rules\` prints every one`;
       console.error(finding({ tool: "craftz", level: "error", message }));
       process.exit(1);
     }

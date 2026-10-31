@@ -129,6 +129,28 @@ export function printed(markdown = doc(), site = SITE): string {
   return out + markdown.slice(at);
 }
 
+/** A part's short name: the first word of its heading, lower case, like `scripts` or `pnpm`. */
+const shortName = (label: string): string => label.split(/[\s:]/)[0]!.toLowerCase();
+
+/** The parts' short names, which `craftz rules <part>` takes. */
+export const partNames = (markdown?: string): string[] => parts(markdown).map(shortName);
+
+/** One part of the rules, as `craftz rules <part>` prints it, with `Practice` after it since it
+ *  holds for any work. `undefined` when no part has that name. */
+export function printedPart(name: string, markdown = doc(), site = SITE): string | undefined {
+  const tree = parse(markdown);
+  const outline = headings(tree).filter((h) => h.depth === 2);
+  const slice = (label: string): string => {
+    const at = outline.findIndex((h) => h.label === label);
+    const end = outline[at + 1] ? tree.start(outline[at + 1]!.node) : markdown.length;
+    return markdown.slice(tree.start(outline[at]!.node), end);
+  };
+  const label = outline.map((h) => h.label).find((it) => shortName(it) === name.toLowerCase());
+  if (!label) return undefined;
+  const wanted = label === "Practice" ? [label] : [label, "Practice"];
+  return printed(wanted.map(slice).join("\n"), site);
+}
+
 /** craftz's commands, each stated in the usage doc, as markz's `printHelp` prints them. */
 export const commands = (markdown = usage()): Commands =>
   readCommands("craftz", markdown, USAGE_SITE);

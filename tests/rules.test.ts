@@ -15,7 +15,7 @@ import { valueAt } from "../src/config.ts";
 import { betas, RULES } from "../src/rules.ts";
 import { RULED, written } from "../src/ruled.ts";
 import { type FormatConfig, format } from "vite-plus/fmt";
-import { parts, printed, stated } from "../src/stated.ts";
+import { partNames, parts, printed, printedPart, stated } from "../src/stated.ts";
 import { CRAFTZ, type Pkg, VERSIONS, here, standard } from "../src/reference.ts";
 import { rulesetFor } from "../src/settings.ts";
 import { checks, type Repo, worker } from "../src/survey.ts";
@@ -67,6 +67,29 @@ test("every check is under a part of the rules", () => {
 
 test("a part is its second-level heading", () => {
   expect(parts("## Scripts\n\n### The editor\n\n```md\n## An example\n```\n")).toEqual(["Scripts"]);
+});
+
+test("a part is read by its first word, with Practice after it", () => {
+  const doc = "## Scripts\n\nA [link](x.md).\n\n### Sub\n\n## Holds\n\nH\n\n## Practice\n\nP\n";
+  const site = "https://example.com/rules.md";
+  expect(printedPart("scripts", doc, site)).toBe(
+    "## Scripts\n\nA [link](https://example.com/x.md).\n\n### Sub\n\n\n## Practice\n\nP\n",
+  );
+  expect(printedPart("PRACTICE", doc, site)).toBe("## Practice\n\nP\n");
+  expect(printedPart("nope", doc, site)).toBeUndefined();
+});
+
+test("every part of the shipped rules has its own name", () => {
+  const names = partNames();
+  expect(new Set(names).size).toBe(names.length);
+  for (const name of names) expect(printedPart(name), name).toContain("## Practice");
+});
+
+test("AGENTS.md names the parts the rules have, and no other", () => {
+  const text = readFileSync(new URL("../reference/AGENTS.md", import.meta.url), "utf8");
+  const line = text.split("\n").find((it) => it.startsWith("The parts are")) ?? "";
+  const named = new Set([...line.matchAll(/`(\w+)`/g)].map((m) => m[1]));
+  expect(named).toEqual(new Set(partNames().filter((it) => it !== "practice")));
 });
 
 test("only the rules' betas are on a pre-release, each an exact build", () => {
