@@ -47,7 +47,6 @@ Three larger changes are decisions of their own, and wait under Later.
 - `worker.ts` reads `wrangler.toml` with regexes, and `directory` matches under any table. A real parser or dropping `wrangler.toml` fixes it, and the choice depends on when the app leaves wrangler.
 - `status --timing` guesses that a pull request fell behind from a merge commit's title and attributes runs by a 60-second window. GitHub's timeline events state both.
 - Cloudflare's error `[12040]` is matched in a message in `settings.ts`. A small client with typed errors would hold every code's meaning in one place.
-- `leftByHand` in `report.ts` scrapes oxlint's printed frames. Reading its JSON output would end that, but it means running the step with another format, which `align` doesn't yet.
 - `cli.ts` imports every command at startup, though only `new` loads lazily. It waits until startup time is a cost someone feels.
 - The beta packages that [`versions-beta`](rules.md#versions-beta) names move to their releases when they graduate, which align reports.
 - The app moves to cf when SvelteKit's adapter writes cf's Build Output, and wrangler leaves the reference with it.

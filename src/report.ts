@@ -58,30 +58,46 @@ export const row = (repo: string): Row => ({
  * its rule and where it is, like `no-empty: test/vendor.ts:340`. So the report names the line a
  * release's notes ask to change.
  *
- * Output with no error oxlint frames, like a type error, gives its `Found` line without the time
- * it took. The time differs on each run, so each step that ran the lint would list it again.
+ * The errors are read from oxlint's JSON, which `align` asks for after a step fails, not from the
+ * frames it prints. Without it, the printed `Found` line stands in, without the time it took. The
+ * time differs on each run, so each step that ran the lint would list it again.
  */
-export function leftByHand(output: string): string[] {
+export function leftByHand(output: string, lint = ""): string[] {
   const found: string[] = [];
-  let rule: string | undefined;
-  let framed = false;
   for (const line of output.split("\n")) {
     const warning = /^ {4}craftz: warning: (.*)/.exec(line);
-    const error = /^\s*[x×] [\w-]+\(([\w/-]+)\):/.exec(line);
-    const at = /^\s*,-\[(.+):(\d+):\d+\]/.exec(line);
     if (warning && !line.includes("; held: ")) found.push(warning[1]!);
-    if (error) rule = error[1];
-    if (at && rule) {
-      found.push(`${rule}: ${at[1]}:${at[2]}`);
-      rule = undefined;
-      framed = true;
-    }
   }
-  if (!framed) {
+  const errors = lintErrors(lint);
+  if (errors.length) found.push(...errors);
+  else {
     const count = output.split("\n").find((line) => /^Found \d+ errors?/.test(line));
     if (count) found.push(count.replace(/ \(.*\)$/, ""));
   }
   return [...new Set(found)];
+}
+
+type Diagnostic = {
+  code?: string;
+  severity?: string;
+  filename?: string;
+  labels?: { span?: { line?: number } }[];
+};
+
+// Each error in `vp lint --format json` as its rule and where it is. Anything else reads as none.
+function lintErrors(json: string): string[] {
+  try {
+    const { diagnostics = [] } = JSON.parse(json) as { diagnostics?: Diagnostic[] };
+    return diagnostics.flatMap(({ code, severity, filename, labels }) => {
+      const rule = /\(([\w/-]+)\)$/.exec(code ?? "")?.[1];
+      const line = labels?.[0]?.span?.line;
+      return severity === "error" && rule && filename && line
+        ? [`${rule}: ${filename}:${line}`]
+        : [];
+    });
+  } catch {
+    return [];
+  }
 }
 
 /** A move as one line, as the pull request lists it. */
