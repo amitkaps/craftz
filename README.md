@@ -18,7 +18,7 @@ Every repository makes the same choices, like its toolchain, versions, workflows
 | [`craftz gone`](docs/usage.md#gone) | deletes the local branches that merged |
 | [`craftz release`](docs/usage.md#release) | opens the pull request that releases a package |
 | [`craftz deps`](docs/usage.md#deps) | says what the install holds, and which dependency brings it |
-| [`craftz rules`](docs/usage.md#rules) | prints the rules, or one rule, from the installed version |
+| [`craftz rules`](docs/usage.md#rules) | prints the rules, or one rule or part, from the installed version |
 | [`craftz help`](docs/usage.md#help) | lists the commands, or prints what one does |
 | [`craftz new`](docs/usage.md#new) | starts a repository that already follows the rules |
 
@@ -43,6 +43,7 @@ It needs Node 26.12.1 or newer, the Node it's built and tested on.
 pnpm craftz check                 # what's out of line
 pnpm craftz fix                   # fix what can be fixed
 pnpm craftz rules scripts-verify  # what one rule asks, and why
+pnpm craftz rules scripts         # the Scripts part, and Practice
 ```
 
 To start a repository instead, run `pnpm dlx @amitkaps/craftz new`. To move to a new craftz, add it again at `@latest` and run `pnpm craftz fix`, as [its usage](docs/usage.md#moving-to-a-new-craftz) says.

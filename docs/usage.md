@@ -26,14 +26,15 @@ pnpm craftz help deps  # what one does, from this page
 
 ## Reading the rules
 
-- [`craftz rules [id]`]{#rules}: prints every rule, or one by its id, from the installed version.
+- [`craftz rules [id|part]`]{#rules}: prints every rule, or one by its id, or one part with `Practice`, from the installed version.
 
 ```sh
 pnpm craftz rules                 # every rule
 pnpm craftz rules scripts-verify  # one rule, with its address
+pnpm craftz rules scripts         # one part, and Practice after it
 ```
 
-`craftz rules` prints [the rules](rules.md) from the installed version, so a repository reads the rules it's checked against, and nothing is fetched. Its links lead to the site, so they work outside the repository. A finding names its rule by id, so `craftz rules <id>` prints the rule it drifted from.
+`craftz rules` prints [the rules](rules.md) from the installed version, so a repository reads the rules it's checked against, and nothing is fetched. Its links lead to the site, so they work outside the repository. A finding names its rule by id, so `craftz rules <id>` prints the rule it drifted from. A part is a second-level heading of the rules, named by its first word in lower case. It costs a fifth of the whole, so an agent reads the part it works in.
 
 ## Checking one repository
 
@@ -203,5 +204,5 @@ The reference pins the versions every repository uses, like Vite+, TypeScript an
 What an agent working in a repository that uses craftz should know, as a snippet to copy into its instructions.
 
 ```md
-Run `pnpm craftz rules` before changing how this repository builds, checks, deploys or releases, and `pnpm craftz rules <id>` for the rule a finding names. Don't change the toolchain, scripts, versions or deploys in this repository alone. They come from craftz.
+Run `pnpm craftz rules <part>` before changing how this repository builds, checks, deploys or releases, and `pnpm craftz rules <id>` for the rule a finding names. Don't change the toolchain, scripts, versions or deploys in this repository alone. They come from craftz.
 ```
