@@ -452,7 +452,9 @@ export function timing(repo: string): string[] {
         pullRequests: {
           nodes: (Omit<Merged, "commits"> & {
             commits: {
-              nodes: { commit: { oid: string; committedDate: string; parents: { totalCount: number } } }[];
+              nodes: {
+                commit: { oid: string; committedDate: string; parents: { totalCount: number } };
+              }[];
             };
           })[];
         };
