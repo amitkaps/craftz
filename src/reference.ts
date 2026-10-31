@@ -17,6 +17,13 @@ export const OWNER = "amitkaps";
 export const TOPIC = "craftz";
 
 export const CRAFTZ = "@amitkaps/craftz";
+/** A version with a tag after its numbers, like `1.0.0-rc.1`. Build metadata after `+` isn't one. */
+export const isPrerelease = (version: string): boolean => version.split("+")[0]!.includes("-");
+
+/** Whether `latest` is a release of the beta `beta`: no tag, at its major or later. */
+export const graduated = (beta: string, latest: string): boolean =>
+  !isPrerelease(latest) && Number(latest.split(".")[0]) >= Number(beta.split(".")[0]);
+
 export const isCraftz = (pkg: Pkg): boolean => pkg.name === CRAFTZ;
 
 export const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");

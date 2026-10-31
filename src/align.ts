@@ -31,7 +31,17 @@ import { promisify } from "node:util";
 import { checkSettings, writeSettings } from "./apply.ts";
 import { catchUp } from "./gone.ts";
 import { fixFiles } from "./rules.ts";
-import { CRAFTZ, OWNER, TOOLS, capture, onMain, readJson, readPkg } from "./reference.ts";
+import {
+  CRAFTZ,
+  OWNER,
+  TOOLS,
+  capture,
+  graduated,
+  isPrerelease,
+  onMain,
+  readJson,
+  readPkg,
+} from "./reference.ts";
 import { leftByHand, moveLine, report, row, type Row, type Step } from "./report.ts";
 import { repos } from "./survey.ts";
 import { keep, temporary } from "./temp.ts";
@@ -98,8 +108,6 @@ async function sh(dir: string, log: string[], cmd: string, ...args: string[]): P
  * says, since its tags don't say which build goes with which. Once npm's latest for it is a
  * release at its major or later, that's listed too.
  */
-const major = (version: string): number => Number(version.split(".")[0]);
-
 function breaking(from: string, to: string): boolean {
   const [a = 0, b = 0] = from.split(".").map(Number);
   const [c = 0, d = 0] = to.split(".").map(Number);
@@ -119,8 +127,8 @@ async function update(dir: string, log: string[], skip: string[]): Promise<strin
   const majors: string[] = [];
   for (const [name, { current, latest }] of Object.entries(found)) {
     if (skip.includes(name)) continue;
-    if (current.includes("-")) {
-      if (!latest.includes("-") && major(latest) >= major(current)) {
+    if (isPrerelease(current)) {
+      if (graduated(current, latest)) {
         majors.push(`${name} ${latest}, a release of the beta ${current}`);
       }
       continue;
