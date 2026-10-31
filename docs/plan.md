@@ -16,7 +16,7 @@ A whole-repository audit for reuse, simplification, efficiency and altitude foun
 - [x] **Run independent work together.** `addresses` in `status.ts`, the beta lookups in `notes.ts` and the two lookups in `apply.ts` run side by side with `Promise.all`. `settle` stays in turn, since each part is written then read back.
 - [x] **Format files together.** `new.ts` formats the files it wrote side by side. `deploy.ts` rereads only the files Cloudflare asks for, to keep a site out of memory, and `snapshot` in `rules.ts` is how `fixFiles` knows what changed, so both stay.
 - [x] **State is a field, not a string prefix.** `writeSettings`, `checkSettings` and `settle` return `{ text, fixed }`, so `cli.ts` and `new.ts` stop testing `startsWith("fixed: ")`.
-- [ ] **Parse arguments once.** `cli.ts` parses `process.argv` into a command, flags and directories, and a table says which flags each command takes.
+- [x] **Parse flags once.** `settings` and `status` in `cli.ts` take their flags and folder from one `flagged` helper. The other commands take one folder or none, and `pr`, `release` and `new` parse their own, so a table for all of them waits until a command needs it.
 - [ ] **One idea of a beta.** `align.ts` and `notes.ts` share a helper for a prerelease, and one that reads `1.0.0-rc.1+build` correctly.
 
 Three larger changes are decisions of their own, and wait under Later.
