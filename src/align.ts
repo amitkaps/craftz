@@ -246,10 +246,10 @@ function versionsIn(dir: string, repo: string): Deps {
   };
 }
 
-// What a failed step leaves by hand, read from its output by `leftByHand`, or the step's first line
-// when it printed none. A candidate's own version is a tarball, which versions-craftz names in
-// every repository, so it's left out.
-function findings(error: unknown): string[] {
+// What a failed step leaves by hand, read from its output by `leftByHand`, with oxlint's JSON when
+// it ran the lint, or the step's first line when it printed none. A candidate's own version is a
+// tarball, which versions-craftz names in every repository, so it's left out.
+async function findings(error: unknown, dir: string): Promise<string[]> {
   const {
     stdout = "",
     stderr = "",
@@ -259,11 +259,22 @@ function findings(error: unknown): string[] {
     stderr?: string;
     message?: string;
   };
-  const found = leftByHand(`${stdout}\n${stderr}`).filter(
+  const output = `${stdout}\n${stderr}`;
+  const ranLint = /^Found \d+ errors?/m.test(output);
+  const lint = ranLint ? await lintJson(dir) : "";
+  const found = leftByHand(output, lint).filter(
     (line) => !(candidate && line.startsWith("versions-craftz:")),
   );
   return found.length || candidate ? found : [message.split("\n")[0] ?? ""];
 }
+
+// The lint again, in the format that names each error's rule and line. It exits 1 on an error, and
+// its output is what's wanted then.
+const lintJson = (dir: string): Promise<string> =>
+  run("pnpm", ["exec", "vp", "lint", "--format", "json"], { cwd: dir, maxBuffer: 64 << 20 }).then(
+    ({ stdout }) => stdout,
+    (error: { stdout?: string }) => error.stdout ?? "",
+  );
 
 /** @prose
  * # A candidate
@@ -339,8 +350,8 @@ const going = () => states.filter((state) => !state.status);
 const byHand =
   (state: State): Run =>
   (command, ...args) =>
-    sh(state.dir, state.log, command, ...args).catch((error: unknown) => {
-      for (const found of findings(error)) {
+    sh(state.dir, state.log, command, ...args).catch(async (error: unknown) => {
+      for (const found of await findings(error, state.dir)) {
         if (!state.byHand.includes(found)) state.byHand.push(found);
       }
     });

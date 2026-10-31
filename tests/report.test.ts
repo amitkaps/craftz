@@ -84,21 +84,33 @@ test("a move reads as the pull request lists it", () => {
   expect(moveLine({ name: "esbuild", from: "0.25.0" })).toBe("esbuild removed");
 });
 
-// prose's lint, as align's run for 0.13.0 printed it, where the report listed only its `Found`
-// line, once for each step that ran it.
-const lint = `x eslint(no-empty): Unexpected empty block statements
-    ,-[src/page/mode.js:11:9]
- 10 |   }
- 11 | } catch {}
-    \`----
-  x eslint(no-empty): Unexpected empty block statements
-     ,-[tests/build.test.ts:108:13]
- 108 |     } catch {}
-     \`----
-Found 2 errors and 0 warnings in 55 files (4.1s, 8 threads)`;
+// prose's lint as oxlint's JSON prints it, which `align` asks for after a step fails.
+const lint = JSON.stringify({
+  diagnostics: [
+    {
+      code: "eslint(no-empty)",
+      severity: "error",
+      filename: "src/page/mode.js",
+      labels: [{ span: { line: 11 } }],
+    },
+    {
+      code: "eslint(no-empty)",
+      severity: "error",
+      filename: "tests/build.test.ts",
+      labels: [{ span: { line: 108 } }],
+    },
+    {
+      code: "eslint(no-console)",
+      severity: "warning",
+      filename: "src/a.ts",
+      labels: [{ span: { line: 1 } }],
+    },
+  ],
+});
 
 test("what's left by hand names each lint error's rule and line, once", () => {
-  expect(leftByHand(`${lint}\n${lint.replace("4.1s", "2.8s")}`)).toEqual([
+  const found = "Found 2 errors and 0 warnings in 55 files (4.1s, 8 threads)";
+  expect(leftByHand(`${found}\n${found.replace("4.1s", "2.8s")}`, lint)).toEqual([
     "no-empty: src/page/mode.js:11",
     "no-empty: tests/build.test.ts:108",
   ]);
@@ -112,4 +124,9 @@ test("what's left by hand names each lint error's rule and line, once", () => {
       ].join("\n"),
     ),
   ).toEqual(["versions-markz: 0.7.0, not 0.8.0", "Found 1 error and 0 warnings in 9 files"]);
+});
+
+test("a move reads as the pull request lists it", () => {
+  expect(moveLine(prose)).toBe("@amitkaps/prose 0.9.0, from 0.8.0");
+  expect(moveLine({ name: "esbuild", from: "0.25.0" })).toBe("esbuild removed");
 });
