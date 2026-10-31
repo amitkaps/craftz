@@ -6,7 +6,7 @@ This is a package's plan, of what craftz itself does next. Each repository moves
 
 ## Next, in order
 
-- [ ] `craftz status` notes an `e2e` run over its two-minute budget, as it notes a `verify` over ten seconds. [The rules](rules.md#ci) already say it does.
+Nothing is queued.
 
 ## Where it is
 
@@ -19,7 +19,7 @@ This is a package's plan, of what craftz itself does next. Each repository moves
 - **Cloud sessions.** Claude Code's settings and two hooks are craftz's, the same in every repository and the same on a laptop and in the cloud. The session-start hook runs `pnpm install`, then installs Chromium's headless shell where a repository has Playwright. The cloud image ships that shell, so it downloads nothing. [cloud-setup.sh](../reference/cloud-setup.sh) is pasted once into an environment and installs the reference's Node and pnpm. `pnpm pr`, `gone`, `status` and `release` talk to GitHub over REST, which a cloud session's proxy allows. `craftz shot <url> <file.png>` saves a page as a PNG with the repository's Playwright. Cross-repository work, `align`, `new` and `bump`, stays on the laptop.
 - **Files craftz owns.** CI, pnpm's settings, the editor's, Claude Code's and a package's release files are checked word for word against [reference/](../reference/README.md) and written whole, so what a repository adds goes in `verify`.
 - **GitHub's settings.** `craftz settings` writes only what has drifted and reads it back, with `--check` to only read. A package's ruleset requires `label` next to `ci`.
-- **A parallel `verify`.** It runs `check`, `test`, `build` and `site` side by side, so it takes as long as the slowest. It has a 10-second budget, which `status` notes when it's over, naming the slowest step. craftz's own is about 20 seconds. A repository with browser checks runs them as `test:e2e` in an `e2e` workflow, with a two-minute budget the rules state.
+- **A parallel `verify`.** It runs `check`, `test`, `build` and `site` side by side, so it takes as long as the slowest. It has a 10-second budget, which `status` notes when it's over, naming the slowest step. craftz's own is about 20 seconds. A repository with browser checks runs them as `test:e2e` in an `e2e` workflow, with a two-minute budget the rules state, which `status` notes when the last run is over it.
 - **Pull requests.** `pnpm pr` takes the working tree to a pull request that merges itself once CI passes, and `--wait` waits for the merge. `pnpm gone` merges a finished one, deletes what merged and ends on `main`, pulled. Both write `outline.md`, and a failed step stops them with one `craftz: error:` line.
 - **What agents read.** Every `AGENTS.md` opens with the same sections, word for word from the [reference](../reference/AGENTS.md). They say to read the rules by part, with `craftz rules <part>`, a fifth of the whole. They also say to run `pnpm gone` before a change, that `pnpm pr` runs `verify`, to look at a page with `pnpm craftz shot <url> <file.png>`, and where `outline.md` is, which they open if they want it. It isn't imported, since agents never read it unprompted. Across 21 sessions on craftz and visframe, an agent found the same files with the outline loaded, left out or named in a bullet, so the headers stay as they are.
 - **The commands, stated once.** Each command opens its section of [usage](usage.md) with an id, and `craftz help` prints from there. A test fails if cli.ts runs a command usage doesn't state, or the other way, and the README links each one.

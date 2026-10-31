@@ -40,6 +40,14 @@ test("a verify over its budget is noted", async () => {
   expect(await notes({}, npm({}))).toEqual([]);
 });
 
+test("an e2e over its budget is noted", async () => {
+  expect(await notes({}, npm({}), undefined, 130)).toEqual([
+    "test:e2e took 130s on CI, over its 120s budget",
+  ]);
+  expect(await notes({}, npm({}), undefined, 120)).toEqual([]);
+  expect(await notes({}, npm({}), undefined, undefined)).toEqual([]);
+});
+
 test("the reference's graduated beta is noted only in craftz", async () => {
   const graduated = npm({ cf: "1.0.0" });
   expect(await notes({ name: CRAFTZ }, graduated)).toEqual([

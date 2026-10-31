@@ -33,6 +33,9 @@ const EXACT = /^\d+\.\d+\.\d+$/;
 
 /** The seconds `verify` should take on CI, at most. */
 export const BUDGET = 10;
+
+/** The seconds a repository's `test:e2e` should take on CI, at most. */
+export const E2E_BUDGET = 120;
 const numbers = (version: string): number[] => version.split("-")[0]?.split(".").map(Number) ?? [];
 
 // Whether `a` is a later release than `b`, by its numbers.
@@ -61,11 +64,18 @@ function later(a: string, b: string): boolean {
  * `main` that passed. It's a note, not a `✗`, since a slow `verify` isn't broken. It names the
  * step that ended last ([The slowest step](status.ts#the-slowest-step)), so a slow one is measured
  * before anyone guesses at it.
+ *
+ * # A slow test:e2e
+ *
+ * A repository with browser checks runs `test:e2e` in an `e2e` workflow, on pull requests, with a
+ * budget of two minutes ([the rules](../docs/rules.md#ci)). The time is that step in the latest
+ * `e2e` run that passed, so it's a note too, and a repository without the workflow has none.
  */
 export async function notes(
   pkg: Pkg,
   latest: Latest = fromNpm,
   verified?: Verified,
+  e2e?: number,
 ): Promise<string[]> {
   const deps = { ...pkg.dependencies, ...pkg.devDependencies };
   const found: string[] = [];
@@ -73,6 +83,9 @@ export async function notes(
     const { step, at } = verified.slowest ?? {};
     const slowest = step ? `, and its slowest step, ${step}, ended ${at}s in` : "";
     found.push(`verify took ${verified.seconds}s on CI, over its ${BUDGET}s budget${slowest}`);
+  }
+  if (e2e !== undefined && e2e > E2E_BUDGET) {
+    found.push(`test:e2e took ${e2e}s on CI, over its ${E2E_BUDGET}s budget`);
   }
   const own = deps[CRAFTZ];
   if (own && EXACT.test(own)) {
