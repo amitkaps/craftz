@@ -136,7 +136,7 @@ async function live(dir: string, log: boolean, full: boolean, timed: boolean): P
   if (full && release) console.log(`\n${release.body.trim()}`);
   else if (summary) console.log(`\n${summary}`);
   if (log && build) console.log(`\n${buildLog(build).join("\n")}`);
-  if (timed) console.log(`\n${timing(repo).join("\n")}`);
+  if (timed) console.log(`\n${(await timing(repo)).join("\n")}`);
   return failed;
 }
 
