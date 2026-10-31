@@ -6,20 +6,9 @@ This is a package's plan, of what craftz itself does next. Each repository moves
 
 ## Next, in order
 
-A whole-repository audit for reuse, simplification, efficiency and altitude found these. Each step is its own pull request.
+- [ ] **Read pull requests' timelines from GitHub.** `status --timing` guesses that a pull request fell behind from a merge commit's title, and attributes runs by a 60-second window. GitHub's timeline events state both.
 
-- [x] **Remove dead code.** `fixGitHub` and `SHARED` in `src/rules.ts` and `rebuild` in `src/settings.ts` are exported and used nowhere. The comment on `rebuild` says align uses it, which it doesn't.
-- [x] **One `gh` and one command runner.** `status.ts`, `settings.ts`, `gone.ts`, `release.ts` and `survey.ts` each wrap `gh` by hand, and `pr.ts`, `gone.ts`, `align.ts` and `reference.ts` each run a command and trim its output. Export one of each, and have `survey.ts` call `githubLogin()` for the token.
-- [x] **One reader for `package.json` and JSON.** `readPkg` and `readJson` are in `src/reference.ts`, and `align.ts`, `cli.ts` and `rules.ts` use them. `moveOn` in `cli.ts` no longer parses the file inline.
-- [x] **One `isCraftz(pkg)`.** It replaces the inline name checks in `notes.ts`, `reference.ts` and `cli.ts`, and the `"craftz"` literal in `rules.ts` that `CRAFTZ` names.
-- [x] **One `tmp(prefix)` in `tests/temp.ts`.** It replaces about 25 `mkdtempSync` calls in the tests.
-- [x] **Run independent work together.** `addresses` in `status.ts`, the beta lookups in `notes.ts` and the two lookups in `apply.ts` run side by side with `Promise.all`. `settle` stays in turn, since each part is written then read back.
-- [x] **Format files together.** `new.ts` formats the files it wrote side by side. `deploy.ts` rereads only the files Cloudflare asks for, to keep a site out of memory, and `snapshot` in `rules.ts` is how `fixFiles` knows what changed, so both stay.
-- [x] **State is a field, not a string prefix.** `writeSettings`, `checkSettings` and `settle` return `{ text, fixed }`, so `cli.ts` and `new.ts` stop testing `startsWith("fixed: ")`.
-- [x] **Parse flags once.** `settings` and `status` in `cli.ts` take their flags and folder from one `flagged` helper. The other commands take one folder or none, and `pr`, `release` and `new` parse their own, so a table for all of them waits until a command needs it.
-- [x] **One idea of a beta.** `isPrerelease` and `graduated` are in `src/reference.ts`, and `align.ts` and `notes.ts` use them. Build metadata after `+` isn't read as a tag.
-
-Three larger changes are decisions of their own, and wait under Later.
+Deriving each rule's fix from its check is a decision of its own, and waits under Later.
 
 ## Where it is
 
@@ -28,6 +17,7 @@ Three larger changes are decisions of their own, and wait under Later.
 - **`craftz upgrade`.** One command moves a repository to the latest craftz and runs that version's fix, and align runs its steps in a clone of each repository.
 - **The rules, checked and fixed.** [The rules](rules.md) are worded once, and their checks and fixes are in [src/](../src/), against the files in [reference/](../reference/README.md). `craftz rules`, `check` and `fix` run them from the installed version, and a second `fix` changes nothing. The rules are read with markz's reader, which craftz bundles, and each finding prints in markz's line, as prose's do. Every `check` runs `pnpm craftz check`, so each pull request is checked against the craftz it installs. craftz checks itself from source, since the version it installs can't hold the rules it's changing. Its tests install the package `pnpm pack` writes, as a repository would, so a file the package leaves out fails a test here. Each rule is yes or no. A repository holds a rule a tool blocks in its own `package.json`, which `check` prints as a warning. `check` reads only the folder's files, and `status` notes a newer craftz and a graduated beta, from npm.
 - **Practice.** Ten principles the repositories' lessons share are a part of [the rules](rules.md), three before the code, four while writing it and three after it runs. Each repository's `lessons.md` groups its lessons under the principle each one shows, and `craftz check` holds every link from it into the rules to an id the installed craftz has. `toolchain-lint` turns on `no-empty`, so an empty `catch` says why.
+- **Smaller modules, one way.** A whole-repository audit removed dead code and gave one `gh`, one command runner, one reader for `package.json` and JSON, one `isCraftz`, one `isPrerelease`, one `tmp` for the tests and one `flagged` for flags. Independent lookups run together, and settings results carry a `fixed` field. The rules are split by the part of [the rules](rules.md) each id starts with, one module each in [src/rules/](../src/rules/), joined in the doc's order by `src/rules.ts`. align reads lint errors from oxlint's JSON.
 - **One way in craftz's own code.** A command takes a temporary folder from one module, which removes it when the run ends, and a test fails a `mkdtemp` anywhere else in `src/`. One helper reads a file as it is on `main`, for `status` and `release`.
 - **GitHub's settings.** `craftz settings` writes only what has drifted and reads it back, with `--check` to only read. A package's ruleset requires `label` next to `ci`.
 - **One toolchain.** Each config writes out its `fmt` and `lint`, and each `tsconfig.json` its compiler options, which `check` compares with the rules and `fix` writes in. A package writes out its publint, Oxc's types and platform, Node unless it runs in browsers too, and a site Vite bundles writes out its browsers. A package for browsers leaves Node's own modules out of its bundle. A static site's `cloudflare.config.ts` is cf's own format, writing out its Worker's date and addresses, and it names the site's own folder, and nothing guesses one. A static site is built by Vite from an `index.html`, by SvelteKit's static adapter, or by `prose build`. `craftz deploy` uploads it, or runs wrangler for an app, and tries a bucket again when Cloudflare fails on its side.
@@ -43,9 +33,8 @@ Three larger changes are decisions of their own, and wait under Later.
 
 ## Later
 
-- Each rule's fix in [src/rules/](../src/rules/) is written beside its check, and the two can disagree, like `cloudflare-static`. Deriving the fix from the check would end that.
+- Each rule's fix in [src/rules/](../src/rules/) is written beside its check, and the two can disagree, like `cloudflare-static`. Deriving the fix from the check would end that. Try it on one part first, like [cloudflare.ts](../src/rules/cloudflare.ts).
 - `worker.ts` reads `wrangler.toml` with regexes, and `directory` matches under any table. A real parser or dropping `wrangler.toml` fixes it, and the choice depends on when the app leaves wrangler.
-- `status --timing` guesses that a pull request fell behind from a merge commit's title and attributes runs by a 60-second window. GitHub's timeline events state both.
 - Cloudflare's error `[12040]` is matched in a message in `settings.ts`. A small client with typed errors would hold every code's meaning in one place.
 - `cli.ts` imports every command at startup, though only `new` loads lazily. It waits until startup time is a cost someone feels.
 - The beta packages that [`versions-beta`](rules.md#versions-beta) names move to their releases when they graduate, which align reports.
