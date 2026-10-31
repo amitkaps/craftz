@@ -239,5 +239,4 @@ export const TOOLCHAIN_RULES: Rule[] = [
     },
   },
   owns("toolchain-editor", EDITOR),
-  owns("toolchain-editor", EDITOR),
 ];
