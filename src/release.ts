@@ -5,10 +5,12 @@
  * names. Once CI passes it merges, and the package's release workflow does the rest. A package
  * runs it as `pnpm craftz release`, like `pr` and `status`.
  *
- * It works on GitHub, not in the folder, so it releases what's on `main`, whatever branch the
- * folder is on and whatever it has changed. It needs `gh` logged in. It sets `version` in
- * `package.json` on a branch named `release-X.Y.Z`, then opens a pull request titled `vX.Y.Z`,
- * labelled `internal`, and turns on auto-merge.
+ * It releases what's on `main`, whatever branch the folder is on and whatever it has changed. It
+ * builds a commit on `origin/main` with git's plumbing, so the folder's branch, index and files
+ * stay as they are, and pushes it as `release-X.Y.Z`. It needs `gh` logged in and a folder that
+ * can push. That is the same in a laptop's checkout and a Claude Code cloud session, whose proxy
+ * refuses the API calls that would make the branch. The commit sets `version` in `package.json`.
+ * Then it opens a pull request titled `vX.Y.Z`, labelled `internal`, and turns on auto-merge.
  *
  * The pull request's description is the release's summary, which goes above the generated notes.
  * `--notes "…"` gives it, and without that the editor opens for it. Left empty, the release has
@@ -27,7 +29,8 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { OWNER, gh, onMain } from "./reference.ts";
+import { autoMerge, createPull } from "./github.ts";
+import { OWNER, onMain } from "./reference.ts";
 import { origin } from "./survey.ts";
 import { temporary } from "./temp.ts";
 
@@ -109,52 +112,35 @@ export function release(dir: string, args: string[]): void {
   }
   const notes = given ?? editor();
 
-  const main = gh("api", `${api}/git/ref/heads/main`, "--jq", ".object.sha").trim();
-  gh(
-    "api",
-    "--method",
-    "POST",
-    `${api}/git/refs`,
-    "-f",
-    `ref=refs/heads/${branch}`,
-    "-f",
-    `sha=${main}`,
-  );
-  gh(
-    "api",
-    "--method",
-    "PUT",
-    `${api}/contents/package.json`,
-    "-f",
-    `message=${tag}`,
-    "-f",
-    `content=${Buffer.from(bumped).toString("base64")}`,
-    "-f",
-    `sha=${file.sha}`,
-    "-f",
-    `branch=${branch}`,
-  );
+  const git = (args: string[], env: NodeJS.ProcessEnv = {}): string =>
+    execFileSync("git", args, {
+      cwd: dir,
+      encoding: "utf8",
+      env: { ...process.env, ...env },
+      stdio: ["ignore", "pipe", "pipe"],
+    }).trim();
+  git(["fetch", "--quiet", "origin", "main"]);
+  const [mode, , blob] = git(["ls-tree", "origin/main", "package.json"]).split(/\s+/);
+  if (blob !== file.sha)
+    fail(`${repo}'s package.json changed on main while this ran. Run it again.`);
 
-  const R = `${OWNER}/${repo}`;
-  const url = gh(
-    "pr",
-    "create",
-    "-R",
-    R,
-    "--base",
-    "main",
-    "--head",
-    branch,
-    "--title",
-    tag,
-    "--label",
-    "internal",
-    "--body",
-    notes,
-  ).trim();
-  gh("pr", "merge", url, "--auto", "--squash");
+  // A commit built apart from the folder's index, so what the folder has changed stays as it is.
+  const apart = { GIT_INDEX_FILE: join(temporary("release-"), "index") };
+  const bumpedBlob = execFileSync("git", ["hash-object", "-w", "--stdin"], {
+    cwd: dir,
+    encoding: "utf8",
+    input: bumped,
+  }).trim();
+  git(["read-tree", "origin/main"], apart);
+  git(["update-index", "--cacheinfo", `${mode},${bumpedBlob},package.json`], apart);
+  const commit = git(["commit-tree", git(["write-tree"], apart), "-p", "origin/main", "-m", tag]);
+  git(["push", "--quiet", "origin", `${commit}:refs/heads/${branch}`]);
 
-  console.log(`✓ ${url}`);
+  const where = { cwd: dir, repo: `${OWNER}/${repo}` };
+  const made = createPull(branch, tag, notes, "internal", where);
+  autoMerge(made.number, where);
+
+  console.log(`✓ ${made.url}`);
   console.log(
     "  Once it merges, approve the staged version on npmjs.com, or with npm stage approve.",
   );
