@@ -16,8 +16,8 @@ This repository follows [craftz's rules](https://craftz.amitkaps.com/docs/rules.
 
 Explanations go in `@prose` comments, and every Markdown file is prose too.
 
-- Run `pnpm prose rules` before your first edit to a `@prose` comment or a `.md` file, and again after the conversation is summarized. Changing code a `@prose` comment explains counts as an edit.
-- After writing, run `pnpm prose style <files>` on the files you changed, and take its advice where it reads better.
+- Run `pnpm prose rules` once before your first edit to a `@prose` comment or a `.md` file, and again after the conversation is summarized. A code change counts only when it changes what the comment states, so a rename or a lint fix doesn't.
+- After writing prose, run `pnpm prose style <files>` on those files, and take its advice where it reads better. It's advice and never fails. `prose check` runs in `verify` and does, like a folder with no `README.md`.
 
 ## Outline
 
