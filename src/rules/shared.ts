@@ -66,7 +66,7 @@ export const recommended = (json: Json): string[] =>
  * Two follow from the repository's axes. pnpm's override points `vite` at the Vite+ the
  * repository installs, so a Vite+ that's behind drifts once, in `versions-vite-plus`. A
  * repository that depends on Svelte adds its editor settings, from
- * [svelte/](../reference/svelte/README.md), whether it deploys an app or a static site. The
+ * [svelte/](../../reference/svelte/README.md), whether it deploys an app or a static site. The
  * editor's files are compared as JSON, since `vp fmt` lays them out.
  */
 export type Axes = { vitePlus?: string; svelte: boolean };
@@ -153,7 +153,7 @@ export const EDITOR = [".vscode/settings.json", ".vscode/extensions.json"];
  * # Releases
  *
  * A package releases the way every package does, with the files in
- * [package/](../reference/package/README.md) copied in unchanged: the release workflow, the notes'
+ * [package/](../../reference/package/README.md) copied in unchanged: the release workflow, the notes'
  * config, and the `label` workflow that checks a pull request has one.
  */
 export const RELEASE_FILES = [
