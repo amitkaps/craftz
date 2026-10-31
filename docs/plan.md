@@ -13,7 +13,7 @@ A whole-repository audit for reuse, simplification, efficiency and altitude foun
 - [x] **One reader for `package.json` and JSON.** `readPkg` and `readJson` are in `src/reference.ts`, and `align.ts`, `cli.ts` and `rules.ts` use them. `moveOn` in `cli.ts` no longer parses the file inline.
 - [x] **One `isCraftz(pkg)`.** It replaces the inline name checks in `notes.ts`, `reference.ts` and `cli.ts`, and the `"craftz"` literal in `rules.ts` that `CRAFTZ` names.
 - [x] **One `tmp(prefix)` in `tests/temp.ts`.** It replaces about 25 `mkdtempSync` calls in the tests.
-- [ ] **Run independent work together.** `status`, `addresses`, the beta lookups in `notes.ts` and the lookups in `apply.ts` await calls one after another that don't depend on each other. Use `Promise.all`, and fetch each repository's branch rules and labels once per `settle`.
+- [x] **Run independent work together.** `addresses` in `status.ts`, the beta lookups in `notes.ts` and the two lookups in `apply.ts` run side by side with `Promise.all`. `settle` stays in turn, since each part is written then read back.
 - [ ] **Don't read or encode a file twice.** `deploy.ts` encodes each asset to hash it and again to upload it, and `new.ts` formats files one at a time and reads back what it just wrote. `snapshot` in `rules.ts` reads the whole tree.
 - [ ] **State is a field, not a string prefix.** `writeSettings` and `checkSettings` return `{ text, fixed }`, so `cli.ts` and `new.ts` stop testing `startsWith("fixed: ")`. `leftByHand` in `report.ts` reads oxlint's JSON output, not its printed frames.
 - [ ] **Parse arguments once.** `cli.ts` parses `process.argv` into a command, flags and directories, and a table says which flags each command takes.
