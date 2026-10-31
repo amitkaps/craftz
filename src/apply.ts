@@ -88,36 +88,43 @@ async function read(part: Part): Promise<string[] | Error> {
 }
 
 /** What has drifted, with nothing written. Each line is one setting, or one that couldn't be read. */
-export async function checkSettings(target: Target): Promise<string[]> {
+export async function checkSettings(target: Target): Promise<Outcome[]> {
   const found = await Promise.all(parts(target).map(read));
-  const lines = found.flatMap((it) => (it instanceof Error ? [it.message] : it));
-  if (hasClassic(target.repo)) lines.push("classic branch protection is on main");
+  const lines = found.flatMap((it) => (it instanceof Error ? [it.message] : it)).map(says);
+  if (hasClassic(target.repo)) lines.push(says("classic branch protection is on main"));
   if (target.site && target.noCloudflare)
-    lines.push(`not checked: ${target.site.name}'s build settings, since ${target.noCloudflare}`);
+    lines.push(
+      says(`not checked: ${target.site.name}'s build settings, since ${target.noCloudflare}`),
+    );
   return lines;
 }
 
 // How many more times a write is read back, `wait` apart, before it's still off.
 const RETRIES = 5;
 
+/** A line of the report, and whether it says a write took hold. */
+export type Outcome = { text: string; fixed: boolean };
+
+const says = (text: string): Outcome => ({ text, fixed: false });
+
 /** Each part read, written when it has drifted, and read back, in turn. */
-export async function settle(all: Part[], wait = 2_000): Promise<string[]> {
-  const lines: string[] = [];
+export async function settle(all: Part[], wait = 2_000): Promise<Outcome[]> {
+  const lines: Outcome[] = [];
   for (const part of all) {
     const before = await read(part);
     if (before instanceof Error) {
-      lines.push(`failed: ${before.message}`);
+      lines.push(says(`failed: ${before.message}`));
       continue;
     }
     if (!before.length) continue;
     try {
       const left = part.write() ?? [];
       if (left.length) {
-        lines.push(...left);
+        lines.push(...left.map(says));
         continue;
       }
     } catch (error) {
-      lines.push(`failed: ${part.name}: ${reason(error)}`);
+      lines.push(says(`failed: ${part.name}: ${reason(error)}`));
     }
     let after = await read(part);
     for (let tries = 0; tries < RETRIES && Array.isArray(after) && after.length; tries++) {
@@ -125,11 +132,15 @@ export async function settle(all: Part[], wait = 2_000): Promise<string[]> {
       after = await read(part);
     }
     if (after instanceof Error) {
-      lines.push(`failed: ${after.message}`);
+      lines.push(says(`failed: ${after.message}`));
       continue;
     }
-    lines.push(...before.filter((line) => !after.includes(line)).map((line) => `fixed: ${line}`));
-    lines.push(...after.map((line) => `still off: ${line}`));
+    lines.push(
+      ...before
+        .filter((line) => !after.includes(line))
+        .map((line) => ({ text: `fixed: ${line}`, fixed: true })),
+    );
+    lines.push(...after.map((line) => says(`still off: ${line}`)));
   }
   return lines;
 }
@@ -138,19 +149,19 @@ export async function settle(all: Part[], wait = 2_000): Promise<string[]> {
  * Writes each part that has drifted, then reads it back. With `removing`, classic branch
  * protection is removed too. Without it, it's left and reported.
  */
-export async function writeSettings(target: Target, removing = false): Promise<string[]> {
+export async function writeSettings(target: Target, removing = false): Promise<Outcome[]> {
   const lines = await settle(parts(target));
   if (hasClassic(target.repo)) {
     if (removing) removeClassic(target.repo);
     lines.push(
       !removing
-        ? "left: classic branch protection on main, which craftz settings --yes removes"
+        ? says("left: classic branch protection on main, which craftz settings --yes removes")
         : hasClassic(target.repo)
-          ? "still off: classic branch protection is on main"
-          : "fixed: classic branch protection is off main",
+          ? says("still off: classic branch protection is on main")
+          : { text: "fixed: classic branch protection is off main", fixed: true },
     );
   }
   if (target.site && target.noCloudflare)
-    lines.push(`left: ${target.site.name}'s build settings, since ${target.noCloudflare}`);
+    lines.push(says(`left: ${target.site.name}'s build settings, since ${target.noCloudflare}`));
   return lines;
 }

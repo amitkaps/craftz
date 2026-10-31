@@ -15,7 +15,7 @@ A whole-repository audit for reuse, simplification, efficiency and altitude foun
 - [x] **One `tmp(prefix)` in `tests/temp.ts`.** It replaces about 25 `mkdtempSync` calls in the tests.
 - [x] **Run independent work together.** `addresses` in `status.ts`, the beta lookups in `notes.ts` and the two lookups in `apply.ts` run side by side with `Promise.all`. `settle` stays in turn, since each part is written then read back.
 - [x] **Format files together.** `new.ts` formats the files it wrote side by side. `deploy.ts` rereads only the files Cloudflare asks for, to keep a site out of memory, and `snapshot` in `rules.ts` is how `fixFiles` knows what changed, so both stay.
-- [ ] **State is a field, not a string prefix.** `writeSettings` and `checkSettings` return `{ text, fixed }`, so `cli.ts` and `new.ts` stop testing `startsWith("fixed: ")`. `leftByHand` in `report.ts` reads oxlint's JSON output, not its printed frames.
+- [x] **State is a field, not a string prefix.** `writeSettings`, `checkSettings` and `settle` return `{ text, fixed }`, so `cli.ts` and `new.ts` stop testing `startsWith("fixed: ")`.
 - [ ] **Parse arguments once.** `cli.ts` parses `process.argv` into a command, flags and directories, and a table says which flags each command takes.
 - [ ] **One idea of a beta.** `align.ts` and `notes.ts` share a helper for a prerelease, and one that reads `1.0.0-rc.1+build` correctly.
 
@@ -47,6 +47,7 @@ Three larger changes are decisions of their own, and wait under Later.
 - `worker.ts` reads `wrangler.toml` with regexes, and `directory` matches under any table. A real parser or dropping `wrangler.toml` fixes it, and the choice depends on when the app leaves wrangler.
 - `status --timing` guesses that a pull request fell behind from a merge commit's title and attributes runs by a 60-second window. GitHub's timeline events state both.
 - Cloudflare's error `[12040]` is matched in a message in `settings.ts`. A small client with typed errors would hold every code's meaning in one place.
+- `leftByHand` in `report.ts` scrapes oxlint's printed frames. Reading its JSON output would end that, but it means running the step with another format, which `align` doesn't yet.
 - `cli.ts` imports every command at startup, though only `new` loads lazily. It waits until startup time is a cost someone feels.
 - The beta packages that [`versions-beta`](rules.md#versions-beta) names move to their releases when they graduate, which align reports.
 - The app moves to cf when SvelteKit's adapter writes cf's Build Output, and wrangler leaves the reference with it.
