@@ -1,7 +1,7 @@
 /** @prose
  * # GitHub over REST
  *
- * `pr`, `gone` and `status` talk to GitHub through `gh api`, never through `gh pr …` or GraphQL.
+ * `pr`, `gone`, `status` and `release` talk to GitHub through `gh api`, never through `gh pr …` or GraphQL.
  * REST works the same on a laptop and in the cloud, so there's one path and no check for where
  * it runs.
  *
@@ -39,7 +39,7 @@ export function repoIn(cwd?: string): string {
 /** A page of 100 pull requests is about a megabyte, past `execFileSync`'s default cap. */
 const MAX_BUFFER = 256 * 1024 * 1024;
 
-type Where = { cwd?: string; repo?: string };
+export type Where = { cwd?: string; repo?: string };
 
 /** Calls the REST API. `{repo}` in the path is `owner/name`, from `origin` unless given. */
 export function api<T>(method: string, path: string, body?: object, where: Where = {}): T {
@@ -120,21 +120,31 @@ export const pullNumber = (number: number): Pull =>
   pullOf(api<Raw>("GET", `repos/{repo}/pulls/${number}`));
 
 /** Opens a pull request into `main` from a pushed branch, with its label. */
-export function createPull(branch: string, title: string, body: string, label?: string): Pull {
+export function createPull(
+  branch: string,
+  title: string,
+  body: string,
+  label?: string,
+  where: Where = {},
+): Pull {
   const made = pullOf(
-    api<Raw>("POST", "repos/{repo}/pulls", { title, head: branch, base: "main", body }),
+    api<Raw>("POST", "repos/{repo}/pulls", { title, head: branch, base: "main", body }, where),
   );
-  if (label) api("POST", `repos/{repo}/issues/${made.number}/labels`, { labels: [label] });
+  if (label) {
+    api("POST", `repos/{repo}/issues/${made.number}/labels`, { labels: [label] }, where);
+  }
   return made;
 }
 
 /** Turns on auto-merge, by the cloud's route if there is one and by GraphQL if not. */
-export function autoMerge(number: number): void {
+export function autoMerge(number: number, where: Where = {}): void {
   try {
-    api("PUT", `repos/{repo}/pulls/${number}/ccr/auto_merge`, { merge_method: "squash" });
+    api("PUT", `repos/{repo}/pulls/${number}/ccr/auto_merge`, { merge_method: "squash" }, where);
   } catch (error) {
     if (!String(error).includes("HTTP 404")) throw error;
-    execFileSync("gh", ["pr", "merge", String(number), "--auto", "--squash"], {
+    const repo = where.repo ? ["--repo", where.repo] : [];
+    execFileSync("gh", ["pr", "merge", String(number), "--auto", "--squash", ...repo], {
+      cwd: where.cwd,
       stdio: ["ignore", "pipe", "pipe"],
     });
   }
