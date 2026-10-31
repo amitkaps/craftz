@@ -127,7 +127,7 @@ pnpm verify    # what CI runs
 pnpm add @${OWNER}/${name}
 \`\`\`
 
-It needs Node 26.12.1 or newer, the Node it's built and tested on.
+It needs Node 26.13.0 or newer, the Node it's built and tested on.
 
 ## Use
 

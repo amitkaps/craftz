@@ -207,7 +207,7 @@ ${intro}
 
 function readme(name: string, shape: Shape, description: string): string {
   const install = shape.package
-    ? `\n## Install\n\n\`\`\`sh\npnpm add @${OWNER}/${name}\n\`\`\`\n\nIt needs Node 26.12.1 or newer, the Node it's built and tested on.\n`
+    ? `\n## Install\n\n\`\`\`sh\npnpm add @${OWNER}/${name}\n\`\`\`\n\nIt needs Node 26.13.0 or newer, the Node it's built and tested on.\n`
     : "";
   return `# ${name}
 

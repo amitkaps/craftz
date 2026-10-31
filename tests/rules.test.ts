@@ -140,8 +140,8 @@ test("a build for browsers targets this repository's browsers", () => {
       files: { "vite.config.ts": config(keys) },
       worker: deploys ? { deploys: "app", directory } : undefined,
     } as unknown as Repo)?.drift;
-  const pkg: Pkg = { engines: { node: ">=26.12.1" } };
-  const browsers = `[${list}, "node26.12.1"]`;
+  const pkg: Pkg = { engines: { node: ">=26.13.0" } };
+  const browsers = `[${list}, "node26.13.0"]`;
   expect(BROWSERS.length).toBeGreaterThan(0);
   expect(drift(`pack: { platform: "node" }`, false, pkg)).toEqual([]);
   expect(drift(`pack: { entry: ["src/index.ts"] }`, false, pkg)).toEqual([
