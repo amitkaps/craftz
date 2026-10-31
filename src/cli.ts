@@ -209,6 +209,18 @@ async function settings(dir: string, checking: boolean, yes: boolean): Promise<b
   return off.length > 0;
 }
 
+// The flags and the one folder a command takes, or its usage when it was given anything else.
+function flagged(allowed: string[]): { flags: string[]; dir: string } {
+  const given = [arg, ...rest].filter((it) => it !== undefined);
+  const flags = given.filter((it) => it.startsWith("--"));
+  const dirs = given.filter((it) => !it.startsWith("--"));
+  if (dirs.length > 1 || flags.some((flag) => !allowed.includes(flag))) {
+    console.error(help());
+    process.exit(1);
+  }
+  return { flags, dir: resolve(dirs[0] ?? ".") };
+}
+
 if (command === "rules" && !rest.length) {
   if (!arg) {
     process.stdout.write(printed());
@@ -236,27 +248,13 @@ if (command === "rules" && !rest.length) {
 } else if (command === "upgrade" && !arg) {
   process.exitCode = await moveOn(process.cwd());
 } else if (command === "settings") {
-  const flags = [arg, ...rest].filter((it) => it?.startsWith("--"));
-  const dirs = [arg, ...rest].filter((it) => it !== undefined && !it.startsWith("--"));
-  if (dirs.length > 1 || flags.some((f) => f !== "--check" && f !== "--yes")) {
-    console.error(help());
-    process.exit(1);
-  }
-  const off = await settings(
-    resolve(dirs[0] ?? "."),
-    flags.includes("--check"),
-    flags.includes("--yes"),
-  );
+  const { flags, dir } = flagged(["--check", "--yes"]);
+  const off = await settings(dir, flags.includes("--check"), flags.includes("--yes"));
   process.exitCode = off ? 1 : 0;
 } else if (command === "status") {
-  const flags = [arg, ...rest].filter((it) => it?.startsWith("--"));
-  const dirs = [arg, ...rest].filter((it) => it !== undefined && !it.startsWith("--"));
-  if (dirs.length > 1 || flags.some((f) => !["--log", "--notes", "--timing"].includes(f ?? ""))) {
-    console.error(help());
-    process.exit(1);
-  }
+  const { flags, dir } = flagged(["--log", "--notes", "--timing"]);
   const failed = await live(
-    resolve(dirs[0] ?? "."),
+    dir,
     flags.includes("--log"),
     flags.includes("--notes"),
     flags.includes("--timing"),
