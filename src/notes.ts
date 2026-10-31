@@ -10,7 +10,7 @@
  * repository to a new craftz anyway. `status` already reads npm, and is run on purpose. When npm
  * can't be reached in a few seconds, there's no note.
  */
-import { CRAFTZ, type Pkg, VERSIONS, isCraftz } from "./reference.ts";
+import { CRAFTZ, type Pkg, VERSIONS, graduated, isCraftz, isPrerelease } from "./reference.ts";
 import { betas } from "./rules.ts";
 import type { Verified } from "./status.ts";
 
@@ -84,12 +84,12 @@ export async function notes(
   if (isCraftz(pkg)) {
     const pending = betas().flatMap((name) => {
       const beta = VERSIONS[name];
-      return beta?.includes("-") ? [{ name, beta }] : [];
+      return beta && isPrerelease(beta) ? [{ name, beta }] : [];
     });
     const newest = await Promise.all(pending.map(({ name }) => latest(name)));
     pending.forEach(({ name, beta }, i) => {
       const out = newest[i];
-      if (out && !out.includes("-") && (numbers(out)[0] ?? 0) >= (numbers(beta)[0] ?? 0)) {
+      if (out && graduated(beta, out)) {
         found.push(
           `${name} ${out} is a release of the beta ${beta}, so it can leave versions-beta`,
         );
