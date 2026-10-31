@@ -21,16 +21,16 @@ import { EDITOR, type Json, drifted, editFile, owns, writeJson, writePkg } from 
  * # The toolchain
  *
  * A repository's `tsconfig.json` writes out the compiler options of
- * [the reference's](../reference/tsconfig.json), and its own `include`. It extends nothing.
+ * [the reference's](../../reference/tsconfig.json), and its own `include`. It extends nothing.
  *
  * So the editor and `vp check` read the options from the file, and the types work without craftz
- * installed. It's parsed as [config.ts](config.ts) parses a config, which takes the comments
+ * installed. It's parsed as [config.ts](../config.ts) parses a config, which takes the comments
  * and trailing commas a tsconfig allows. Each option is compared, so the check names the ones
  * that differ. The fix keeps `include` and writes the rest, so a repository's own options and
  * comments go.
  *
  * The `fmt` and `lint` blocks are read from the parsed `vite.config.ts` too, a value at a time
- * from [ruled.ts](ruled.ts), and the fix writes each one that differs, as edit.ts does. A
+ * from [ruled.ts](../ruled.ts), and the fix writes each one that differs, as edit.ts does. A
  * package's `pack` is read the same way, by the releases' rules.
  */
 export const OPTIONS = (JSON.parse(read(join(here, "tsconfig.json"))) as { compilerOptions: Json })
@@ -67,7 +67,7 @@ export const WORKER = {
 /** @prose
  * # The browsers
  *
- * The list comes from [browsers.ts](browsers.ts). A package runs in Node, with `platform: "node"`
+ * The list comes from [browsers.ts](../browsers.ts). A package runs in Node, with `platform: "node"`
  * and no `pack.target`. One that runs in browsers too packs for `"neutral"`, and targets the list
  * and the Node its `engines` asks for. A package is read as one for browsers when it packs for
  * `"neutral"` or targets a browser, so the fix keeps it there.
