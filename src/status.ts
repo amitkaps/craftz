@@ -336,6 +336,39 @@ export function verifyTook(repo: string): Verified | undefined {
   }
 }
 
+/** What the `test:e2e` step took in the latest `e2e` run that passed, in seconds, or `undefined`
+ *  when a repository has no `e2e` workflow, no run passed, or GitHub can't be read. The workflow
+ *  runs on pull requests, so the run isn't on `main`. */
+export function e2eTook(repo: string): number | undefined {
+  try {
+    const [run] = JSON.parse(
+      gh(
+        "run",
+        "list",
+        "-R",
+        `${OWNER}/${repo}`,
+        "--workflow",
+        "e2e.yml",
+        "--status",
+        "success",
+        "--limit",
+        "1",
+        "--json",
+        "databaseId",
+      ),
+    ) as { databaseId: number }[];
+    if (!run) return undefined;
+    const { jobs } = JSON.parse(
+      gh("api", `repos/${OWNER}/${repo}/actions/runs/${run.databaseId}/jobs`),
+    ) as { jobs: { steps: { name: string; started_at: string; completed_at: string }[] }[] };
+    const step = jobs.flatMap((job) => job.steps).find((it) => it.name.includes("test:e2e"));
+    if (!step) return undefined;
+    return Math.round((Date.parse(step.completed_at) - Date.parse(step.started_at)) / 1000);
+  } catch {
+    return undefined;
+  }
+}
+
 /** The lines of a build's log. */
 export function buildLog(uuid: string): string[] {
   const log = cf("builds", "logs", "get", uuid) as { lines: [number, string][] };
