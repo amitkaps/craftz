@@ -2,13 +2,13 @@
  * # The agents rules
  *
  * The rules under [Agents](../../docs/rules.md#agents): the sections of `AGENTS.md` every
- * repository shares with craftz's, and `outline.md` kept out of git.
+ * repository shares with craftz's, `outline.md` kept out of git, and Claude Code's settings.
  */
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { here, read } from "../reference.ts";
 import type { Rule } from "../rules.ts";
-import { drifted } from "./shared.ts";
+import { CLAUDE, drifted, owns } from "./shared.ts";
 
 /** @prose
  * # The agents' instructions
@@ -93,4 +93,5 @@ export const AGENTS_RULES: Rule[] = [
       },
     },
   },
+  owns("agents-claude", CLAUDE),
 ];

@@ -147,6 +147,13 @@ export function owns(
 export const WORKSPACE = "pnpm-workspace.yaml";
 export const CI = ".github/workflows/ci.yml";
 
+/** Claude Code's settings and the two hooks they run, the same in every repository. */
+export const CLAUDE = [
+  ".claude/settings.json",
+  ".claude/hooks/session-start.sh",
+  ".claude/hooks/suggest-clear.sh",
+];
+
 export const EDITOR = [".vscode/settings.json", ".vscode/extensions.json"];
 
 /** @prose
