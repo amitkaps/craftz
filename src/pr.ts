@@ -26,6 +26,16 @@
 import { existsSync, readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 import { gone, step, writeOutline } from "./gone.ts";
+import {
+  autoMerge,
+  checksOn,
+  createPull,
+  openPulls,
+  pullFrom,
+  pullNumber,
+  squashMerge,
+  updateBranch,
+} from "./github.ts";
 import { capture } from "./reference.ts";
 
 function fail(message: string): never {
@@ -134,9 +144,7 @@ export async function pr(args: string[]): Promise<void> {
   let found: (BranchPr & { headRefOid: string; url: string }) | undefined;
   if (branch !== "main") {
     try {
-      found = JSON.parse(
-        output("gh", "pr", "view", branch, "--json", "number,title,state,headRefOid,url"),
-      ) as BranchPr & { headRefOid: string; url: string };
+      found = pullFrom(branch);
     } catch {
       // A branch with no pull request, or no `gh`, starts as a new one.
     }
@@ -144,11 +152,7 @@ export async function pr(args: string[]): Promise<void> {
   let start = startOn(branch, title, found);
   if ("stop" in start) fail(start.stop);
   if (start.from !== "here") {
-    const search = ["--state", "open", "--search", `"${title}" in:title`];
-    const into = titled(
-      JSON.parse(output("gh", "pr", "list", ...search, "--json", "title,headRefName")) as OpenPr[],
-      title,
-    );
+    const into = titled(openPulls(), title);
     if (into) {
       branch = into.headRefName;
       console.log(`"${title}" is open, so the change goes into ${branch}.`);
@@ -168,7 +172,7 @@ export async function pr(args: string[]): Promise<void> {
   }
   if (start.from === "merge" && found) {
     console.log(`Waiting for #${found.number}, "${found.title}", to merge first.`);
-    const timing = await landed(branch, found.url);
+    const timing = await landed(found.number, found.url);
     console.log(
       `#${found.number} merged${timing && `, ${timing},`} so "${title}" starts from main.`,
     );
@@ -203,30 +207,12 @@ export async function pr(args: string[]): Promise<void> {
   const verified = took(Date.now() - verifying);
   step("git", "push", "--quiet", "--set-upstream", "origin", branch);
 
-  const open = (): string => {
-    try {
-      return output(
-        "gh",
-        "pr",
-        "view",
-        branch,
-        "--json",
-        "state,url",
-        "--jq",
-        'select(.state == "OPEN") | .url',
-      );
-    } catch {
-      return "";
-    }
-  };
-  let url = open();
-  if (!url) {
-    const labels = label ? ["--label", label] : [];
-    url = output("gh", "pr", "create", "--title", title, "--body", values.body, ...labels);
-  }
-  step("gh", "pr", "merge", branch, "--auto", "--squash");
-  console.log(`${url}, after verify took ${verified}`);
-  if (values.wait) await merged(branch, url);
+  const existing = pullFrom(branch);
+  const opened =
+    existing?.state === "OPEN" ? existing : createPull(branch, title, values.body, label);
+  autoMerge(opened.number);
+  console.log(`${opened.url}, after verify took ${verified}`);
+  if (values.wait) await merged(branch, opened.number, opened.url);
 }
 
 /** @prose
@@ -326,25 +312,22 @@ export function timingOf(pr: State, updates = 0): string {
     .join(", ");
 }
 
-async function landed(branch: string, url: string): Promise<string> {
+async function landed(number: number, url: string): Promise<string> {
   let updates = 0;
   for (;;) {
     await new Promise((resolve) => setTimeout(resolve, 10_000));
-    const pr = JSON.parse(
-      output(
-        "gh",
-        "pr",
-        "view",
-        branch,
-        "--json",
-        "state,mergeStateStatus,mergedAt,statusCheckRollup",
-      ),
-    ) as State;
+    const now = pullNumber(number);
+    const pr: State = {
+      state: now.state,
+      mergeStateStatus: now.mergeStateStatus,
+      ...(now.mergedAt ? { mergedAt: now.mergedAt } : {}),
+      statusCheckRollup: checksOn(now.headRefOid),
+    };
     if (pr.state === "MERGED") return timingOf(pr, updates);
     if (pr.state === "CLOSED") fail(`${url} was closed without merging.`);
     if (pr.mergeStateStatus === "BEHIND") {
       try {
-        output("gh", "pr", "update-branch", branch);
+        updateBranch(number);
         updates++;
         console.log(`${url} fell behind main, so its branch is updated and CI runs again.`);
       } catch {
@@ -356,7 +339,7 @@ async function landed(branch: string, url: string): Promise<string> {
     if (pr.mergeStateStatus === "CLEAN") {
       // Auto-merge can wait minutes after the checks pass.
       try {
-        output("gh", "pr", "merge", branch, "--squash");
+        squashMerge(number);
       } catch {
         // A merge that lost a race only means asking again.
       }
@@ -372,8 +355,8 @@ async function landed(branch: string, url: string): Promise<string> {
   }
 }
 
-async function merged(branch: string, url: string): Promise<void> {
-  const timing = await landed(branch, url);
+async function merged(branch: string, number: number, url: string): Promise<void> {
+  const timing = await landed(number, url);
   console.log(timing ? `Merged, ${timing}.` : "Merged.");
   const elsewhere = mainElsewhere();
   if (elsewhere) {

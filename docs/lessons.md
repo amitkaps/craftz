@@ -189,7 +189,7 @@ What each tool does that its docs don't say.
 - **A push after the checks pass can arrive too late.** Auto-merge had merged the pull request, so the follow-up commit went to a branch with no open pull request, and `pnpm pr` with the same title failed. Look at `gh pr view` before pushing again, and open a new pull request from `main` if it merged.
 - **Auto-merge can wait minutes after the checks pass.** Pull requests sat 6 to 12 minutes, all green. A wait that sees one ready merges it, and so does `gone`, after an agent polled GitHub by hand. The rules still decide what merges.
 - **git won't delete a branch another worktree has checked out.** Not even with `--force`, and the error ended `gone`'s run. `gone` removes the worktree first, without `--force`, so one with changes is kept.
-- **A Claude Code cloud session can't use GitHub's GraphQL API.** `pnpm pr` pushes the branch, then fails on GraphQL with no pull request opened. Open it with the GitHub tools or the REST API, then add the label and turn on auto-merge there.
+- **A Claude Code cloud session can't use GitHub's GraphQL API.** `pnpm pr` pushed the branch, then failed on GraphQL with no pull request opened, and `gone` and `status` failed the same way. They now call the REST API through [github.ts](../src/github.ts). Auto-merge has no REST route, so the cloud's proxy offers `PUT /pulls/{n}/ccr/auto_merge`, which real GitHub answers with a 404. `pr` tries it and falls back to `gh pr merge --auto`. A test keeps those three files off GraphQL.
 
 ### npm
 
