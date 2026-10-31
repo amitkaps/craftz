@@ -89,7 +89,11 @@ test("AGENTS.md names the parts the rules have, and no other", () => {
   const text = readFileSync(new URL("../reference/AGENTS.md", import.meta.url), "utf8");
   const line = text.split("\n").find((it) => it.startsWith("The parts are")) ?? "";
   const named = [...line.matchAll(/`(\w+)`/g)].map((m) => m[1]);
-  expect(named.toSorted()).toEqual(partNames().filter((it) => it !== "practice").toSorted());
+  expect(named.toSorted()).toEqual(
+    partNames()
+      .filter((it) => it !== "practice")
+      .toSorted(),
+  );
 });
 
 test("only the rules' betas are on a pre-release, each an exact build", () => {
