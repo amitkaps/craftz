@@ -15,18 +15,20 @@
  * the repository's pull request. It changes nothing in a clone already in line, so it's safe to run
  * on every one. A fix in `github` is written directly, since there's no file to review. A rule with
  * no fix is fixed by hand, as the rules say.
+ *
+ * The table is split by the part of the rules each id starts with, one module for each in
+ * [rules/](rules/), and this module joins them in the doc's order. What more than one of them
+ * writes with is in [rules/shared.ts](rules/shared.ts).
  */
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { join, relative } from "node:path";
 import {
   CRAFTZ,
   isCraftz,
   OWNER,
   type Pkg,
-  VERSIONS,
   here,
   read,
-  readJson,
   readPkg,
   standard,
   versionsIn,
@@ -44,9 +46,24 @@ import {
 import { type Config, PACKED, RULED, written } from "./ruled.ts";
 import { rulesetFor, writeLabels, writeRuleset } from "./settings.ts";
 import { BROWSERS, COMPATIBILITY_DATE } from "./pinned.ts";
-import { anchors, linkedRules, stated } from "./stated.ts";
+import { anchors, linkedRules } from "./stated.ts";
+import { VERSION_RULES } from "./rules/versions.ts";
 import type { BranchRule, Finding, Repo } from "./survey.ts";
 import { type Worker, workerIn } from "./worker.ts";
+import {
+  CI,
+  EDITOR,
+  type Json,
+  unread,
+  RELEASE_FILES,
+  drifted,
+  editFile,
+  owns,
+  writeJson,
+  writePkg,
+} from "./rules/shared.ts";
+
+export { betas } from "./rules/versions.ts";
 
 export type Fix =
   | { in: "files"; apply: (dir: string, std: string) => void }
@@ -65,7 +82,6 @@ export type Rule = {
   holdable?: boolean;
 };
 
-const pnpm = standard.packageManager?.replace(/^pnpm@/, "");
 const standardScripts = standard.scripts ?? {};
 
 const BUILT = ["dev", "build"];
@@ -94,39 +110,6 @@ function rulesDrift(found: BranchRule[], pkg: Pkg): string[] {
   return drift;
 }
 
-const drifted = (drift: string[]): Finding => ({ drift });
-
-// What GitHub couldn't answer. Its rate limit isn't drift: the check says it wasn't made.
-export function unread(error: Error): Finding {
-  if (error.name === "RateLimit") return { drift: [], unchecked: error.message };
-  return drifted([`GitHub couldn't be read: ${error.message}`]);
-}
-
-// A JSON file is written only when its value changes, so one the formatter laid out stays as it
-// is, and a second fix changes nothing.
-function writeJson(path: string, value: unknown): void {
-  const text = JSON.stringify(value, null, 2);
-  try {
-    if (JSON.stringify(JSON.parse(readFileSync(path, "utf8")), null, 2) === text) return;
-  } catch {
-    // A file that's missing or isn't JSON is written whole.
-  }
-  writeFileSync(path, `${text}\n`);
-}
-const writePkg = (dir: string, pkg: Pkg): void => writeJson(join(dir, "package.json"), pkg);
-
-// Sets a dependency to the rules' version, in whichever list the repository has it.
-function pin(dir: string, std: string, name: string): void {
-  const want = versionsIn(std)[name];
-  const pkg = readPkg(dir);
-  if (!want) return;
-  for (const field of ["dependencies", "devDependencies"] as const) {
-    const deps = pkg[field];
-    if (deps?.[name]) deps[name] = want;
-  }
-  writePkg(dir, pkg);
-}
-
 // craftz in the dev dependencies, and no `craftz()` in the Vite config, as edit.ts says.
 function useCraftz(dir: string, std: string): void {
   const pkg = readPkg(dir);
@@ -140,72 +123,6 @@ function useCraftz(dir: string, std: string): void {
   }
   editFile(join(dir, "vite.config.ts"), withoutCraftz);
 }
-
-/** @prose
- * # A shared version
- *
- * A tool every repository writes as this one does, checked where a repository has it.
- */
-const version = (id: string, name: string, holdable = true): Rule => ({
-  id,
-  holdable,
-  check: ({ deps }) => {
-    const value = deps[name];
-    if (!value) return undefined;
-    const want = VERSIONS[name];
-    return { value, drift: value === want ? [] : [`${name} is ${value}, not ${want}`] };
-  },
-  fix: { in: "files", apply: (dir, std) => pin(dir, std, name) },
-});
-
-/** @prose
- * # Our own version
- *
- * A package of ours that another builds on, checked as at least the reference's, so the one
- * that builds on it can move before craftz does. Its fix raises a version that's behind and
- * leaves one that leads, since every fix runs whether its rule drifted or not.
- */
-const atLeast = (id: string, name: string): Rule => ({
-  id,
-  holdable: true,
-  check: ({ deps }) => {
-    const value = deps[name];
-    if (!value) return undefined;
-    const want = VERSIONS[name] ?? "";
-    if (!EXACT.test(value)) return { value, drift: [`${name} is ${value}, not an exact version`] };
-    return { value, drift: behind(value, want) ? [`${name} is ${value}, behind ${want}`] : [] };
-  },
-  fix: {
-    in: "files",
-    apply: (dir, std) => {
-      const pkg = readPkg(dir);
-      const value = pkg.devDependencies?.[name] ?? pkg.dependencies?.[name];
-      const want = versionsIn(std)[name];
-      if (value && want && (!EXACT.test(value) || behind(value, want))) pin(dir, std, name);
-    },
-  },
-});
-const EXACT = /^\d+\.\d+\.\d+$/;
-const behind = (value: string, want: string) =>
-  value.localeCompare(want, "en", { numeric: true }) < 0;
-
-/** @prose
- * # The betas
- *
- * The packages `versions-beta` names, as code in its line of the rules, so the list is kept
- * in one place. A version is a pre-release when its numbers are followed by a tag, as in
- * `1.0.0-beta.17`, behind a range or not.
- */
-export const betas = (): string[] =>
-  [
-    ...(stated()
-      .find((rule) => rule.id === "versions-beta")
-      ?.text.matchAll(/`([^`]+)`/g) ?? []),
-  ].flatMap((match) => match[1] ?? []);
-const PRERELEASE = /^[\^~<>=]*\d+\.\d+\.\d+-/;
-
-const node = standard.devEngines?.runtime;
-const vitePlus = VERSIONS["vite-plus"];
 
 /** @prose
  * # The toolchain
@@ -249,8 +166,6 @@ const rule = (dir: string, values: Config): void =>
 
 // What every Worker's `cloudflare.config.ts` sets: the date cf's runtime knows, and only its domain.
 const WORKER = { compatibilityDate: COMPATIBILITY_DATE, workersDev: false, previewUrls: false };
-
-const EDITOR = [".vscode/settings.json", ".vscode/extensions.json"];
 
 /** @prose
  * # The browsers
@@ -311,102 +226,6 @@ function siteDrift(vite: string, site?: Worker): string[] {
   const same = [...new Set(have)].sort().join(" ") === [...BROWSERS].sort().join(" ");
   return same ? [] : [`build.target is ${have.join(" ")}, not ${BROWSERS.join(" ")}`];
 }
-
-// Writes a file's edit, where the file exists and the edit changes it.
-function editFile(file: string, edit: (text: string) => string): void {
-  if (!existsSync(file)) return;
-  const text = readFileSync(file, "utf8");
-  const edited = edit(text);
-  if (edited !== text) writeFileSync(file, edited);
-}
-
-type Json = Record<string, unknown>;
-const recommended = (json: Json): string[] =>
-  Array.isArray(json.recommendations) ? (json.recommendations as string[]) : [];
-
-/** @prose
- * # Files craftz owns
- *
- * CI, pnpm's settings and the editor's are the same in every repository, so each is the
- * reference's, word for word, and the fix writes it whole. What a repository adds goes
- * elsewhere, a step in `verify` and a setting in its own config, so no fix edits one by its lines.
- *
- * Two follow from the repository's axes. pnpm's override points `vite` at the Vite+ the
- * repository installs, so a Vite+ that's behind drifts once, in `versions-vite-plus`. A
- * repository that depends on Svelte adds its editor settings, from
- * [svelte/](../reference/svelte/README.md), whether it deploys an app or a static site. The
- * editor's files are compared as JSON, since `vp fmt` lays them out.
- */
-type Axes = { vitePlus?: string; svelte: boolean };
-
-const axesOf = (repo: Repo): Axes => ({ vitePlus: repo.vitePlus, svelte: !!repo.deps?.["svelte"] });
-
-function axesIn(dir: string): Axes {
-  const pkg = readPkg(dir);
-  const deps = { ...pkg.dependencies, ...pkg.devDependencies };
-  return { vitePlus: deps["vite-plus"], svelte: !!deps["svelte"] };
-}
-
-// A file craftz owns, as the reference in `std` writes it for a repository with these axes.
-function owned(file: string, axes: Axes, std: string): string {
-  if (RELEASE_FILES.includes(file)) return read(join(std, "package", file));
-  const text = read(join(std, file));
-  if (file === WORKSPACE) {
-    const own = axes.vitePlus;
-    return own ? text.replace(/vite-plus-core@[\w.-]+/, `vite-plus-core@${own}`) : text;
-  }
-  if (!EDITOR.includes(file) || !axes.svelte) return text;
-  const ours = JSON.parse(text) as Json;
-  const adds = readJson<Json>(join(std, "svelte", file));
-  const merged = file.endsWith("extensions.json")
-    ? { recommendations: [...recommended(ours), ...recommended(adds)] }
-    : { ...ours, ...adds };
-  return `${JSON.stringify(merged, null, 2)}\n`;
-}
-
-function same(file: string, have: string, want: string): boolean {
-  if (!file.endsWith(".json")) return have === want;
-  try {
-    return JSON.stringify(JSON.parse(have)) === JSON.stringify(JSON.parse(want));
-  } catch {
-    return false;
-  }
-}
-
-// A rule that each of `files` is craftz's, where `applies` says the repository has them.
-function owns(id: string, files: string[], applies: (pkg: Pkg) => boolean = () => true): Rule {
-  return {
-    id,
-    check: (repo) => {
-      if (!applies(repo.pkg)) return undefined;
-      const axes = axesOf(repo);
-      return drifted(
-        files.flatMap((file) => {
-          const have = repo.files[file];
-          if (!have) return [`no ${file}`];
-          return same(file, have, owned(file, axes, here)) ? [] : [`${file} differs from craftz's`];
-        }),
-      );
-    },
-    fix: {
-      in: "files",
-      apply: (dir, std) => {
-        if (!applies(readPkg(dir))) return;
-        const axes = axesIn(dir);
-        for (const file of files) {
-          const path = join(dir, file);
-          const want = owned(file, axes, std);
-          if (existsSync(path) && same(file, read(path), want)) continue;
-          mkdirSync(dirname(path), { recursive: true });
-          writeFileSync(path, want);
-        }
-      },
-    },
-  };
-}
-
-const WORKSPACE = "pnpm-workspace.yaml";
-const CI = ".github/workflows/ci.yml";
 
 /** @prose
  * # The agents' instructions
@@ -586,18 +405,6 @@ const nav = (text: string): string[] =>
     .filter(Boolean);
 
 /** @prose
- * # Releases
- *
- * A package releases the way every package does, with the files in
- * [package/](../reference/package/README.md) copied in unchanged: the release workflow, the notes'
- * config, and the `label` workflow that checks a pull request has one.
- */
-const RELEASE_FILES = [
-  ".github/workflows/release.yml",
-  ".github/workflows/label.yml",
-  ".github/notes.yml",
-];
-/** @prose
  * The notes' config was once `.github/release.yml`, GitHub's default path, which read as the
  * release workflow. It's `.github/notes.yml` now, so the fix deletes the old one.
  */
@@ -710,98 +517,7 @@ const CLOUDFLARE_TOOLS = ["cf", "@cloudflare/vite-plugin", "wrangler"];
 const SVELTEKIT = "@sveltejs/kit";
 
 export const RULES: Rule[] = [
-  {
-    id: "versions-node",
-    holdable: true,
-    check: ({ pkg }) => {
-      const runtime = pkg.devEngines?.runtime;
-      const drift: string[] = [];
-      if (runtime?.version !== node?.version) {
-        drift.push(`devEngines asks for Node ${runtime?.version}, not ${node?.version}`);
-      }
-      if (runtime?.onFail !== node?.onFail) {
-        drift.push(`devEngines Node onFail is ${runtime?.onFail}, not ${node?.onFail}`);
-      }
-      if (pkg.engines?.node !== standard.engines?.node) {
-        drift.push(`engines asks for Node ${pkg.engines?.node}, not ${standard.engines?.node}`);
-      }
-      return { value: runtime?.version, drift };
-    },
-    fix: {
-      in: "files",
-      apply: (dir, std) => {
-        const want = readPkg(std);
-        const pkg = readPkg(dir);
-        pkg.devEngines = { ...pkg.devEngines, runtime: want.devEngines?.runtime };
-        pkg.engines = { ...pkg.engines, node: want.engines?.node };
-        writePkg(dir, pkg);
-      },
-    },
-  },
-  {
-    id: "versions-pnpm",
-    holdable: true,
-    check: ({ pkg }) => {
-      const drift: string[] = [];
-      if (pkg.packageManager !== `pnpm@${pnpm}`) {
-        drift.push(`packageManager is ${pkg.packageManager}, not pnpm@${pnpm}`);
-      }
-      const engine = pkg.devEngines?.packageManager;
-      if (engine?.version !== pnpm) {
-        drift.push(`devEngines pins pnpm ${engine?.version}, not ${pnpm}`);
-      }
-      if (engine?.onFail !== "download") {
-        drift.push(`devEngines pnpm onFail is ${engine?.onFail}, not download`);
-      }
-      return { value: pkg.packageManager?.replace(/^pnpm@/, ""), drift };
-    },
-    fix: {
-      in: "files",
-      apply: (dir, std) => {
-        const want = readPkg(std);
-        const pkg = readPkg(dir);
-        pkg.packageManager = want.packageManager;
-        pkg.devEngines = { ...pkg.devEngines, packageManager: want.devEngines?.packageManager };
-        writePkg(dir, pkg);
-      },
-    },
-  },
-  version("versions-types-node", "@types/node"),
-  {
-    id: "versions-vite-plus",
-    holdable: true,
-    check: ({ deps, vitePlus: own }) => {
-      if (!own) return { drift: ["not on Vite+"] };
-      const drift: string[] = [];
-      if (own !== vitePlus) drift.push(`vite-plus is ${own}, not ${vitePlus}`);
-      if (deps.vite) drift.push(`depends on vite ${deps.vite} directly`);
-      return { value: own, drift };
-    },
-    // A repository not on Vite+ moves by hand. The override moves with it, in versions-workspace.
-    fix: { in: "files", apply: (dir, std) => pin(dir, std, "vite-plus") },
-  },
-  version("versions-typescript", "typescript"),
-  atLeast("versions-prose", "@amitkaps/prose"),
-  atLeast("versions-markz", "@amitkaps/markz"),
-  // No tool keeps a repository from craftz, so its version can't be held.
-  version("versions-craftz", CRAFTZ, false),
-  version("versions-cf", "cf"),
-  {
-    id: "versions-beta",
-    check: ({ deps }) => {
-      const pre = Object.entries(deps).filter(([, value]) => PRERELEASE.test(value));
-      if (!pre.length) return undefined;
-      return drifted(
-        pre.flatMap(([name, value]) => {
-          if (!betas().includes(name)) return [`${name} is on a pre-release, ${value}`];
-          return /^\d/.test(value) ? [] : [`${name} is ${value}, not an exact build`];
-        }),
-      );
-    },
-  },
-  version("versions-wrangler", "wrangler"),
-  version("versions-publint", "publint"),
-  owns("versions-workspace", [WORKSPACE]),
+  ...VERSION_RULES,
   {
     id: "toolchain-types",
     holdable: true,
