@@ -26,16 +26,17 @@ import { OWNER, type Pkg, here, read, readPkg, versionsIn } from "./reference.ts
 import {} from "./config.ts";
 import {} from "./edit.ts";
 import { PACKED } from "./ruled.ts";
-import { rulesetFor, writeLabels, writeRuleset } from "./settings.ts";
+import { writeLabels } from "./settings.ts";
 import {} from "./pinned.ts";
 import { anchors, linkedRules } from "./stated.ts";
 import { CLOUDFLARE_RULES } from "./rules/cloudflare.ts";
+import { GITHUB_RULES } from "./rules/github.ts";
 import { SCRIPT_RULES } from "./rules/scripts.ts";
 import { TOOLCHAIN_RULES, unruled, rule } from "./rules/toolchain.ts";
 import { VERSION_RULES } from "./rules/versions.ts";
-import type { BranchRule, Finding, Repo } from "./survey.ts";
+import type { Finding, Repo } from "./survey.ts";
 import {} from "./worker.ts";
-import { CI, unread, RELEASE_FILES, drifted, owns, writePkg } from "./rules/shared.ts";
+import { unread, RELEASE_FILES, drifted, owns, writePkg } from "./rules/shared.ts";
 
 export { betas } from "./rules/versions.ts";
 
@@ -55,28 +56,6 @@ export type Rule = {
   fix?: Fix;
   holdable?: boolean;
 };
-
-// Each rule in the file has to be there, with the parameters the file sets. Other parameters,
-// and rules the file doesn't name, are the repository's own.
-function rulesDrift(found: BranchRule[], pkg: Pkg): string[] {
-  if (!found.length) return ["main has no branch rules"];
-  const drift: string[] = [];
-  for (const want of rulesetFor(pkg).rules) {
-    const name = want.type.replaceAll("_", " ");
-    const have = found.find((rule) => rule.type === want.type);
-    if (!have) {
-      drift.push(`no ${name} rule`);
-      continue;
-    }
-    for (const [key, value] of Object.entries(want.parameters ?? {})) {
-      const got = JSON.stringify(have.parameters?.[key]);
-      if (got !== JSON.stringify(value)) {
-        drift.push(`${name}: ${key} is ${got}, not ${JSON.stringify(value)}`);
-      }
-    }
-  }
-  return drift;
-}
 
 /** @prose
  * # The agents' instructions
@@ -270,23 +249,7 @@ export const RULES: Rule[] = [
   ...TOOLCHAIN_RULES,
   ...SCRIPT_RULES,
   ...CLOUDFLARE_RULES,
-  {
-    id: "github-rules",
-    check: ({ rules, pkg }) => {
-      if (!rules) return undefined;
-      return rules instanceof Error ? unread(rules) : drifted(rulesDrift(rules, pkg));
-    },
-    fix: { in: "github", apply: writeRuleset },
-  },
-  {
-    ...owns("github-ci", [CI]),
-    // Versions move in the reference first, so a repository doesn't take Dependabot's.
-    check: (repo) => {
-      const finding = owns("github-ci", [CI]).check(repo);
-      const dependabot = repo.files[".github/dependabot.yml"] ? ["has a dependabot.yml"] : [];
-      return drifted([...(finding?.drift ?? []), ...dependabot]);
-    },
-  },
+  ...GITHUB_RULES,
   {
     id: "agents-sections",
     check: ({ files }) => {
