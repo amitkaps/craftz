@@ -402,7 +402,7 @@ export async function start(argv: string[]): Promise<void> {
       description,
     );
     const settings = await writeSettings({ repo: name, pkg: { private: !start.package } }, true);
-    for (const line of settings.filter((it) => !it.startsWith("fixed: "))) console.log(line);
+    for (const line of settings.filter((it) => !it.fixed)) console.log(line.text);
   }
 
   const left = [

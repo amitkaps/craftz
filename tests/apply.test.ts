@@ -48,7 +48,7 @@ test("each write is read back and reported as it ended", async () => {
     0,
   );
   expect(writes).toEqual([]);
-  expect(lines).toEqual([
+  expect(lines.map((line) => line.text)).toEqual([
     "fixed: a is off",
     "still off: b is off",
     "failed: ruleset: HTTP 403",
@@ -56,4 +56,5 @@ test("each write is read back and reported as it ended", async () => {
     "left: not connected yet",
     "failed: labels couldn't be read: HTTP 500",
   ]);
+  expect(lines.filter((line) => line.fixed).map((line) => line.text)).toEqual(["fixed: a is off"]);
 });

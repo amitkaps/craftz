@@ -19,7 +19,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
-import { type Target, checkSettings, writeSettings } from "./apply.ts";
+import { type Outcome, type Target, checkSettings, writeSettings } from "./apply.ts";
 import { deploy as upload } from "./deploy.ts";
 import { deps } from "./deps.ts";
 import { gone } from "./gone.ts";
@@ -190,7 +190,7 @@ async function settings(dir: string, checking: boolean, yes: boolean): Promise<b
     process.exit(1);
   }
   const it = target(dir);
-  let found: string[];
+  let found: Outcome[];
   if (checking) {
     found = await checkSettings(it);
   } else {
@@ -203,9 +203,9 @@ async function settings(dir: string, checking: boolean, yes: boolean): Promise<b
           ))));
     found = await writeSettings(it, removing);
   }
-  const off = found.filter((line) => !line.startsWith("fixed: "));
+  const off = found.filter((line) => !line.fixed);
   console.log(off.length ? `✗ ${it.repo}` : `✓ ${it.repo}`);
-  for (const line of found) console.log(`    ${line}`);
+  for (const line of found) console.log(`    ${line.text}`);
   return off.length > 0;
 }
 

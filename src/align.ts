@@ -447,7 +447,10 @@ async function settings(repo: string): Promise<string[]> {
   const pkg = existsSync(join(dir, "package.json")) ? readPkg(dir) : {};
   // align says once, at the start, why the Workers aren't written.
   const site = noCloudflare ? undefined : workerIn(dir);
-  return local ? checkSettings({ repo, pkg, site }) : writeSettings({ repo, pkg, site }, true);
+  const lines = local
+    ? await checkSettings({ repo, pkg, site })
+    : await writeSettings({ repo, pkg, site }, true);
+  return lines.map((line) => line.text);
 }
 
 const settled = states.filter((state) => !state.status || state.status === "in line");
