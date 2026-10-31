@@ -14,7 +14,7 @@ pnpm verify    # what CI runs
 
 ## Changing the rules
 
-A change to how things are done starts here, in [the rules](rules.md) and in [the reference](../reference/README.md). When it can be checked, it's also a rule. That's a list item in the rules that opens with its id as a span, like ``- [`scripts-verify`]{#scripts-verify}: …``, and a check under the same id in [src/rules.ts](../src/rules.ts), with a fix when one can be automated. [rules.test.ts](../tests/rules.test.ts) fails if either has an id the other doesn't.
+A change to how things are done starts here, in [the rules](rules.md) and in [the reference](../reference/README.md). When it can be checked, it's also a rule. That's a list item in the rules that opens with its id as a span, like ``- [`scripts-verify`]{#scripts-verify}: …``, and a check under the same id in [src/rules/](../src/rules/), with a fix when one can be automated. [rules.test.ts](../tests/rules.test.ts) fails if either has an id the other doesn't.
 
 `pnpm craftz check ../markz` runs the rules from source on another checkout, to see what a change asks of it before it's released. What the change taught goes in [the lessons](lessons.md), in the same pull request.
 

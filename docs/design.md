@@ -27,7 +27,7 @@ A package removes both. A repository checks itself against the version it instal
 
 ## One rule, one check, one fix
 
-Each rule has one implementation. [The rules](rules.md) word it once, as a list item that opens with its id. [src/rules.ts](../src/rules.ts) holds its check and, where it can be automated, its fix, under the same id. A test fails if either has an id the other doesn't. `craftz check` and `craftz fix` run the rules in a repository, and align calls the same code in each clone, with no second copy of any rule. That's the property to protect as craftz grows.
+Each rule has one implementation. [The rules](rules.md) word it once, as a list item that opens with its id. [src/rules/](../src/rules/) holds its check and, where it can be automated, its fix, under the same id. A test fails if either has an id the other doesn't. `craftz check` and `craftz fix` run the rules in a repository, and align calls the same code in each clone, with no second copy of any rule. That's the property to protect as craftz grows.
 
 A rule is yes or no. It has one right answer, so a repository meets it or drifts, and a reader never picks between options. Where a tool keeps a repository from the answer, the repository holds the rule, as [errors, warnings and notes](#errors-warnings-and-notes) say. A rule never grows a second answer for it.
 
