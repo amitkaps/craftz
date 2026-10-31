@@ -77,19 +77,19 @@ test("a release's line is its tag, and its summary is the paragraph above GitHub
 
 test("timing gives the spread, and the first reason each slow pull request fits", () => {
   const t = (minute: number) => new Date(Date.UTC(2026, 9, 24, 12, minute)).toISOString();
-  const pr = (number: number, open: number, merge: number, commits: [number, string][] = []) => ({
+  const pr = (number: number, open: number, merge: number, commits: [number, number][] = []) => ({
     number,
     createdAt: t(open),
     mergedAt: t(merge),
-    headRefName: `b${number}`,
-    commits: [[open, "work"] as [number, string], ...commits].map(([m, messageHeadline]) => ({
+    commits: [[open, 1] as [number, number], ...commits].map(([m, parents]) => ({
+      oid: `c${number}-${m}`,
       committedDate: t(m),
-      messageHeadline,
+      parents,
     })),
   });
   const run = (number: number, start: number, end: number, conclusion = "success") => ({
     workflowName: "CI",
-    headBranch: `b${number}`,
+    headSha: `c${number}-${start}`,
     conclusion,
     startedAt: t(start),
     updatedAt: t(end),
@@ -98,8 +98,8 @@ test("timing gives the spread, and the first reason each slow pull request fits"
     [
       pr(1, 0, 2),
       pr(2, 10, 20),
-      pr(3, 30, 40, [[35, "Merge branch 'main' into b3"]]),
-      pr(4, 50, 58, [[55, "more work"]]),
+      pr(3, 30, 40, [[35, 2]]),
+      pr(4, 50, 58, [[55, 1]]),
       pr(5, 60, 70),
       pr(6, 100, 400),
     ],

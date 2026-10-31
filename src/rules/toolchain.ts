@@ -167,7 +167,10 @@ export const TOOLCHAIN_RULES: Rule[] = [
       in: "files",
       apply: (dir) => {
         const path = join(dir, "tsconfig.json");
-        const parsed = tsconfigIn(read(path));
+        const text = read(path);
+        // A missing or empty file starts from the rules' options, and one that can't be read is
+        // left to fix by hand.
+        const parsed = text.trim() ? tsconfigIn(text) : {};
         if (!parsed) return;
         writeJson(path, {
           compilerOptions: OPTIONS,

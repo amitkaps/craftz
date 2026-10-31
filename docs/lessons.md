@@ -18,7 +18,7 @@ The rule is [Measure before changing](rules.md#measure-before-changing). `craftz
 - **A test repeated an expensive step for each case.** Five shapes of `new` each ran `verify`, and only two build differently. List what each case runs that the others don't, and run the expensive step only for those.
 - **Work at a module's top level runs for every command.** Three constants parsed the rules doc as their modules loaded, so `gone` paid 50 ms for rules it never read. Parse on first use, and profile a command that does nothing.
 - **`verify` ran its steps one after another.** `vp run`'s `all` task runs them side by side. A step that writes can't run beside steps that read, and a test that packs couldn't run beside `build`. Read what each step reads and writes on disk before moving it.
-- **Splitting a slow test file only helps when a core is idle.** `vp test` already runs a file to a core, so splitting markz's saved 3 of 30 seconds. Time `verify` before and after a split, and keep it only when the time falls.
+- **Splitting a slow test file only helps when a core is idle.** `vp test` already runs a file to a core, so splitting markz's saved 3 of 30 seconds. Time `verify` before and after a split, and keep it only when the time falls. craftz's fixes test did it again: three files saved 5 of 20 seconds, and putting back the files each case touched, not a copy of the repository, took it to 7.
 - **A timing test failed on a slower machine.** markz's passed locally and in CI, then stopped a deploy on Cloudflare's. A private repository's CI gets two cores to a public one's four, too. A test that starts the CLI more than once gets its own timeout.
 - **A shorter wait looked like a fix for a blocked release.** The block was the version check, not pnpm's wait. Weigh a setting by what it guards before changing it.
 - **Vite's default browsers were three years old.** It's a list frozen at each Vite major. MDN's browser-compat-data was a release ahead of caniuse, so the floors come from it. caniuse counts Android Chrome as one version and leaves out in-app browsers, so read it beside a source that counts them.
@@ -95,6 +95,7 @@ The rule is [Try it on the real thing](rules.md#try-it-on-the-real-thing). The t
 
 The rule is [Have a way to verify](rules.md#have-a-way-to-verify). Each rule has a check that runs in every repository's `verify`, and a check that moves is held to the findings it had before.
 
+- **A split left links that still resolved.** Moving the rules out of `src/rules.ts` kept the file, so five docs still named it as holding every check, and six empty imports stayed behind. After moving code, search the docs for the old path and the file for what it no longer uses.
 - **A moved check is proven by the same findings.** Repositories in line print the same ticks either way, which shows little. Make a clone drift on purpose and compare what both print.
 - **Replacing a tool drops what it did on failure.** `craftz deploy` sent each bucket of files once, where cf tries again, and one `10013` from Cloudflare failed a deploy. When a command replaces a tool, list what the tool does on failure too.
 - **A version nobody looks at drifts.** Checking versions found prose on Node 24 with no Vite+ override, and two repositories behind on markz. Every shared version is checked.
@@ -185,9 +186,10 @@ What each tool does that its docs don't say.
 - **Search without a login leaves out private repositories.** Three with the topic stayed two releases behind. align searches as `gh`.
 - **GitHub shows anyone a public repository's branch rules, but not its merge settings.** So `craftz settings --check` runs on a laptop, not in CI.
 - **Auto-merge doesn't update a branch that falls behind.** `main` requires an up-to-date branch, so the second of two pull requests sat blocked. A wait updates it. Turning the rule off would let two changes that pass alone break `main` together.
+- **A push after the checks pass can arrive too late.** Auto-merge had merged the pull request, so the follow-up commit went to a branch with no open pull request, and `pnpm pr` with the same title failed. Look at `gh pr view` before pushing again, and open a new pull request from `main` if it merged.
 - **Auto-merge can wait minutes after the checks pass.** Pull requests sat 6 to 12 minutes, all green. A wait that sees one ready merges it, and so does `gone`, after an agent polled GitHub by hand. The rules still decide what merges.
 - **git won't delete a branch another worktree has checked out.** Not even with `--force`, and the error ended `gone`'s run. `gone` removes the worktree first, without `--force`, so one with changes is kept.
-- **A Claude Code cloud session can't use GitHub's GraphQL API.** `pnpm pr` pushes the branch, then fails on GraphQL with no pull request opened. Open it with the GitHub tools or the REST API, then add the label and turn on auto-merge there.
+- **A Claude Code cloud session can't use GitHub's GraphQL API.** `pnpm pr` pushed the branch, then failed on GraphQL with no pull request opened, and `gone` and `status` failed the same way. They now call the REST API through [github.ts](../src/github.ts). Auto-merge has no REST route, so the cloud's proxy offers `PUT /pulls/{n}/ccr/auto_merge`, which real GitHub answers with a 404. `pr` tries it and falls back to `gh pr merge --auto`. A test keeps those three files off GraphQL.
 
 ### npm
 

@@ -49,10 +49,11 @@
  * doesn't fail the command, since the branches are already where they should be.
  */
 import { execFileSync } from "node:child_process";
+import { type Pull, pages, pullFrom, pullNumber, squashMerge } from "./github.ts";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { finding } from "@amitkaps/markz/rules";
-import { capture, gh } from "./reference.ts";
+import { capture } from "./reference.ts";
 
 /** Runs a step of `pr` or `gone`, with its output shown. A step that fails stops the command with
  *  one line, since its own output, above it, says why. */
@@ -106,12 +107,11 @@ export const goneIn = (refs: string, merged: (commit: string) => boolean = () =>
 // The last commits of the merged pull requests, or none without `gh`.
 function mergedHeads(dir = "."): Set<string> {
   try {
-    const heads = execFileSync(
-      "gh",
-      ["pr", "list", "--state", "merged", "--limit", "1000", "--json", "headRefOid"],
-      { cwd: dir, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+    const closed = pages<{ merged_at: string | null; head: { sha: string } }>(
+      "repos/{repo}/pulls?state=closed&per_page=100",
+      { cwd: dir },
     );
-    return new Set((JSON.parse(heads) as { headRefOid: string }[]).map((pr) => pr.headRefOid));
+    return new Set(closed.filter((pr) => pr.merged_at).map((pr) => pr.head.sha));
   } catch {
     return new Set();
   }
@@ -144,18 +144,17 @@ function mergedIn(dir: string): Gone[] {
 // Merges the open pull request of `branch` once its checks pass, or says it's still open. Without
 // `gh`, or with no pull request, it does nothing.
 function mergeReady(branch: string): void {
-  let pr: { number: number; state: string; mergeStateStatus: string };
+  let pr: Pull | undefined;
   try {
-    pr = JSON.parse(
-      gh("pr", "view", branch, "--json", "number,state,mergeStateStatus"),
-    ) as typeof pr;
+    pr = pullFrom(branch);
+    if (pr?.state === "OPEN") pr = pullNumber(pr.number);
   } catch {
     return;
   }
-  if (pr.state !== "OPEN") return;
+  if (pr?.state !== "OPEN") return;
   if (pr.mergeStateStatus === "CLEAN") {
     try {
-      gh("pr", "merge", branch, "--squash");
+      squashMerge(pr.number);
       console.log(`Merged #${pr.number}, whose checks had passed.`);
       return;
     } catch {
