@@ -323,14 +323,16 @@ export async function write(
   execFileSync("git", ["init", "-q", "-b", "main"], { cwd: dir });
   // Formatted as `vp fmt` formats it, with the rules' options, so the repository starts out formatted.
   const fmt = RULED["fmt"] as FormatConfig;
-  for (const file of readdirSync(dir, { recursive: true, encoding: "utf8" })) {
-    const path = join(dir, file);
-    if (!/\.(json|ts|md|ya?ml|html)$/.test(file)) continue;
-    const text = readFileSync(path, "utf8");
-    const { code, errors } = await format(file, text, fmt);
-    if (errors.length) throw new Error(`${file} doesn't format: ${errors[0]?.message}`);
-    if (code !== text) writeFileSync(path, code);
-  }
+  const formatted = readdirSync(dir, { recursive: true, encoding: "utf8" })
+    .filter((file) => /\.(json|ts|md|ya?ml|html)$/.test(file))
+    .map(async (file) => {
+      const path = join(dir, file);
+      const text = readFileSync(path, "utf8");
+      const { code, errors } = await format(file, text, fmt);
+      if (errors.length) throw new Error(`${file} doesn't format: ${errors[0]?.message}`);
+      if (code !== text) writeFileSync(path, code);
+    });
+  await Promise.all(formatted);
 }
 
 /** Starts a repository from `craftz new`'s arguments, in a folder of the current one. */

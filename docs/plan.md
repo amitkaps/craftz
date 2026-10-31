@@ -14,7 +14,7 @@ A whole-repository audit for reuse, simplification, efficiency and altitude foun
 - [x] **One `isCraftz(pkg)`.** It replaces the inline name checks in `notes.ts`, `reference.ts` and `cli.ts`, and the `"craftz"` literal in `rules.ts` that `CRAFTZ` names.
 - [x] **One `tmp(prefix)` in `tests/temp.ts`.** It replaces about 25 `mkdtempSync` calls in the tests.
 - [x] **Run independent work together.** `addresses` in `status.ts`, the beta lookups in `notes.ts` and the two lookups in `apply.ts` run side by side with `Promise.all`. `settle` stays in turn, since each part is written then read back.
-- [ ] **Don't read or encode a file twice.** `deploy.ts` encodes each asset to hash it and again to upload it, and `new.ts` formats files one at a time and reads back what it just wrote. `snapshot` in `rules.ts` reads the whole tree.
+- [x] **Format files together.** `new.ts` formats the files it wrote side by side. `deploy.ts` rereads only the files Cloudflare asks for, to keep a site out of memory, and `snapshot` in `rules.ts` is how `fixFiles` knows what changed, so both stay.
 - [ ] **State is a field, not a string prefix.** `writeSettings` and `checkSettings` return `{ text, fixed }`, so `cli.ts` and `new.ts` stop testing `startsWith("fixed: ")`. `leftByHand` in `report.ts` reads oxlint's JSON output, not its printed frames.
 - [ ] **Parse arguments once.** `cli.ts` parses `process.argv` into a command, flags and directories, and a table says which flags each command takes.
 - [ ] **One idea of a beta.** `align.ts` and `notes.ts` share a helper for a prerelease, and one that reads `1.0.0-rc.1+build` correctly.
