@@ -553,6 +553,22 @@ test(".gitignore lists outline.md, and the fix adds it once", () => {
   expect(check()).toEqual([]);
 });
 
+test("an AGENTS.md that still has the Outline section is told to drop it, and the fix does", () => {
+  const dir = tmp("craftz-retired-");
+  const file = join(dir, "AGENTS.md");
+  const rule = RULES.find((r) => r.id === "agents-sections");
+  const ours = readFileSync(join(here, "AGENTS.md"), "utf8");
+  writeFileSync(file, `${ours}\n## Outline\n\nEvery file.\n\n@outline.md\n`);
+  const check = () =>
+    rule?.check({
+      files: { "AGENTS.md": readFileSync(file, "utf8"), "CLAUDE.md": "@AGENTS.md" },
+    } as unknown as Repo)?.drift;
+  expect(check()).toEqual(["Outline section, which craftz no longer shares"]);
+  for (let i = 0; i < 2; i++) if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
+  expect(readFileSync(file, "utf8")).not.toContain("@outline.md");
+  expect(check()).toEqual([]);
+});
+
 test("each step in the plan's Next is a task, and the fix turns a numbered step into one", () => {
   const dir = tmp("craftz-plan-");
   mkdirSync(join(dir, "docs"));
