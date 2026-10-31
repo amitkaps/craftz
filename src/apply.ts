@@ -40,8 +40,10 @@ export type Target = {
 // The rules with a fix on GitHub, like `github-rules`, are checked as the survey checks them.
 // What GitHub couldn't answer is thrown, so it's reported rather than written over.
 async function ruled(repo: string, pkg: Pkg, rule: Rule): Promise<string[]> {
-  const rules = await branchRules(repo);
-  const labels = pkg.private ? undefined : await repoLabels(repo);
+  const [rules, labels] = await Promise.all([
+    branchRules(repo),
+    pkg.private ? undefined : repoLabels(repo),
+  ]);
   for (const found of [rules, labels]) if (found instanceof Error) throw found;
   const it: Repo = { pkg, files: {}, deps: {}, rules, labels };
   return rule.check(it)?.drift ?? [];

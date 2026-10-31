@@ -132,13 +132,17 @@ async function answers(url: string): Promise<number | string> {
 
 async function addresses(site: Worker, dev?: string): Promise<Line[]> {
   const lines: Line[] = [];
-  if (site.domain) {
-    const code = await answers(`https://${site.domain}/`);
+  const [domainCode, devCode] = await Promise.all([
+    site.domain ? answers(`https://${site.domain}/`) : undefined,
+    dev ? answers(dev) : undefined,
+  ]);
+  if (site.domain && domainCode !== undefined) {
+    const code = domainCode;
     const ok = typeof code === "number" && code < 400;
     lines.push({ what: site.domain, found: String(code), ok });
   }
-  if (dev) {
-    const code = await answers(dev);
+  if (dev && devCode !== undefined) {
+    const code = devCode;
     // Off means no answer: Cloudflare's 404 for a Worker with workers.dev turned off.
     const ok = site.workersDev ? typeof code === "number" && code < 400 : code === 404;
     lines.push({

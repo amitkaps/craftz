@@ -82,16 +82,19 @@ export async function notes(
     }
   }
   if (isCraftz(pkg)) {
-    for (const name of betas()) {
+    const pending = betas().flatMap((name) => {
       const beta = VERSIONS[name];
-      if (!beta?.includes("-")) continue;
-      const newest = await latest(name);
-      if (newest && !newest.includes("-") && (numbers(newest)[0] ?? 0) >= (numbers(beta)[0] ?? 0)) {
+      return beta?.includes("-") ? [{ name, beta }] : [];
+    });
+    const newest = await Promise.all(pending.map(({ name }) => latest(name)));
+    pending.forEach(({ name, beta }, i) => {
+      const out = newest[i];
+      if (out && !out.includes("-") && (numbers(out)[0] ?? 0) >= (numbers(beta)[0] ?? 0)) {
         found.push(
-          `${name} ${newest} is a release of the beta ${beta}, so it can leave versions-beta`,
+          `${name} ${out} is a release of the beta ${beta}, so it can leave versions-beta`,
         );
       }
-    }
+    });
   }
   return found;
 }
