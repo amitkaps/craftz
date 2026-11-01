@@ -6,7 +6,7 @@ This is a package's plan, of what craftz itself does next. Each repository moves
 
 ## Next, in order
 
-Nothing is queued.
+- [x] The session-start hook ends with a line saying the session's Node, pnpm and Playwright shell, and where Node or pnpm differ from the repository's. It reaches the repositories with the next release, not a point release of its own.
 
 ## Where it is
 
