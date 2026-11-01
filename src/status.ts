@@ -477,7 +477,7 @@ export type RunSteps = { workflow: string; steps: JobStep[] };
  *  up the job, aren't ours to speed up. */
 export function stepsIn(runs: RunSteps[]): string[] {
   const rows: [string, string][] = [];
-  for (const workflow of [...new Set(runs.map((run) => run.workflow))]) {
+  for (const workflow of new Set(runs.map((run) => run.workflow))) {
     const own = runs.filter((run) => run.workflow === workflow);
     const spans = new Map<string, number[]>();
     for (const run of own)
