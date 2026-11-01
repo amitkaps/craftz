@@ -389,6 +389,10 @@ export function buildLog(uuid: string): string[] {
  *
  * A run belongs to a pull request when it ran on one of its commits. A pull request fell behind
  * when it holds a commit with two parents after it opened, which is GitHub's update from `main`. Both are read from GitHub's REST API, not guessed from titles and times.
+ *
+ * After them come the steps. For each workflow it gives the median of every step over its last five
+ * runs that passed, in the order a run takes them, and the slowest. A step is as named in the
+ * workflow, which is why [the rules](https://craftz.amitkaps.com/docs/rules.md#ci) name each one.
  */
 /** A merged pull request, as REST gives it. */
 export type Merged = {
@@ -463,6 +467,44 @@ export function timingIn(prs: Merged[], runs: PrRun[]): string[] {
   ];
 }
 
+/** A step of a job on CI, as REST gives it. */
+export type JobStep = { name: string; started_at: string | null; completed_at: string | null };
+/** A passing run's jobs, with the name of the workflow it belongs to. */
+export type RunSteps = { workflow: string; steps: JobStep[] };
+
+/** The median of each step over runs that passed, as one row to print for each workflow, in the
+ *  order a run takes them, and the slowest step on its own row. GitHub's own steps, like setting
+ *  up the job, aren't ours to speed up. */
+export function stepsIn(runs: RunSteps[]): string[] {
+  const rows: [string, string][] = [];
+  for (const workflow of [...new Set(runs.map((run) => run.workflow))]) {
+    const own = runs.filter((run) => run.workflow === workflow);
+    const spans = new Map<string, number[]>();
+    for (const run of own)
+      for (const step of run.steps) {
+        if (!step.started_at || !step.completed_at) continue;
+        if (/^(Set up job|Post |Complete job)/.test(step.name)) continue;
+        const list = spans.get(step.name) ?? [];
+        list.push(at(step.completed_at) - at(step.started_at));
+        spans.set(step.name, list);
+      }
+    const medians = [...spans].map(([name, list]) => {
+      const sorted = [...list].sort((a, b) => a - b);
+      return [name, quantile(sorted, 0.5)] as const;
+    });
+    if (!medians.length) continue;
+    const slowest = medians.reduce((a, b) => (b[1] > a[1] ? b : a));
+    rows.push([workflow, medians.map(([name, ms]) => `${name} ${took(ms)}`).join(", ")]);
+    rows.push(["", `slowest: ${slowest[0]}`]);
+  }
+  return rows.length
+    ? [
+        "Steps, the median of each over recent runs that passed:",
+        ...rows.map(([what, found]) => `    ${what.padEnd(14)}  ${found}`),
+      ]
+    : [];
+}
+
 type Closed = { number: number; created_at: string; merged_at: string | null };
 type Commit = { sha: string; commit: { committer: { date: string } }; parents: unknown[] };
 
@@ -505,8 +547,26 @@ export async function timing(repo: string): Promise<string[]> {
       "--limit",
       "200",
       "--json",
-      "workflowName,headSha,conclusion,startedAt,updatedAt",
+      "workflowName,headSha,conclusion,startedAt,updatedAt,databaseId",
     ),
-  ) as PrRun[];
-  return timingIn(prs, runs);
+  ) as (PrRun & { databaseId: number })[];
+  // The last five runs of each workflow that passed, each one's jobs read side by side.
+  const latest = new Map<string, number[]>();
+  for (const run of runs.filter((run) => run.conclusion === "success")) {
+    const ids = latest.get(run.workflowName) ?? [];
+    if (ids.length < 5) latest.set(run.workflowName, [...ids, run.databaseId]);
+  }
+  const steps = await Promise.all(
+    [...latest].flatMap(([workflow, ids]) =>
+      ids.map(async (id): Promise<RunSteps> => {
+        const jobs = await pagesAsync<{ steps: JobStep[] }>(
+          `repos/{repo}/actions/runs/${id}/jobs?per_page=100`,
+          where,
+          ".jobs[]",
+        );
+        return { workflow, steps: jobs.flatMap((job) => job.steps) };
+      }),
+    ),
+  );
+  return [...timingIn(prs, runs), ...stepsIn(steps)];
 }

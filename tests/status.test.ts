@@ -6,7 +6,7 @@
  * Cloudflare is left to running it.
  */
 import { expect, test } from "vite-plus/test";
-import { buildIn, npmIn, releaseIn, runsIn, slowestIn, timingIn } from "../src/status.ts";
+import { buildIn, npmIn, releaseIn, runsIn, slowestIn, stepsIn, timingIn } from "../src/status.ts";
 
 const run = (workflowName: string, status: string, conclusion: string, headSha = "abcdef123") => ({
   workflowName,
@@ -129,4 +129,26 @@ test("the slowest step in verify is the last group its log prints", () => {
   ].join("\n");
   expect(slowestIn(log, "2026-10-29T15:21:00Z")).toEqual({ step: "test", at: 12 });
   expect(slowestIn("no groups here", "2026-10-29T15:21:00Z")).toBeUndefined();
+});
+
+test("each step's median over passing runs, and the slowest, leaving out GitHub's own steps", () => {
+  const step = (name: string, from: number, to: number) => ({
+    name,
+    started_at: new Date(from * 1000).toISOString(),
+    completed_at: new Date(to * 1000).toISOString(),
+  });
+  const run = (install: number, verify: number) => ({
+    workflow: "CI",
+    steps: [
+      step("Set up job", 0, 2),
+      step("Install", 2, 2 + install),
+      step("Verify", 10, 10 + verify),
+    ],
+  });
+  expect(stepsIn([run(3, 20), run(5, 30), run(4, 25)])).toEqual([
+    "Steps, the median of each over recent runs that passed:",
+    "    CI              Install 4s, Verify 25s",
+    "                    slowest: Verify",
+  ]);
+  expect(stepsIn([])).toEqual([]);
 });
