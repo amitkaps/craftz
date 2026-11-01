@@ -23,6 +23,7 @@ The rule is [Measure before changing](rules.md#measure-before-changing). `craftz
 - **A shorter wait looked like a fix for a blocked release.** The block was the version check, not pnpm's wait. Weigh a setting by what it guards before changing it.
 - **Vite's default browsers were three years old.** It's a list frozen at each Vite major. MDN's browser-compat-data was a release ahead of caniuse, so the floors come from it. caniuse counts Android Chrome as one version and leaves out in-app browsers, so read it beside a source that counts them.
 - **A tool already had the feature the plan waited for.** Vite+'s `lazyPlugins()` skips plugins while it reads a config for `fmt` or `lint`, which halved a site's check. Read a tool's current docs before waiting on it, or before copying a workaround's reason.
+- **Chromium's headless shell only trims the install.** visframe's e2e job moved to `--only-shell` in the same pull request that ran the suite on a build with a worker per core. The `Playwright` step fell from 222 to 156 seconds, but the same step took 221 seconds beside a 136-second install of full Chromium, and the install took 16 seconds on another run. The shell is a smaller download, and a headless test runs the same in either. Time the install and the test as separate steps, and credit a faster run to what changed what it does.
 
 ## Don't repeat yourself
 
