@@ -6,7 +6,7 @@
 # ruleset doesn't require it, and a failure shows on the pull request. A failed run keeps its
 # Playwright report for a week, to open the trace.
 #
-# A job that runs past eight minutes is stopped, where GitHub's own limit is six hours. That's for
+# A job that runs past six minutes is stopped, where GitHub's own limit is six hours. That's for
 # a job that hangs. The `test:e2e` step is stopped at four minutes, twice its budget, so a suite
 # that has slowed that far fails and gets fixed. One over the budget but under the stop passes, and
 # `craftz status` notes it, as [the rules](https://craftz.amitkaps.com/docs/rules.md#ci) say.
@@ -27,7 +27,7 @@ permissions:
 jobs:
   e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 6
     steps:
       - name: Checkout
         uses: actions/checkout@v7
