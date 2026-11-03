@@ -27,7 +27,7 @@ permissions:
 
 jobs:
   ci:
-    runs-on: ubuntu-slim
+    runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
       - name: Checkout
