@@ -13,7 +13,8 @@
 #
 # On a pull request, `prose style` also gives its advice on the files the pull request changed,
 # shown beside their lines. An agent that opens one without `pnpm pr` sees it there. It's advice,
-# so it never fails, and it runs before `verify`, so it shows when `verify` fails too.
+# so it never fails. It runs after `verify`, since prose's own `prose` is the build `verify`
+# writes, and it runs when `verify` fails too.
 name: CI
 
 on:
@@ -52,10 +53,10 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      - name: Style
-        if: github.event_name == 'pull_request'
-        run: pnpm prose style --since HEAD^1
-
       - name: Verify
         timeout-minutes: 2
         run: pnpm run verify
+
+      - name: Style
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        run: pnpm prose style --since HEAD^1
