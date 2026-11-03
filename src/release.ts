@@ -42,7 +42,8 @@ export function unready(plan: string, version: string): string | undefined {
     .map((it) => it.trim())
     .find((it) => it && !it.startsWith("#"));
   if (!summary?.includes(version)) return `its summary doesn't name ${version}`;
-  if (/^\s*- \[x\]/im.test(body)) return "it has a ticked step, which belongs in Where it is or the doc that states it";
+  if (/^\s*- \[x\]/im.test(body))
+    return "it has a ticked step, which belongs in Where it is or the doc that states it";
   return undefined;
 }
 
