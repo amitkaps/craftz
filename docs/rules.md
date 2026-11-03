@@ -261,6 +261,12 @@ import { chromium } from "@playwright/test";
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 await page.goto(process.argv[2]);
+await page.waitForLoadState("networkidle", { timeout: 10_000 }).catch(() => {});
+await page.waitForFunction(
+  `document.body.innerText.trim() || document.querySelector("img, svg, canvas, video")`,
+  undefined,
+  { timeout: 5_000 },
+);
 await page.screenshot({ path: process.argv[3], fullPage: true });
 await browser.close();
 ```

@@ -116,6 +116,7 @@ The rule is [Silence is the failure](rules.md#silence-is-the-failure). Each find
 - **A report that adds up can still be wrong.** `craftz deps` read pagez as 7 packages, since pnpm prints a package's dependencies once and marks it `deduped` after. A line saying each dependency is one package was the sign.
 - **A run waited an hour on a pull request that couldn't merge.** A conflict never fails a check, so align's wait sat until someone closed it. A conflict ends a wait.
 - **A warning everyone learned to skip is noise.** Rolldown printed `UNRESOLVED_IMPORT` for every `node:` import in markz's browser build, though the build was right. Say what the tool should do, here with `pack.deps.neverBundle`, so the warning goes.
+- **A blank screenshot passed.** `craftz shot` returned at `load` and exited 0, so a page that renders in the browser came back as an empty PNG, and it looked like a broken page. On a private repository's app, the network going quiet was the signal that mattered, since 154 characters of text at the first paint became 47,824. A page that polls never goes quiet, so the wait is capped, and nothing drawn at the end fails the command.
 - **A run prints what it's for, not what it did in order.** align printed a line per repository per step, and the versions it moved were spread across them. Each step finishes for every repository before the next, and the report groups each version with where it moved.
 
 ## A run removes what it writes

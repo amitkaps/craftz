@@ -38,7 +38,7 @@ pnpm craftz rules scripts         # one part, and Practice after it
 
 ## Looking at a page
 
-- [`craftz shot <url> <file.png> [--width <pixels>]`]{#shot}: saves a page as a PNG, with the repository's Playwright.
+- [`craftz shot <url> <file.png> [--width <pixels>]`]{#shot}: saves a page as a PNG, with the repository's Playwright. It waits for a page that renders in the browser, up to 10 seconds for the network to go quiet and 5 for something drawn. With nothing drawn, it saves the PNG and fails, saying so. It doesn't scroll, so content a page renders only on scrolling stays out of the picture.
 
 ```sh
 pnpm craftz shot http://localhost:3000 page.png
