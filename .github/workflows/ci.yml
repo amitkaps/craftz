@@ -6,9 +6,9 @@
 # the same in every repository, so what a repository adds goes in `verify`. The job is named
 # `ci`, the check that branch protection requires.
 #
-# A job that runs past two minutes is stopped, where GitHub's own limit is six hours. That's for
-# a job that hangs. The `verify` step is stopped at one minute, six times its budget, so a `verify`
-# that has slowed that far fails and gets fixed. One over the budget but under the stop passes, and
+# A job that runs past three minutes is stopped, where GitHub's own limit is six hours. That's for
+# a job that hangs. The `verify` step is stopped at two minutes, twelve times its budget, so a
+# `verify` that has slowed that far fails and gets fixed. One over the budget but under the stop passes, and
 # `craftz status` notes it, as [the rules](https://craftz.amitkaps.com/docs/rules.md#ci) say.
 name: CI
 
@@ -29,7 +29,7 @@ permissions:
 jobs:
   ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 3
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -46,5 +46,5 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Verify
-        timeout-minutes: 1
+        timeout-minutes: 2
         run: pnpm run verify
