@@ -176,8 +176,8 @@ importers:
         specifier: 0.11.1
         version: 0.11.1
       '@mdn/browser-compat-data':
-        specifier: ^8.1.7
-        version: 8.1.7
+        specifier: ^8.1.8
+        version: 8.1.8
       '@types/node':
         specifier: 26.6.6
         version: 26.6.6
@@ -225,8 +225,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@mdn/browser-compat-data@8.1.7':
-    resolution: {integrity: sha512-TJ+rX530bFoE8678PuH2gjCSzwpBcaLlcElRhnnxFdkLHHT1clUAxtjImPFZDAlWQ005px9xaJ4Nd+aQp/rylQ==}
+  '@mdn/browser-compat-data@8.1.8':
+    resolution: {integrity: sha512-+RK7inkLeZ70kr9Mo+Y81JjZMpQIt0Sx40tHHU0hXGDSdf9YvlawH+4WlUpP3SE8rFLmjqGiTzL+qPPPnncWDw==}
 
   '@oxc-project/runtime@0.155.0':
     resolution: {integrity: sha512-VbW9raczGS5ZZ1FMunUBYHe4uV/R684qlQCoMdE3n5JT1PcqQsvmFpMYkF8AD+W04fBLGAq6Tr7YsTk0jjvDBA==}
@@ -1018,8 +1018,8 @@ packages:
   std-env@4.3.0:
     resolution: {integrity: sha512-OtU/EgQ1kIm5KwqQpBC6ZEMXrZRui11w8zgfTWp8cdO9B8OaPsbA8bTHO2P+HNo1VlUTGMVBwPhydu6poeXiag==}
 
-  tinybench@6.2.2:
-    resolution: {integrity: sha512-nIZ2N2dFpjBsg2hgitKu7mA+FvsIJuGJOwysRngmVRRmWgR/UyPjwJj8c/fT/dhm8EkHnF5EOogRf+0Z2qrimA==}
+  tinybench@6.2.3:
+    resolution: {integrity: sha512-Al01C2JIBnO2CXCAPbpAl6sUiOZHeThGtHYNTa51JRw9PyWOCdr+9Ong05R4qg/Sk3+H645E8ov1h2c58ityNw==}
     engines: {node: '>=20.0.0'}
 
   tinyexec@1.3.1:
@@ -1107,8 +1107,8 @@ packages:
     engines: {node: '>=20.11'}
     hasBin: true
 
-  ws@8.22.0:
-    resolution: {integrity: sha512-Ydggc987+RO0AnWtZ/7Wq9FtNvcrL1b/RO0ud9mWjUPgDrsAAwQSF51sm2hm1XofbU/4jkpGEsLFsZZxU+1DOg==}
+  ws@8.22.1:
+    resolution: {integrity: sha512-oyL6OPYme/CmiFvNuGzeoxCJ4nOrZE2O1FwM9MWM1AsGri6nLXB2pg+lNA8aLeXMSav0J6eIVS1j6vUPzUtK9g==}
     engines: {node: '>=10.0.0'}
     peerDependencies:
       bufferutil: ^4.0.1
@@ -1154,7 +1154,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.6.0
 
-  '@mdn/browser-compat-data@8.1.7': {}
+  '@mdn/browser-compat-data@8.1.8': {}
 
   '@oxc-project/runtime@0.155.0': {}
 
@@ -1373,7 +1373,7 @@ snapshots:
       sirv: 3.0.2
       tinyrainbow: 3.2.0
       vitest: 5.0.5(@types/node@26.6.6)(@vitest/browser-preview@5.0.5)(@vitest/ui@5.0.5)(@voidzero-dev/vite-plus-core@1.4.0(@types/node@26.6.6)(publint@0.3.25))(publint@0.3.25)
-      ws: 8.22.0
+      ws: 8.22.1
     transitivePeerDependencies:
       - '@arethetypeswrong/core'
       - '@types/node'
@@ -1748,7 +1748,7 @@ snapshots:
 
   std-env@4.3.0: {}
 
-  tinybench@6.2.2: {}
+  tinybench@6.2.3: {}
 
   tinyexec@1.3.1: {}
 
@@ -1837,7 +1837,7 @@ snapshots:
       obug: 3.0.0
       picomatch: 4.0.7
       std-env: 4.3.0
-      tinybench: 6.2.2
+      tinybench: 6.2.3
       tinyexec: 1.3.1
       tinyglobby: 0.2.17
       vite: '@voidzero-dev/vite-plus-core@1.4.0(@types/node@26.6.6)(publint@0.3.25)'
@@ -1871,7 +1871,7 @@ snapshots:
 
   why-is-node-running@3.2.1: {}
 
-  ws@8.22.0: {}
+  ws@8.22.1: {}
 
   yuku-core@0.19.0:
     dependencies:
