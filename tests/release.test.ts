@@ -23,7 +23,7 @@ test("a plan that names another version isn't", () => {
 
 test("a ticked step isn't ready", () => {
   expect(unready(plan("0.9.0 is on npm.", "- [x] **Done.** Merged."), "0.9.0")).toBe(
-    "it has a ticked step, which belongs in Where it is",
+    "it has a ticked step, which belongs in Where it is or the doc that states it",
   );
 });
 
