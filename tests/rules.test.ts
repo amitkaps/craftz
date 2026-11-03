@@ -221,6 +221,37 @@ test("a package writes out its publint and types, and the fixes write them in", 
   );
 });
 
+test("a Playwright config doesn't retry a test, and the fix writes that in", () => {
+  const playwright = (text: string) => {
+    const rule = RULES.find((r) => r.id === "toolchain-playwright");
+    return rule?.check({ files: { "playwright.config.ts": text } } as unknown as Repo)?.drift;
+  };
+  const ruled = `export default defineConfig({\n  retries: 0,\n  forbidOnly: true,\n  use: { trace: "retain-on-failure" },\n});\n`;
+  expect(playwright(ruled)).toEqual([]);
+  // A repository with no Playwright config has nothing to check.
+  expect(playwright("")).toBeUndefined();
+  // A retry written as an expression isn't read as 0, and a comment naming it isn't read at all.
+  const retried = `// retries: 0
+export default defineConfig({
+  retries: process.env.CI ? 2 : 0,
+  use: { trace: "on-first-retry" },
+});
+`;
+  expect(playwright(retried)).toEqual([
+    "retries isn't 0",
+    'use.trace is "on-first-retry", not "retain-on-failure"',
+    "forbidOnly isn't true",
+  ]);
+
+  const dir = tmp("craftz-playwright-");
+  writeFileSync(join(dir, "playwright.config.ts"), retried);
+  const fix = RULES.find((r) => r.id === "toolchain-playwright")?.fix;
+  if (fix?.in === "files") fix.apply(dir, here);
+  const fixed = readFileSync(join(dir, "playwright.config.ts"), "utf8");
+  expect(playwright(fixed)).toEqual([]);
+  expect(fixed).toContain("retries: 0");
+});
+
 test("a config writes out the format and lint the rules set, and the fix writes them in", () => {
   const drift = (id: string, vite: string) =>
     RULES.find((r) => r.id === id)?.check({

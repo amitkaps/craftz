@@ -16,7 +16,8 @@
  */
 import { tmp } from "./temp.ts";
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { here } from "../src/reference.ts";
 import { join } from "node:path";
 import { beforeAll, expect, inject, test } from "vite-plus/test";
 import { write } from "../src/new.ts";
@@ -55,6 +56,30 @@ test("check finds what fix puts back", () => {
 
   const again = craftz("fix", dir);
   expect([again.status, again.stdout]).toEqual([0, expect.stringMatching(/^Changed nothing\./)]);
+}, 30_000);
+
+test("a repository's e2e workflow is compared with the reference's", () => {
+  const file = join(dir, "package.json");
+  const pkg = JSON.parse(readFileSync(file, "utf8")) as { scripts: Record<string, string> };
+  pkg.scripts["test:e2e"] = "playwright test";
+  writeFileSync(file, JSON.stringify(pkg, null, 2));
+  const workflow = join(dir, ".github/workflows/e2e.yml");
+  mkdirSync(join(dir, ".github/workflows"), { recursive: true });
+
+  // Without the workflow the repository is told it has none.
+  expect(craftz("check", dir).stdout).toContain("github-e2e: no .github/workflows/e2e.yml");
+
+  // With the reference's, it isn't told anything, so the survey reads the file it has.
+  copyFileSync(join(here, ".github/workflows/e2e.yml"), workflow);
+  expect(craftz("check", dir).stdout).not.toContain("github-e2e");
+
+  writeFileSync(workflow, `${readFileSync(workflow, "utf8")}# changed\n`);
+  expect(craftz("check", dir).stdout).toContain("github-e2e: .github/workflows/e2e.yml differs");
+
+  // The later tests use the same folder, so it goes back as it was.
+  rmSync(workflow);
+  delete pkg.scripts["test:e2e"];
+  writeFileSync(file, JSON.stringify(pkg, null, 2));
 }, 30_000);
 
 test("a rule prints with its address", () => {
