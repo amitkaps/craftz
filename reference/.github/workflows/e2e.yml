@@ -1,0 +1,58 @@
+# @prose
+# # End-to-end tests
+#
+# Runs a repository's browser checks, `pnpm run test:e2e`, on every pull request. It's a workflow
+# beside `ci.yml`, so `ci` stays the same in every repository and finishes first. The `main`
+# ruleset doesn't require it, and a failure shows on the pull request. A failed run keeps its
+# Playwright report for a week, to open the trace.
+#
+# A job that runs past six minutes is stopped, where GitHub's own limit is six hours. That's for
+# a job that hangs. A slow `test:e2e` passes, and `craftz status` notes it, as
+# [the rules](https://craftz.amitkaps.com/docs/rules.md#ci) say.
+name: E2E
+
+on:
+  pull_request:
+    branches: [main]
+
+# A new push cancels the run before it.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      # Reads the pnpm version from package.json's `packageManager`.
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: package.json
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      # The headless shell is all a headless run needs, and it's far smaller than full Chromium.
+      - name: Chromium
+        run: pnpm exec playwright install --with-deps --only-shell chromium
+
+      - name: test:e2e
+        run: pnpm run test:e2e
+
+      - name: Report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          if-no-files-found: ignore
+          retention-days: 7

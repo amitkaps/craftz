@@ -146,6 +146,7 @@ export function owns(
 
 export const WORKSPACE = "pnpm-workspace.yaml";
 export const CI = ".github/workflows/ci.yml";
+export const E2E = ".github/workflows/e2e.yml";
 
 /** Claude Code's settings and the two hooks they run, the same in every repository. */
 export const CLAUDE = [
