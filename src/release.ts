@@ -18,8 +18,8 @@
  * so it stops and asks for `--notes`, before anything changes on GitHub.
  *
  * It reads `docs/plan.md` on `main` first, and stops unless the plan's summary names the version
- * and no step in it is ticked. A step is ticked as it merges, and its ticked steps move into
- * "Where it is" before a release ([docs-plan](../docs/rules.md#docs-plan)). So a plan that's
+ * and no step in it is ticked. A step is ticked as it merges, and then leaves, for "Where it is"
+ * or the doc that states what it built ([docs-plan](../docs/rules.md#docs-plan)). So a plan that's
  * ready has nothing ticked, and it names the release. Updating the plan after a release was a
  * step nobody took, so it comes before.
  *
@@ -42,7 +42,8 @@ export function unready(plan: string, version: string): string | undefined {
     .map((it) => it.trim())
     .find((it) => it && !it.startsWith("#"));
   if (!summary?.includes(version)) return `its summary doesn't name ${version}`;
-  if (/^\s*- \[x\]/im.test(body)) return "it has a ticked step, which belongs in Where it is";
+  if (/^\s*- \[x\]/im.test(body))
+    return "it has a ticked step, which belongs in Where it is or the doc that states it";
   return undefined;
 }
 
