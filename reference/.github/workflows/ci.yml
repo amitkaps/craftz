@@ -10,6 +10,10 @@
 # a job that hangs. The `verify` step is stopped at two minutes, twelve times its budget, so a
 # `verify` that has slowed that far fails and gets fixed. One over the budget but under the stop passes, and
 # `craftz status` notes it, as [the rules](https://craftz.amitkaps.com/docs/rules.md#ci) say.
+#
+# On a pull request, `prose style` also gives its advice on the files the pull request changed,
+# shown beside their lines. An agent that opens one without `pnpm pr` sees it there. It's advice,
+# so it never fails, and it runs before `verify`, so it shows when `verify` fails too.
 name: CI
 
 on:
@@ -33,6 +37,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        # A pull request's checkout is a merge commit, so its first parent is `main`.
+        with:
+          fetch-depth: 2
       # Reads the pnpm version from package.json's `packageManager`.
       - name: Set up pnpm
         uses: pnpm/action-setup@v6
@@ -44,6 +51,10 @@ jobs:
 
       - name: Install
         run: pnpm install --frozen-lockfile
+
+      - name: Style
+        if: github.event_name == 'pull_request'
+        run: pnpm prose style --since HEAD^1
 
       - name: Verify
         timeout-minutes: 2
