@@ -7,8 +7,9 @@
 # `ci`, the check that branch protection requires.
 #
 # A job that runs past three minutes is stopped, where GitHub's own limit is six hours. That's for
-# a job that hangs. A slow `verify` passes, and `craftz status` notes it, as
-# [the rules](https://craftz.amitkaps.com/docs/rules.md#ci) say.
+# a job that hangs. The `verify` step is stopped at one minute, six times its budget, so a `verify`
+# that has slowed that far fails and gets fixed. One over the budget but under the stop passes, and
+# `craftz status` notes it, as [the rules](https://craftz.amitkaps.com/docs/rules.md#ci) say.
 name: CI
 
 on:
@@ -45,4 +46,5 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Verify
+        timeout-minutes: 1
         run: pnpm run verify

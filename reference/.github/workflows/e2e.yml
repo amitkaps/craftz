@@ -7,8 +7,9 @@
 # Playwright report for a week, to open the trace.
 #
 # A job that runs past eight minutes is stopped, where GitHub's own limit is six hours. That's for
-# a job that hangs. A slow `test:e2e` passes, and `craftz status` notes it, as
-# [the rules](https://craftz.amitkaps.com/docs/rules.md#ci) say.
+# a job that hangs. The `test:e2e` step is stopped at four minutes, twice its budget, so a suite
+# that has slowed that far fails and gets fixed. One over the budget but under the stop passes, and
+# `craftz status` notes it, as [the rules](https://craftz.amitkaps.com/docs/rules.md#ci) say.
 name: E2E
 
 on:
@@ -49,6 +50,7 @@ jobs:
         run: pnpm exec playwright install --only-shell chromium
 
       - name: test:e2e
+        timeout-minutes: 4
         run: pnpm run test:e2e
 
       - name: Report
