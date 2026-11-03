@@ -12,7 +12,7 @@ import { existsSync } from "node:fs";
 import { at, exported, jsonc, literal, valueAt } from "../config.ts";
 import { type Worker, workerIn } from "../worker.ts";
 import { unlike, withValues, withoutCraftz, usesCraftz } from "../edit.ts";
-import { type Config, RULED, written } from "../ruled.ts";
+import { type Config, PLAYWRIGHT, RULED, written } from "../ruled.ts";
 import { BROWSERS, COMPATIBILITY_DATE } from "../pinned.ts";
 import type { Rule } from "../rules.ts";
 import { EDITOR, type Json, drifted, editFile, owns, writeJson, writePkg } from "./shared.ts";
@@ -195,6 +195,20 @@ export const TOOLCHAIN_RULES: Rule[] = [
       return drifted(unruled(files["vite.config.ts"] ?? "", { fmt: RULED["fmt"] }));
     },
     fix: { in: "files", apply: (dir) => rule(dir, { fmt: RULED["fmt"] }) },
+  },
+  {
+    id: "toolchain-playwright",
+    check: ({ files }) => {
+      const config = files["playwright.config.ts"];
+      return config ? drifted(unruled(config, PLAYWRIGHT)) : undefined;
+    },
+    fix: {
+      in: "files",
+      apply: (dir) => {
+        if (!existsSync(join(dir, "playwright.config.ts"))) return;
+        editFile(join(dir, "playwright.config.ts"), (text) => withValues(text, PLAYWRIGHT));
+      },
+    },
   },
   {
     id: "toolchain-craftz",
