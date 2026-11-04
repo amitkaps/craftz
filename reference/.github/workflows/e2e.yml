@@ -7,8 +7,8 @@
 # Playwright report for a week, to open the trace.
 #
 # A job that runs past six minutes is stopped, where GitHub's own limit is six hours. That's for
-# a job that hangs. The `test:e2e` step is stopped at four minutes, twice its budget, so a suite
-# that has slowed that far fails and gets fixed. One over the budget but under the stop passes, and
+# a job that hangs. The `test:e2e` step is stopped at four minutes, twice its target, so a suite
+# that has slowed that far fails and gets fixed. One over the target but under the stop passes, and
 # `craftz status` notes it, as [the rules](https://craftz.amitkaps.com/docs/rules.md#ci) say.
 name: E2E
 

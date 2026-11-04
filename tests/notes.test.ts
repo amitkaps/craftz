@@ -3,7 +3,7 @@
  *
  * A note comes from what npm says, so npm is stood in for here. A newer craftz is noted with the
  * command that moves it, and a graduated beta only in craftz's own repository. When npm doesn't
- * answer, there's no note. A `verify` is noted only over its budget.
+ * answer, there's no note. A `verify` is noted only over its target.
  */
 import { expect, test } from "vite-plus/test";
 import { type Latest, notes } from "../src/notes.ts";
@@ -29,20 +29,20 @@ test("no answer from npm is no note", async () => {
   );
 });
 
-test("a verify over its budget is noted", async () => {
+test("a verify over its target is noted", async () => {
   expect(await notes({}, npm({}), { seconds: 28 })).toEqual([
-    "verify took 28s on CI, over its 10s budget",
+    "verify took 28s on CI, over its 10s target",
   ]);
   expect(await notes({}, npm({}), { seconds: 28, slowest: { step: "test", at: 26 } })).toEqual([
-    "verify took 28s on CI, over its 10s budget, and its slowest step, test, ended 26s in",
+    "verify took 28s on CI, over its 10s target, and its slowest step, test, ended 26s in",
   ]);
   expect(await notes({}, npm({}), { seconds: 10 })).toEqual([]);
   expect(await notes({}, npm({}))).toEqual([]);
 });
 
-test("an e2e over its budget is noted", async () => {
+test("an e2e over its target is noted", async () => {
   expect(await notes({}, npm({}), undefined, 130)).toEqual([
-    "test:e2e took 130s on CI, over its 120s budget",
+    "test:e2e took 130s on CI, over its 120s target",
   ]);
   expect(await notes({}, npm({}), undefined, 120)).toEqual([]);
   expect(await notes({}, npm({}), undefined, undefined)).toEqual([]);
