@@ -2,7 +2,7 @@
  * # Notes
  *
  * What `craftz status` says after its lines, when something is worth knowing: a newer craftz
- * than the one a repository installs, a beta that's graduated, and a `verify` over its budget. A
+ * than the one a repository installs, a beta that's graduated, and a `verify` over its target. A
  * note never fails `status`.
  *
  * Both read npm, which took 0.5 to 3 seconds, while the rules take a quarter of one. `check` once
@@ -32,10 +32,10 @@ const fromNpm: Latest = async (name) => {
 const EXACT = /^\d+\.\d+\.\d+$/;
 
 /** The seconds `verify` should take on CI, at most. */
-export const BUDGET = 10;
+export const TARGET = 10;
 
 /** The seconds a repository's `test:e2e` should take on CI, at most. */
-export const E2E_BUDGET = 120;
+export const E2E_TARGET = 120;
 const numbers = (version: string): number[] => version.split("-")[0]?.split(".").map(Number) ?? [];
 
 // Whether `a` is a later release than `b`, by its numbers.
@@ -59,7 +59,7 @@ function later(a: string, b: string): boolean {
  *
  * # A slow verify
  *
- * `verify` has a budget of 10 seconds on CI, the same in every repository, as
+ * `verify` has a target of 10 seconds on CI, the same in every repository, as
  * [the rules](../docs/rules.md#ci) say. The time is the `Verify` step of the latest CI run on
  * `main` that passed. It's a note, not a `✗`, since a slow `verify` isn't broken. It names the
  * step that ended last ([The slowest step](status.ts#the-slowest-step)), so a slow one is measured
@@ -68,7 +68,7 @@ function later(a: string, b: string): boolean {
  * # A slow test:e2e
  *
  * A repository with browser checks runs `test:e2e` in an `e2e` workflow, on pull requests, with a
- * budget of two minutes ([the rules](../docs/rules.md#ci)). The time is that step in the latest
+ * target of two minutes ([the rules](../docs/rules.md#ci)). The time is that step in the latest
  * `e2e` run that passed, so it's a note too, and a repository without the workflow has none.
  */
 export async function notes(
@@ -79,13 +79,13 @@ export async function notes(
 ): Promise<string[]> {
   const deps = { ...pkg.dependencies, ...pkg.devDependencies };
   const found: string[] = [];
-  if (verified && verified.seconds > BUDGET) {
+  if (verified && verified.seconds > TARGET) {
     const { step, at } = verified.slowest ?? {};
     const slowest = step ? `, and its slowest step, ${step}, ended ${at}s in` : "";
-    found.push(`verify took ${verified.seconds}s on CI, over its ${BUDGET}s budget${slowest}`);
+    found.push(`verify took ${verified.seconds}s on CI, over its ${TARGET}s target${slowest}`);
   }
-  if (e2e !== undefined && e2e > E2E_BUDGET) {
-    found.push(`test:e2e took ${e2e}s on CI, over its ${E2E_BUDGET}s budget`);
+  if (e2e !== undefined && e2e > E2E_TARGET) {
+    found.push(`test:e2e took ${e2e}s on CI, over its ${E2E_TARGET}s target`);
   }
   const own = deps[CRAFTZ];
   if (own && EXACT.test(own)) {

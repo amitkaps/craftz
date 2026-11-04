@@ -22,7 +22,7 @@
  *   [Access](settings.ts#access) says. Either is fine, and saying which means a site meant to be
  *   internal doesn't go public unseen. An Access application with no policy is marked.
  *
- * The [notes](notes.ts) follow the lines: a newer craftz, a `verify` over its budget, and in
+ * The [notes](notes.ts) follow the lines: a newer craftz, a `verify` over its target, and in
  * craftz's own repository a beta that's graduated.
  *
  * `--log` prints the latest build's log after, which is where a failed deploy says why, and
