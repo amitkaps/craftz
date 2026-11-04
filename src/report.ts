@@ -163,3 +163,45 @@ export function report(rows: Row[]): string[] {
     .filter((lines) => lines.length)
     .flatMap((lines, i) => (i ? ["", ...lines] : lines));
 }
+
+/** @prose
+ * # What to do next
+ *
+ * `pnpm bump` ends with the steps that are left, each a whole instruction with its command, so an
+ * agent that ran it before a release knows whether to release or to act first. A person reads it
+ * the same way.
+ *
+ * What's left for review never blocks a release, since a new major is a choice. What failed or is
+ * left by hand does, because nothing merged for it. A run with `--local` pushed nothing, so it
+ * says so, and a run that changed nothing says there's nothing to merge.
+ */
+export function next(rows: Row[], local: boolean): string[] {
+  const failed = rows.some((r) => r.status === "failed");
+  const byHand = rows.some((r) => r.status === "left by hand");
+  const steps: string[] = [];
+  if (failed) {
+    steps.push(
+      "Read the log of each repository under Failed, in the folder printed above, fix the cause, and run `pnpm bump` again.",
+    );
+  }
+  if (byHand) {
+    steps.push(
+      "Make each change under By hand in this checkout, open a pull request with `pnpm pr`, and run `pnpm bump` again.",
+    );
+  }
+  if (rows.some((r) => r.review.length)) {
+    steps.push(
+      "Decide each line under Left for review. A new major isn't taken for you, and none of it blocks a release. To take one, change its version in the reference, open a pull request with `pnpm pr`, and run `pnpm bump` again. To leave one, do nothing, and the next bump lists it again.",
+    );
+  }
+  if (local) {
+    steps.push("`--local` pushed nothing. Run `pnpm bump` without it to open the pull request.");
+  } else if (!failed && !byHand) {
+    steps.push(
+      rows.some((r) => r.pr)
+        ? "The pull request merged, so `main` holds this bump. The release can go ahead with `pnpm craftz release`."
+        : "Nothing changed, so there's no pull request. The release can go ahead with `pnpm craftz release`.",
+    );
+  }
+  return steps.length ? ["Next", ...steps.map((step) => `  ${step}`)] : [];
+}

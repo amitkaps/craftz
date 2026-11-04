@@ -43,7 +43,7 @@ import {
   readJson,
   readPkg,
 } from "./reference.ts";
-import { leftByHand, moveLine, report, row, type Row, type Step } from "./report.ts";
+import { leftByHand, moveLine, next, report, row, type Row, type Step } from "./report.ts";
 import { repos } from "./survey.ts";
 import { keep, temporary } from "./temp.ts";
 import { type Run, upgrade } from "./upgrade.ts";
@@ -642,5 +642,10 @@ if (!local) {
 if (readdirSync(work).length) {
   keep(work);
   console.log(`\nclones and logs in ${work}`);
+}
+// `pnpm bump` is read before a release, often by an agent, so it ends by saying what to do.
+if (targets.length === 1 && targets[0] === SELF && !candidate) {
+  const steps = next(states, local);
+  if (steps.length) console.log(["", ...steps].join("\n"));
 }
 process.exitCode = failed ? 1 : 0;
