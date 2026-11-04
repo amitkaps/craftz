@@ -99,7 +99,62 @@ export function owned(file: string, axes: Axes, std: string): string {
   return `${JSON.stringify(merged, null, 2)}\n`;
 }
 
+/** @prose
+ * # A dependency pnpm leaves alone
+ *
+ * A repository's library can ship a release its tooling can't use, and `pnpm update` takes it
+ * all the same. So the repository names it under `updateConfig.ignoreDependencies` in
+ * `pnpm-workspace.yaml`, which pnpm reads for `update` and `outdated` alike, with the reason in
+ * the comment above it. That block is the one part of the file that is the repository's own, and
+ * it comes last, so the comparison with the reference leaves it out and a fix that writes the
+ * file whole puts it back as it was.
+ *
+ * The block has one shape, a list of names each under its reason, so it's read line by line and
+ * not with a YAML parser, which would be most of the package. A line that isn't in that shape is
+ * reported by `versions-ignored`, never guessed at.
+ */
+export type Held = { name: string; reason: string };
+
+// Where the repository's own block starts, and the file before it.
+const split = (text: string): [before: string, block: string] => {
+  const start = /^updateConfig:[ \t]*$/m.exec(text)?.index ?? text.length;
+  return [text.slice(0, start), text.slice(start)];
+};
+
+export function heldIn(text: string): { held: Held[]; odd: string[] } {
+  const held: Held[] = [];
+  const odd: string[] = [];
+  const block = split(text)[1];
+  if (!block) return { held, odd };
+  const body = block
+    .split("\n")
+    .slice(1)
+    .filter((line) => line.trim() !== "");
+  if (body[0] !== "  ignoreDependencies:") {
+    return { held, odd: [body[0]?.trim() || "updateConfig has nothing under it"] };
+  }
+  let reason: string[] = [];
+  for (const line of body.slice(1)) {
+    const comment = /^ {4}# ?(.*)$/.exec(line);
+    const item = /^ {4}- ("?)([^"\s#]+)\1\s*$/.exec(line);
+    if (comment) reason.push(comment[1]!.trim());
+    else if (item) {
+      held.push({ name: item[2]!, reason: reason.join(" ") });
+      reason = [];
+    } else odd.push(line.trim());
+  }
+  if (reason.length) odd.push("a reason with no dependency under it");
+  return { held, odd };
+}
+
+// The reference's file with the block the repository's file has, as it was written.
+const withHolds = (want: string, have: string): string => {
+  const block = split(have)[1];
+  return block ? `${want.trimEnd()}\n\n${block.trimEnd()}\n` : want;
+};
+
 export function same(file: string, have: string, want: string): boolean {
+  if (file === WORKSPACE) return split(have)[0].trimEnd() === split(want)[0].trimEnd();
   if (!file.endsWith(".json")) return have === want;
   try {
     return JSON.stringify(JSON.parse(have)) === JSON.stringify(JSON.parse(want));
@@ -134,10 +189,11 @@ export function owns(
         const axes = axesIn(dir);
         for (const file of files) {
           const path = join(dir, file);
-          const want = owned(file, axes, std);
-          if (existsSync(path) && same(file, read(path), want)) continue;
+          const made = owned(file, axes, std);
+          const have = existsSync(path) ? read(path) : undefined;
+          if (have !== undefined && same(file, have, made)) continue;
           mkdirSync(dirname(path), { recursive: true });
-          writeFileSync(path, want);
+          writeFileSync(path, file === WORKSPACE && have ? withHolds(made, have) : made);
         }
       },
     },

@@ -8,7 +8,7 @@
 import { CRAFTZ, VERSIONS, readPkg, standard, versionsIn } from "../reference.ts";
 import { stated } from "../stated.ts";
 import type { Rule } from "../rules.ts";
-import { WORKSPACE, drifted, owns, pin, writePkg } from "./shared.ts";
+import { WORKSPACE, drifted, heldIn, owns, pin, writePkg } from "./shared.ts";
 
 /** @prose
  * # A shared version
@@ -172,4 +172,26 @@ export const VERSION_RULES: Rule[] = [
   version("versions-publint", "publint"),
   version("versions-playwright", "@playwright/test"),
   owns("versions-workspace", [WORKSPACE]),
+  {
+    id: "versions-ignored",
+    check: ({ files, deps }) => {
+      const text = files[WORKSPACE];
+      if (!text) return undefined;
+      const { held, odd } = heldIn(text);
+      if (!held.length && !odd.length) return undefined;
+      return drifted([
+        ...odd.map(
+          (line) => `${WORKSPACE} has "${line}", which isn't in an ignoreDependencies list`,
+        ),
+        ...held.flatMap(({ name, reason }) => [
+          ...(deps[name] ? [] : [`${name} is ignored, but isn't a dependency`]),
+          ...(name in VERSIONS ? [`${name} is a tool craftz moves, so hold its rule instead`] : []),
+          ...(reason ? [] : [`${name} is ignored with no reason above it`]),
+          ...(/^[\^~]/.test(deps[name] ?? "")
+            ? [`${name} is ${deps[name]}, which lets a fresh install take a newer release`]
+            : []),
+        ]),
+      ]);
+    },
+  },
 ];

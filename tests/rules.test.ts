@@ -855,3 +855,64 @@ test("a tsconfig writes out the reference's options and its own include, and the
   });
   expect(drift()).toEqual([]);
 });
+
+test("a dependency pnpm leaves alone is the repository's own, and the fix keeps it", () => {
+  const workspace = readFileSync(join(here, "pnpm-workspace.yaml"), "utf8");
+  const held = `${workspace}
+updateConfig:
+  ignoreDependencies:
+    # Plot 0.6.18 ships no types beside its default export. Look again when exports is fixed.
+    - "@observablehq/plot"
+`;
+  const dir = tmp("craftz-ignored-");
+  const pkg = {
+    name: "x",
+    devDependencies: { "vite-plus": "1.0.0", "@observablehq/plot": "0.6.17" },
+  };
+  const repoOf = (text: string, deps: Record<string, string> = pkg.devDependencies) =>
+    ({ pkg, files: { "pnpm-workspace.yaml": text }, deps, vitePlus: "1.0.0" }) as unknown as Repo;
+  const rule = (id: string) => RULES.find((r) => r.id === id)!;
+  const own = workspace.replace(/vite-plus-core@[\w.-]+/, "vite-plus-core@1.0.0");
+
+  // The block isn't drift from the reference, and the rule for it finds nothing.
+  expect(
+    rule("versions-workspace").check(repoOf(own.concat(held.slice(workspace.length))))?.drift,
+  ).toEqual([]);
+  expect(rule("versions-ignored").check(repoOf(held))?.drift).toEqual([]);
+
+  // Each way the block goes wrong.
+  const drift = (text: string, deps?: Record<string, string>) =>
+    rule("versions-ignored").check(repoOf(text, deps))?.drift;
+  expect(drift(held, { "vite-plus": "1.0.0" })).toEqual([
+    "@observablehq/plot is ignored, but isn't a dependency",
+  ]);
+  expect(drift(held.replace(/ {4}#.*\n/, ""))).toEqual([
+    "@observablehq/plot is ignored with no reason above it",
+  ]);
+  expect(drift(held, { "@observablehq/plot": "^0.6.17" })).toEqual([
+    "@observablehq/plot is ^0.6.17, which lets a fresh install take a newer release",
+  ]);
+  expect(
+    drift(held.replace('@observablehq/plot"', 'typescript"'), { typescript: "6.0.0" }),
+  ).toEqual(["typescript is a tool craftz moves, so hold its rule instead"]);
+  expect(rule("versions-ignored").check(repoOf(workspace))).toBeUndefined();
+  // A line outside the shape is reported and never guessed at.
+  expect(drift(held.replace('- "@observablehq', '* "@observablehq'))).toEqual([
+    'pnpm-workspace.yaml has "* "@observablehq/plot"", which isn\'t in an ignoreDependencies list',
+    'pnpm-workspace.yaml has "a reason with no dependency under it", which isn\'t in an ignoreDependencies list',
+  ]);
+
+  // The fix writes the reference's file and puts the block back.
+  writeFileSync(join(dir, "package.json"), JSON.stringify(pkg));
+  writeFileSync(
+    join(dir, "pnpm-workspace.yaml"),
+    held.replace("vite-plus-core@", "vite-plus-core@0.0.1-"),
+  );
+  const fix = rule("versions-workspace").fix;
+  if (fix?.in === "files") fix.apply(dir, here);
+  const after = readFileSync(join(dir, "pnpm-workspace.yaml"), "utf8");
+  expect(after).toContain("vite-plus-core@1.0.0");
+  expect(after).toContain("# Plot 0.6.18 ships no types");
+  expect(after).toContain("@observablehq/plot");
+  expect(rule("versions-workspace").check(repoOf(after))?.drift).toEqual([]);
+});

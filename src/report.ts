@@ -13,8 +13,9 @@
  *
  * A repository left by hand or failed gets no pull request, so nothing in it moved, and its
  * versions and files aren't listed. Its own `craftz upgrade` does the fix again, before the steps
- * that are left. What's left for review, the settings and the pull
- * requests print only when there are any. A last line counts the outcomes.
+ * that are left. What's left for review, what's held, the settings and the pull
+ * requests print only when there are any. A held dependency is one a repository tells pnpm to
+ * leave, so it prints on every run with its reason, and no one forgets it's there. A last line counts the outcomes.
  */
 
 /** The steps every repository takes, in order, as the table's columns. */
@@ -35,6 +36,8 @@ export type Row = {
   files: string[];
   /** New majors, left for review. */
   review: string[];
+  /** Dependencies the repository tells pnpm to leave, each with its reason. */
+  held: string[];
   byHand: string[];
   failed?: string;
   settings: string[];
@@ -47,6 +50,7 @@ export const row = (repo: string): Row => ({
   moved: [],
   files: [],
   review: [],
+  held: [],
   byHand: [],
   settings: [],
 });
@@ -153,6 +157,7 @@ export function report(rows: Row[]): string[] {
       : ["Moved: none"],
     section("From craftz", kept, (r) => r.files, true),
     section("Left for review", rows, (r) => r.review, false),
+    section("Held", rows, (r) => r.held, false),
     section("By hand", rows, (r) => r.byHand, true),
     section("Failed", rows, (r) => (r.failed ? [r.failed] : []), true),
     section("Settings", rows, (r) => r.settings, false),
