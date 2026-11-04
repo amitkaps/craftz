@@ -28,6 +28,7 @@ import { execFile, execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { promisify } from "node:util";
+import { staleActions } from "./actions.ts";
 import { checkSettings, writeSettings } from "./apply.ts";
 import { catchUp } from "./gone.ts";
 import { fixFiles } from "./rules.ts";
@@ -153,6 +154,9 @@ async function update(dir: string, log: string[], skip: string[]): Promise<strin
  * removed, so only `package.json` and `pnpm-workspace.yaml` change. Every tool is in its
  * `package.json`, wrangler too, so one update moves them all, within pnpm's one-day wait, and each
  * stays exact.
+ *
+ * The reference's workflows are read too, and each action with a later major is listed beside the
+ * libraries' majors, as [Actions](actions.ts) says.
  */
 async function updateReference(dir: string, log: string[]): Promise<string[]> {
   try {
@@ -173,7 +177,7 @@ async function moveReference(dir: string, log: string[]): Promise<string[]> {
     workspace,
     readFileSync(workspace, "utf8").replace(/vite-plus-core@[\w.-]+/, `vite-plus-core@${vitePlus}`),
   );
-  return majors;
+  return [...majors, ...staleActions(dir)];
 }
 
 /** @prose

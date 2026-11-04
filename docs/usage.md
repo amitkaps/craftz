@@ -210,7 +210,7 @@ A step that fails on what's left to do by hand, `fix` or `verify`, doesn't stop 
 pnpm bump
 ```
 
-The reference pins the versions every repository uses, like Vite+, TypeScript and wrangler, so they move only when craftz's reference does. bump moves it to the newest versions pnpm's one-day wait allows, runs craftz's fixes from source against them, and opens craftz's pull request. Run it before a release, so the release carries them, then `pnpm align` takes them to the others.
+The reference pins the versions every repository uses, like Vite+, TypeScript and wrangler, so they move only when craftz's reference does. bump moves it to the newest versions pnpm's one-day wait allows, lists the workflows' actions that have a later major, like `actions/upload-artifact`, runs craftz's fixes from source against them, and opens craftz's pull request. Run it before a release, so the release carries them, then `pnpm align` takes them to the others.
 
 ## For agents
 
