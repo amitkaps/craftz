@@ -2,10 +2,12 @@
  * # The screenshot command's test
  *
  * What `craftz shot` says when it's given too little or run in a folder with no Playwright, and
- * what it waits for before the picture. A folder holds a stand-in Playwright that writes down each
- * call, since a real screenshot needs a browser, which `verify` doesn't install. A real one is
- * checked by hand with `pnpm craftz shot` in this repository. A browser test is ruled out for now,
- * since it would need the `e2e` workflow for one small command.
+ * what it waits for before the picture.
+ *
+ * A folder holds a stand-in Playwright that writes down each call, since a real screenshot needs a
+ * browser, which `verify` doesn't install. A real one is checked by hand with `pnpm craftz shot` in
+ * this repository. A browser test is ruled out for now, since it would need the `e2e` workflow for
+ * one small command.
  */
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
