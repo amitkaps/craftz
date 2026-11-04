@@ -221,7 +221,12 @@ function flagged(allowed: string[]): { flags: string[]; dir: string } {
   return { flags, dir: resolve(dirs[0] ?? ".") };
 }
 
-if (command === "rules" && !rest.length) {
+// `pnpm pr help` is how an agent asks what `pr` does, and `pr` would read `help` as the title.
+// So those two print their section, as `craftz help <command>` does.
+const asksHelp = ["help", "--help", "-h"].includes(arg ?? "") && !rest.length;
+if (asksHelp && ["pr", "release"].includes(command ?? "")) {
+  process.stdout.write(helpOn(command as string) ?? help());
+} else if (command === "rules" && !rest.length) {
   if (!arg) {
     process.stdout.write(printed());
   } else {

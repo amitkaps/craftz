@@ -157,3 +157,18 @@ test("help reads usage from the package", () => {
   const none = craftz("help", "nothing");
   expect([none.status, none.stderr]).toEqual([1, expect.stringContaining("no command `nothing`")]);
 });
+
+test("pr and release print their help for help, so it's never taken for a title", () => {
+  for (const [command, word] of [
+    ["pr", "help"],
+    ["pr", "--help"],
+    ["release", "help"],
+  ]) {
+    const out = craftz(command, word);
+    expect([command, out.status, out.stdout]).toEqual([
+      command,
+      0,
+      expect.stringContaining(`craftz ${command}`),
+    ]);
+  }
+});
