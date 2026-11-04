@@ -32,7 +32,7 @@ const fromNpm: Latest = async (name) => {
 const EXACT = /^\d+\.\d+\.\d+$/;
 
 /** The seconds `verify` should take on CI, at most. */
-export const TARGET = 10;
+export const VERIFY_TARGET = 10;
 
 /** The seconds a repository's `test:e2e` should take on CI, at most. */
 export const E2E_TARGET = 120;
@@ -61,9 +61,10 @@ function later(a: string, b: string): boolean {
  *
  * `verify` has a target of 10 seconds on CI, the same in every repository, as
  * [the rules](../docs/rules.md#ci) say. The time is the `Verify` step of the latest CI run on
- * `main` that passed. It's a note, not a `✗`, since a slow `verify` isn't broken. It names the
- * step that ended last ([The slowest step](status.ts#the-slowest-step)), so a slow one is measured
- * before anyone guesses at it.
+ * `main` that passed. It's a note, not a `✗`, since a slow `verify` isn't broken. It gives the
+ * whole job's time beside it, since a developer waits on the job, and setup takes a third of it.
+ * It names the step that ended last ([The slowest step](status.ts#the-slowest-step)), so a slow
+ * one is measured before anyone guesses at it.
  *
  * # A slow test:e2e
  *
@@ -79,10 +80,12 @@ export async function notes(
 ): Promise<string[]> {
   const deps = { ...pkg.dependencies, ...pkg.devDependencies };
   const found: string[] = [];
-  if (verified && verified.seconds > TARGET) {
+  if (verified && verified.seconds > VERIFY_TARGET) {
     const { step, at } = verified.slowest ?? {};
     const slowest = step ? `, and its slowest step, ${step}, ended ${at}s in` : "";
-    found.push(`verify took ${verified.seconds}s on CI, over its ${TARGET}s target${slowest}`);
+    found.push(
+      `verify took ${verified.seconds}s on CI in a job of ${verified.job}s, over its ${VERIFY_TARGET}s target${slowest}`,
+    );
   }
   if (e2e !== undefined && e2e > E2E_TARGET) {
     found.push(`test:e2e took ${e2e}s on CI, over its ${E2E_TARGET}s target`);
