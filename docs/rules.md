@@ -117,6 +117,10 @@ A repository's own libraries, like svelte or micromark, are its own to choose. `
 
 - [`versions-workspace`]{#versions-workspace}: `pnpm-workspace.yaml` is [the reference's](../reference/pnpm-workspace.yaml), word for word, with the override at the repository's own `vite-plus`. The fix writes it whole. A setting a repository wants for itself is a change to these rules.
 
+A library can ship a release its tooling can't use, and `pnpm update` takes it all the same. The repository then tells pnpm to leave it, which `outdated` and `update` both respect, and `align` too. Its name goes under `updateConfig.ignoreDependencies` in `pnpm-workspace.yaml`, with the reason in the comment above it. The reason says when to look again, like a release that fixes what broke. That block is the one part of the file that is the repository's own, so the comparison above leaves it out, and the fix puts it back when it writes the file.
+
+- [`versions-ignored`]{#versions-ignored}: a dependency that `ignoreDependencies` names is a dependency of the repository, has a reason in the comment above it, and is at an exact version. A range lets a fresh install take the release that was left. A tool the reference names is held by its rule in [the holds](#holds), never here, since `craftz upgrade` moves it and not `pnpm update`.
+
 - **The cooldown.** pnpm's one-day wait on a new version is kept, with only `@amitkaps/*` excluded. A hijacked release can be pulled before it's installed, and our own skip the wait, since each reaches npm only after the owner approves it. The wait guards the libraries and nested packages, hundreds in each lockfile, that `align` moves without review. The shared tools are few, and `pnpm bump` moves them when they're wanted, so a day costs them little. A shorter wait, and leaving the shared tools out of it, are ruled out. Any number of hours is as arbitrary as pnpm's, and the shared tools do the most when they run.
 
 ## Holds
@@ -132,6 +136,8 @@ When a tool a repository depends on keeps it from a rule, the repository holds t
 ```
 
 Only a rule a tool can block can be held: a tool's version, other than craftz's own, `cloudflare-config` and `toolchain-types`. A hold on any other rule fails `craftz check`.
+
+A hold stops craftz's rule. A library no rule names, like a charting library whose latest release broke the types, is ignored in [pnpm's settings](#versions-ignored) instead, since only `pnpm update` moves it.
 
 A hold is for what a tool can't do, never for a preference. The point of one set of rules is that a choice like Vite+ is made once and paid for once, not argued again in each repository. A hold whose check stops drifting fails `craftz check` until it's removed, so none outlives its reason.
 

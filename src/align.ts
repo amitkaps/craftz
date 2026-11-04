@@ -32,6 +32,7 @@ import { staleActions } from "./actions.ts";
 import { checkSettings, writeSettings } from "./apply.ts";
 import { catchUp } from "./gone.ts";
 import { fixFiles } from "./rules.ts";
+import { heldIn } from "./rules/shared.ts";
 import {
   CRAFTZ,
   OWNER,
@@ -368,6 +369,12 @@ await phase("cloning", "clone", going(), async ({ dir, log, repo }) => {
 await phase("upgrading", "upgrade", going(), async (state) => {
   state.before = versionsIn(state.dir, state.repo);
   state.review = await alignTo(state.dir, state.repo, state.log, byHand(state));
+  const settings = join(state.dir, "pnpm-workspace.yaml");
+  if (existsSync(settings)) {
+    state.held = heldIn(readFileSync(settings, "utf8")).held.map(
+      ({ name, reason }) => `${name}: ${reason || "no reason given"}`,
+    );
+  }
 });
 
 await phase("installing", "install", going(), async (state) => {

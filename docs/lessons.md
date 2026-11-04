@@ -147,6 +147,7 @@ craftz's own principle. Each release sends every repository a round of pull requ
 - **What every repository changes for goes in before the release.** `pr` and `gone` were to become commands after the move, which would have meant a second round. A shared file that changes changes for everyone at once. Before a release, ask what the next one would change everywhere, and grep the reference for links outside craftz.
 - **A rule that's missed is found by the next thing to use it.** 0.1.0 had no rule that a repository depends on craftz. Before a release, start a repository with `new`, and read what it writes against what the release is for.
 - **A release's notes come from a run, not a plan.** 0.4.0's notes listed what the plan expected, and align then failed six sites on a rule without a fix. What a candidate run leaves by hand is what the notes say.
+- **A candidate run can't see what the wait hides.** Plot 0.6.18 was 23 hours old, inside pnpm's one-day wait, so the candidate kept 0.6.17 and visframe passed. The real run came 2 hours later, took 0.6.18, and left visframe by hand over types the release dropped. The real `align` is the check that counts, so read its report before saying a release is done. A library a release breaks is [ignored in pnpm's settings](rules.md#versions-ignored) until it's fixed.
 
 {#tools}
 
@@ -156,6 +157,7 @@ What each tool does that its docs don't say.
 
 ### pnpm
 
+- **An exact pin isn't a hold.** `pnpm update --latest` rewrote visframe's `0.6.17` to `0.6.18`, and a tsconfig `paths` mapping cleared the types but not the lint error beside them. `updateConfig.ignoreDependencies` in `pnpm-workspace.yaml` is what `outdated` and `update` both respect, tested on a scratch project with and without it.
 - **An exact pin with `onFail: error` breaks on every pnpm release.** A newer global pnpm refused with `ERR_PNPM_BAD_PM_VERSION`. `onFail: download` fetches and runs the pinned version.
 - **pnpm 12.13.0 needs its install script.** Its `pnpm` file is a placeholder for the native binary. Install the global pnpm from its GitHub release, as mise's default source does, not from npm. npm still warns that those scripts aren't covered by `allowScripts`, and a stricter npm would skip them.
 - **The laptop gets Node and pnpm from mise, and CI gets them from actions.** A repository has no `mise.toml`, so `package.json` is the one place that holds both versions. A change to either setup reads them from there, and keeps the two on the same Node and pnpm.
