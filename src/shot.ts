@@ -17,8 +17,9 @@
  *
  * It doesn't scroll, so content a page renders only on scrolling stays out of the picture.
  *
- * craftz doesn't depend on Playwright. It loads the one the repository has, and says so when
- * there is none.
+ * A repository that installs craftz doesn't get Playwright from it. The command loads the one the
+ * repository has, and says so when there is none. craftz's own repository has it as a dev
+ * dependency, so this command runs against a real browser here too.
  */
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
