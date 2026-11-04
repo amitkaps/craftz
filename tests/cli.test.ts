@@ -21,6 +21,7 @@ import { here } from "../src/reference.ts";
 import { join } from "node:path";
 import { beforeAll, expect, inject, test } from "vite-plus/test";
 import { write } from "../src/new.ts";
+import { commands } from "../src/stated.ts";
 import { usePacked } from "./packed.ts";
 
 const dir = join(tmp("craftz-cli-"), "example");
@@ -158,18 +159,36 @@ test("help reads usage from the package", () => {
   expect([none.status, none.stderr]).toEqual([1, expect.stringContaining("no command `nothing`")]);
 });
 
-test("pr and release print their help for help, so it's never taken for a title", () => {
-  const asked: [string, string][] = [
-    ["pr", "help"],
-    ["pr", "--help"],
-    ["release", "help"],
-  ];
-  for (const [command, word] of asked) {
-    const out = craftz(command, word);
-    expect([command, out.status, out.stdout]).toEqual([
-      command,
+test("every command prints its help for --help, and -h is the same flag", () => {
+  const asked = [...commands().commands.map((c) => [c.id, "--help"]), ["pr", "-h"]];
+  for (const [id, flag] of asked) {
+    const out = craftz(id ?? "", flag ?? "");
+    expect([id, flag, out.status, out.stdout]).toEqual([
+      id,
+      flag,
       0,
-      expect.stringContaining(`craftz ${command}`),
+      expect.stringContaining(`craftz ${id}`),
     ]);
   }
+}, 60_000);
+
+test("the word help after pr or release is an error, and never starts a branch", () => {
+  const pr = craftz("pr", "help");
+  expect([pr.status, pr.stderr]).toEqual([1, expect.stringContaining("pnpm pr --help")]);
+  const dashed = craftz("pr", "--", "help");
+  expect(dashed.status).toBe(1);
+  const release = craftz("release", "help");
+  expect([release.status, release.stderr]).toEqual([1, expect.stringContaining("<X.Y.Z>")]);
+});
+
+test("pr wants one title, in words, before it touches git", () => {
+  const both = craftz("pr", "--title", "one", "two");
+  expect([both.status, both.stderr]).toEqual([1, expect.stringContaining("Give a title once")]);
+  const none = craftz("pr", "--wait");
+  expect([none.status, none.stderr]).toEqual([1, expect.stringContaining("Give a title once")]);
+  const empty = craftz("pr", "--title", "!!!");
+  expect([empty.status, empty.stderr]).toEqual([
+    1,
+    expect.stringContaining("no letters or digits"),
+  ]);
 });

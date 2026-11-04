@@ -101,6 +101,21 @@ test("a body or label is read as given, even one that opens with a dash", () => 
   expect(joined(["t", "--body=-x", "--body"])).toEqual(["t", "--body=-x", "--body"]);
 });
 
+test("--title is read as given, and what follows -- is left alone", () => {
+  expect(joined(["--title", "-fix it", "--wait"])).toEqual(["--title=-fix it", "--wait"]);
+  expect(joined(["--label", "fixed", "--", "--label", "x"])).toEqual([
+    "--label=fixed",
+    "--",
+    "--label",
+    "x",
+  ]);
+});
+
+test("a title with no letters or digits can't name a branch", () => {
+  expect(branchOf("!!!")).toBe("");
+  expect(branchOf("-fix it")).toBe("fix-it");
+});
+
 test("a merge says what CI took, the runs a fall behind added, and the wait after it passed", () => {
   expect([took(41_400), took(60_000), took(662_000), took(59_100_000)]).toEqual([
     "41s",

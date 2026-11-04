@@ -22,7 +22,7 @@ pnpm craftz help       # every command, with how it's run
 pnpm craftz help deps  # what one does, from this page
 ```
 
-`craftz help` reads this page from the installed version, as `craftz rules` reads the rules. `craftz --help` lists the commands too.
+`craftz help` reads this page from the installed version, as `craftz rules` reads the rules. `craftz --help` lists the commands too, and `craftz <command> --help` or `-h` prints one's section.
 
 ## Reading the rules
 
@@ -105,17 +105,18 @@ pnpm craftz deploy
 
 ## Pull requests
 
-- [`craftz pr "<title>" [--label <label>] [--body <text>] [--wait]`]{#pr}: opens a pull request that merges itself once CI passes.
+- [`craftz pr ("<title>" | --title "<title>") [--label <label>] [--body <text>] [--wait]`]{#pr}: opens a pull request that merges itself once CI passes.
 - [`craftz gone`]{#gone}: merges the branch's pull request if its checks passed, deletes the local branches that merged, ends on `main`, pulled, and writes `outline.md`.
 
 ```sh
 pnpm pr "<title>" --label added   # commit, verify, push, and merge once CI passes
 pnpm pr "<title>" --wait          # and wait for the merge, then switch to main
 pnpm gone                         # delete the merged branches, and pull main
-pnpm pr help                      # what pr does, and never a title
+pnpm pr -- "-a title with a dash" # after --, everything is the title
+pnpm pr --help                    # what pr does, as every command's --help and -h do
 ```
 
-A repository's `pr` and `gone` scripts run `craftz pr` and `craftz gone`, and every change reaches `main` this way. A package's pull request takes one label for the release notes, and stops without one before anything is committed. A site or a tool takes none. `pr help` and `release help` print their section, and are never read as a title. Without `--wait`, start the next change while CI runs, and run `pr` again with its title. If the last pull request hasn't merged yet, `pr` waits for it, then starts the new one from `main`. A title that's already open, like a release's `vX.Y.Z`, adds the change to that pull request, from any branch. End a session with `--wait`, so it ends on `main` with `outline.md` written, which the next session's `AGENTS.md` imports. Both `gone` and `--wait` write it only where prose is installed. `pr` first deletes the local branches that merged. A branch merged when its branch on GitHub is gone, when its last commit is a merged pull request's, or when it's on `main`.
+A repository's `pr` and `gone` scripts run `craftz pr` and `craftz gone`, and every change reaches `main` this way. A package's pull request takes one label for the release notes, and stops without one before anything is committed. A site or a tool takes none. The title is the argument or `--title`, and a title with no letters or digits stops before anything is committed. Every command prints its section for `--help` or `-h`. The bare word `help` is no request for help, as in git, so `pr` refuses it as a title. Without `--wait`, start the next change while CI runs, and run `pr` again with its title. If the last pull request hasn't merged yet, `pr` waits for it, then starts the new one from `main`. A title that's already open, like a release's `vX.Y.Z`, adds the change to that pull request, from any branch. End a session with `--wait`, so it ends on `main` with `outline.md` written, which the next session's `AGENTS.md` imports. Both `gone` and `--wait` write it only where prose is installed. `pr` first deletes the local branches that merged. A branch merged when its branch on GitHub is gone, when its last commit is a merged pull request's, or when it's on `main`.
 
 ## Releasing a package
 
