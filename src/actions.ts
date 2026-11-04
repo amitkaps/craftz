@@ -1,18 +1,19 @@
 /** @prose
  * # Actions
  *
- * The reference's workflows name each action by its major version, like `actions/checkout@v7`.
- * `pnpm bump` lists the ones whose repository has a later major release, in craftz's pull request.
- * It doesn't take them, as it doesn't take a new major of a library, since a major can change what
- * an action does, and the `e2e` workflow doesn't run on craftz's own pull requests.
+ * `pnpm bump` lists each action in the reference's workflows that has a later major release, like
+ * `actions/checkout@v7` against a v8. It lists them in craftz's pull request and doesn't take them.
+ *
+ * A major can change what an action does, and the `e2e` workflow doesn't run on craftz's own pull
+ * requests. So a person reads the list, as they read a library's new major.
  *
  * Being on the latest action doesn't matter, as it doesn't for pnpm. Being on the same one does,
- * and the reference is the one place that holds it. This stops the reference from falling behind
- * in silence, as `upload-artifact@v4` did while the others were on v7.
+ * and the reference holds it. This stops the reference falling behind in silence, as
+ * `upload-artifact@v4` did while the others were on v7.
  *
- * A workflow is read as YAML. An action that can't be compared is named, and never skipped quietly:
- * a pinned commit or a branch, a repository with no release, or a release GitHub doesn't answer
- * for.
+ * A workflow is read as YAML. An action that can't be compared is named, and never skipped quietly.
+ * That covers a pinned commit or a branch, a repository with no release, and a GitHub that doesn't
+ * answer.
  */
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
