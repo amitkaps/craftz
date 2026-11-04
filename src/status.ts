@@ -256,8 +256,9 @@ function latestRelease(repo: string): Release | undefined {
   }
 }
 
-/** How long `verify` took on CI, and the step that ended last in it, with how far in it ended. */
-export type Verified = { seconds: number; slowest?: { step: string; at: number } };
+/** How long `verify` took on CI and the job it ran in, and the step that ended last in `verify`,
+ *  with how far in it ended. */
+export type Verified = { seconds: number; job: number; slowest?: { step: string; at: number } };
 
 /** @prose
  * # The slowest step
@@ -308,7 +309,12 @@ export function verifyTook(repo: string): Verified | undefined {
     const { jobs } = JSON.parse(
       gh("api", `repos/${OWNER}/${repo}/actions/runs/${run.databaseId}/jobs`),
     ) as {
-      jobs: { id: number; steps: { name: string; started_at: string; completed_at: string }[] }[];
+      jobs: {
+        id: number;
+        started_at: string;
+        completed_at: string;
+        steps: { name: string; started_at: string; completed_at: string }[];
+      }[];
     };
     const job = jobs.find((it) => it.steps.some((s) => s.name === "Verify"));
     const step = job?.steps.find((s) => s.name === "Verify");
@@ -316,6 +322,7 @@ export function verifyTook(repo: string): Verified | undefined {
     const seconds = Math.round(
       (Date.parse(step.completed_at) - Date.parse(step.started_at)) / 1000,
     );
+    const whole = Math.round((Date.parse(job.completed_at) - Date.parse(job.started_at)) / 1000);
     let slowest: Verified["slowest"];
     try {
       const log = gh(
@@ -329,8 +336,8 @@ export function verifyTook(repo: string): Verified | undefined {
     }
     // The step's times are whole seconds and the log's aren't, so a step can't end after it.
     return slowest
-      ? { seconds, slowest: { ...slowest, at: Math.min(slowest.at, seconds) } }
-      : { seconds };
+      ? { seconds, job: whole, slowest: { ...slowest, at: Math.min(slowest.at, seconds) } }
+      : { seconds, job: whole };
   } catch {
     return undefined;
   }
