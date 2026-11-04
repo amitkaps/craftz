@@ -159,11 +159,12 @@ test("help reads usage from the package", () => {
 });
 
 test("pr and release print their help for help, so it's never taken for a title", () => {
-  for (const [command, word] of [
+  const asked: [string, string][] = [
     ["pr", "help"],
     ["pr", "--help"],
     ["release", "help"],
-  ]) {
+  ];
+  for (const [command, word] of asked) {
     const out = craftz(command, word);
     expect([command, out.status, out.stdout]).toEqual([
       command,
