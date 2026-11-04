@@ -172,15 +172,13 @@ test("every command prints its help for --help, and -h is the same flag", () => 
   }
 }, 60_000);
 
-test("pr and release print their help for help, so it's never taken for a title", () => {
-  for (const command of ["pr", "release"]) {
-    const out = craftz(command, "help");
-    expect([command, out.status, out.stdout]).toEqual([
-      command,
-      0,
-      expect.stringContaining(`craftz ${command}`),
-    ]);
-  }
+test("the word help after pr or release is an error, and never starts a branch", () => {
+  const pr = craftz("pr", "help");
+  expect([pr.status, pr.stderr]).toEqual([1, expect.stringContaining("pnpm pr --help")]);
+  const dashed = craftz("pr", "--", "help");
+  expect(dashed.status).toBe(1);
+  const release = craftz("release", "help");
+  expect([release.status, release.stderr]).toEqual([1, expect.stringContaining("<X.Y.Z>")]);
 });
 
 test("pr wants one title, in words, before it touches git", () => {

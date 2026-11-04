@@ -223,13 +223,10 @@ function flagged(allowed: string[]): { flags: string[]; dir: string } {
 
 // `--help` or `-h` on any command prints its section, as `craftz help <command>` does, before the
 // command reads its arguments. What follows a `--` is input, so it's never a request for help.
-// `pr` and `release` also take the word `help`, since an agent asks `pnpm pr help` and would
-// otherwise open a pull request titled "help".
+// The bare word `help` after a command isn't one, as in git, so `pr` refuses it as a title.
 const asked = [arg, ...rest].filter((it) => it !== undefined);
 const options = asked.includes("--") ? asked.slice(0, asked.indexOf("--")) : asked;
-const wantsHelp =
-  options.some((it) => it === "--help" || it === "-h") ||
-  (["pr", "release"].includes(command ?? "") && asked.length === 1 && asked[0] === "help");
+const wantsHelp = options.some((it) => it === "--help" || it === "-h");
 const section = wantsHelp && command ? helpOn(command) : undefined;
 if (section) {
   process.stdout.write(section);

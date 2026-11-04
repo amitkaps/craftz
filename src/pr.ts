@@ -153,6 +153,9 @@ export async function pr(args: string[]): Promise<void> {
       'Give a title once: craftz pr "<title>" or craftz pr --title "<title>", then [--label <label>] [--body <text>] [--wait]',
     );
   }
+  if (title.trim().toLowerCase() === "help") {
+    fail('"help" is no title, and pr has no help word. For what pr does, run pnpm pr --help.');
+  }
   if (!branchOf(title)) {
     fail(`"${title}" has no letters or digits to name its branch from. Give it a title in words.`);
   }
