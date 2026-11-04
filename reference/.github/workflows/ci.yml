@@ -41,9 +41,9 @@ jobs:
         # A pull request's checkout is a merge commit, so its first parent is `main`.
         with:
           fetch-depth: 2
-      # Reads the pnpm version from package.json's `packageManager`.
+      # Installs the pnpm that package.json's `packageManager` names, with the npm the runner has.
       - name: Set up pnpm
-        uses: pnpm/action-setup@v6
+        run: npm install --global "$(node -p 'require("./package.json").packageManager')"
       - name: Set up Node
         uses: actions/setup-node@v7
         with:
