@@ -17,6 +17,10 @@
  *
  * It first deletes the other local branches that merged, as `craftz gone` does ([gone.ts](gone.ts)).
  *
+ * The title is the argument, or `--title` for a caller that names every value, as `gh pr create`
+ * does. After a `--`, everything is the title, so one can open with a dash. A title that leaves no
+ * letters or digits for a branch name stops before anything is committed.
+ *
  * `--body <text>` is the description. `--wait` waits for the merge, then switches to `main`,
  * pulls, and deletes the branch. Without it, `pr` returns once the pull request is open, so the
  * next change can start while CI runs. A session's last change takes `--wait`, to end on `main`.
@@ -108,13 +112,20 @@ export type OpenPr = { title: string; headRefName: string };
 export const titled = (prs: OpenPr[], title: string): OpenPr | undefined =>
   prs.find((it) => it.title === title);
 
-/** The arguments with each value joined to its option, as `--body=<text>`, so a body can open with a dash. */
+/**
+ * The arguments with each value joined to its option, as `--body=<text>`, so a body can open with
+ * a dash. What follows a `--` is left as it is, since it's the title and no option.
+ */
 export function joined(args: string[]): string[] {
   const out: string[] = [];
   for (let i = 0; i < args.length; i++) {
     const arg = args[i] ?? "";
     const value = args[i + 1];
-    if (/^--(?:label|body)$/.test(arg) && value !== undefined) {
+    if (arg === "--") {
+      out.push(...args.slice(i));
+      break;
+    }
+    if (/^--(?:label|body|title)$/.test(arg) && value !== undefined) {
       out.push(`${arg}=${value}`);
       i++;
     } else out.push(arg);
@@ -128,14 +139,22 @@ export async function pr(args: string[]): Promise<void> {
     args: joined(args),
     allowPositionals: true,
     options: {
+      title: { type: "string" },
       label: { type: "string" },
       body: { type: "string", default: "" },
       wait: { type: "boolean", default: false },
     },
   });
-  const title = positionals[0];
-  if (!title || positionals.length > 1) {
-    fail('Give a title: craftz pr "<title>" [--label <label>] [--body <text>] [--wait]');
+  // The title is the argument or `--title`, never both, and it has to name a branch.
+  const title = values.title ?? positionals[0];
+  const spare = values.title === undefined ? positionals.length > 1 : positionals.length > 0;
+  if (!title || spare) {
+    fail(
+      'Give a title once: craftz pr "<title>" or craftz pr --title "<title>", then [--label <label>] [--body <text>] [--wait]',
+    );
+  }
+  if (!branchOf(title)) {
+    fail(`"${title}" has no letters or digits to name its branch from. Give it a title in words.`);
   }
 
   const NOTES = ".github/notes.yml";
