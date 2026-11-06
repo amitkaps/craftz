@@ -1,10 +1,13 @@
 # @prose
 # # CI
 #
-# Checks every pull request and every push to `main` with `pnpm run verify`, the script a
-# site's deploy and a package's release run first too. It doesn't deploy or release, and it's
-# the same in every repository, so what a repository adds goes in `verify`. The job is named
-# `ci`, the check that branch protection requires.
+# Checks every pull request with `pnpm run verify`, the script a site's deploy and a package's
+# release run first too. The job is named `ci`, the check that branch protection requires.
+#
+# It doesn't run again on a push to `main`. The ruleset needs the branch up to date, so the merge
+# is the tree this run checked, and the deploy or the release runs `verify` on it again. It
+# doesn't deploy or release, and it's the same in every repository, so what a repository adds
+# goes in `verify`.
 #
 # A job that runs past three minutes is stopped, where GitHub's own limit is six hours. That's for
 # a job that hangs. The `verify` step is stopped at two minutes, twelve times its target, so a
@@ -18,8 +21,6 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
 
