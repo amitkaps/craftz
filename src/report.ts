@@ -196,7 +196,7 @@ export function next(rows: Row[], local: boolean): string[] {
   }
   if (rows.some((r) => r.review.length)) {
     steps.push(
-      "Decide each line under Left for review. A new major isn't taken for you, and none of it blocks a release. To take one, change its version in the reference, open a pull request with `pnpm pr`, and run `pnpm bump` again. To leave one, do nothing, and the next bump lists it again.",
+      "Decide each line under Left for review. A new major, or a pnpm, Node or beta version that is pinned by hand, isn't taken for you, and none of it blocks a release. To take one, change its version in the reference, open a pull request with `pnpm pr`, and run `pnpm bump` again. To leave one, do nothing, and the next bump lists it again.",
     );
   }
   if (local) {

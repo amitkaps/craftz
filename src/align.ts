@@ -29,6 +29,7 @@ import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from "no
 import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 import { staleActions } from "./actions.ts";
+import { heldTools } from "./held.ts";
 import { checkSettings, writeSettings } from "./apply.ts";
 import { catchUp } from "./gone.ts";
 import { fixFiles } from "./rules.ts";
@@ -178,7 +179,7 @@ async function moveReference(dir: string, log: string[]): Promise<string[]> {
     workspace,
     readFileSync(workspace, "utf8").replace(/vite-plus-core@[\w.-]+/, `vite-plus-core@${vitePlus}`),
   );
-  return [...majors, ...staleActions(dir)];
+  return [...majors, ...staleActions(dir), ...(await heldTools(readPkg(dir)))];
 }
 
 /** @prose
@@ -430,7 +431,7 @@ async function open(state: State): Promise<void> {
     "",
     ...[...state.moved.map(moveLine), ...state.files].map((line) => `- ${line}`),
     ...(state.review.length
-      ? ["", "New majors, left for review:", "", ...state.review.map((line) => `- ${line}`)]
+      ? ["", "Left for review:", "", ...state.review.map((line) => `- ${line}`)]
       : []),
     "",
     "`verify` passed on this branch before it was pushed.",
