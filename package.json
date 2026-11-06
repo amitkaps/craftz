@@ -50,7 +50,7 @@
     "@playwright/test": "1.63.0",
     "@types/node": "26.6.6",
     "publint": "0.3.25",
-    "vite-plus": "1.4.0",
+    "vite-plus": "1.5.0",
     "yaml": "^2.9.1"
   },
   "peerDependencies": {
