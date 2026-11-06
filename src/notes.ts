@@ -60,8 +60,8 @@ function later(a: string, b: string): boolean {
  * # A slow verify
  *
  * `verify` has a target of 10 seconds on CI, the same in every repository, as
- * [the rules](../docs/rules.md#ci) say. The time is the `Verify` step of the latest CI run on
- * `main` that passed. It's a note, not a `✗`, since a slow `verify` isn't broken. It gives the
+ * [the rules](../docs/rules.md#ci) say. The time is the `Verify` step of the latest CI run that
+ * passed, a pull request's, since CI doesn't run on a push to `main`. It's a note, not a `✗`, since a slow `verify` isn't broken. It gives the
  * whole job's time beside it, since a developer waits on the job, and setup takes a third of it.
  * It names the step that ended last ([The slowest step](status.ts#the-slowest-step)), so a slow
  * one is measured before anyone guesses at it.
