@@ -103,7 +103,7 @@ The tools every repository shares are on one version, written the same way, so m
 - [`versions-prose`]{#versions-prose}: `@amitkaps/prose` is an exact version, at least the reference's, where a repository has it.
 - [`versions-markz`]{#versions-markz}: `@amitkaps/markz` is an exact version, at least the reference's, where a repository has it.
 - [`versions-craftz`]{#versions-craftz}: `@amitkaps/craftz` is at craftz's own version, exactly, so the rules a repository names are the rules it's checked against, and a release of craftz is what moves every repository to them.
-- [`versions-cf`]{#versions-cf}: `cf` is the reference's, where a repository has it. None does, craftz included. craftz runs the reference's version to write the Workers' settings, and reads the compatibility date from the workerd it depends on.
+- [`versions-cf`]{#versions-cf}: `cf` is the reference's, where a repository has it. None does, craftz included. craftz runs the reference's version to write the Workers' settings, and reads the compatibility date from the workerd it depends on. It deploys nothing, since `craftz deploy` uploads a static site with Cloudflare's API. cf is tracked because it replaces wrangler, which Cloudflare will deprecate, so a site that needs a server can drop wrangler once cf deploys it.
 - [`versions-beta`]{#versions-beta}: only `cf` is on a pre-release, pinned to an exact build.
 - [`versions-wrangler`]{#versions-wrangler}: `wrangler` is the reference's, while a repository is still on it.
 - [`versions-publint`]{#versions-publint}: `publint` is the reference's, where a package has it.
