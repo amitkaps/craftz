@@ -68,7 +68,7 @@ function later(a: string, b: string): boolean {
  *
  * # A slow test:e2e
  *
- * A repository with browser checks runs `test:e2e` in an `e2e` workflow, on pull requests, with a
+ * A repository with browser checks runs `test:e2e` in an `e2e` workflow, after each merge, with a
  * target of two minutes ([the rules](../docs/rules.md#ci)). The time is that step in the latest
  * `e2e` run that passed, so it's a note too, and a repository without the workflow has none.
  */

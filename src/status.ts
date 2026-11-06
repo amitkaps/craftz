@@ -345,8 +345,8 @@ export function verifyTook(repo: string): Verified | undefined {
 }
 
 /** What the `test:e2e` step took in the latest `e2e` run that passed, in seconds, or `undefined`
- *  when a repository has no `e2e` workflow, no run passed, or GitHub can't be read. The workflow
- *  runs on pull requests, so the run isn't on `main`. */
+ *  when a repository has no `e2e` workflow, no run passed, or GitHub can't be read. It's the
+ *  latest run on any branch, `main` after a merge or one started by hand. */
 export function e2eTook(repo: string): number | undefined {
   try {
     const [run] = JSON.parse(

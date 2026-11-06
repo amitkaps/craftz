@@ -25,6 +25,7 @@ import { deps } from "./deps.ts";
 import { gone } from "./gone.ts";
 import { pr } from "./pr.ts";
 import { release } from "./release.ts";
+import { e2eOnMain } from "./e2e.ts";
 import { buildLog, e2eTook, status, timing, verifyTook } from "./status.ts";
 import { CRAFTZ, OWNER, type Pkg, here, isCraftz, read, readPkg } from "./reference.ts";
 import { fixFiles } from "./rules.ts";
@@ -133,6 +134,8 @@ async function live(dir: string, log: boolean, full: boolean, timed: boolean): P
   }
   for (const message of await notes(pkg, undefined, verifyTook(repo), e2eTook(repo)))
     console.log(`    ${finding({ tool: "craftz", level: "note", message })}`);
+  const e2e = e2eOnMain({ repo: `${OWNER}/${repo}` });
+  if (e2e) console.log(`    ${finding({ tool: "craftz", level: "note", message: e2e })}`);
   if (full && release) console.log(`\n${release.body.trim()}`);
   else if (summary) console.log(`\n${summary}`);
   if (log && build) console.log(`\n${buildLog(build).join("\n")}`);
