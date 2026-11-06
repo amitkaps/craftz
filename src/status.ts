@@ -283,7 +283,8 @@ export function slowestIn(log: string, start: string): Verified["slowest"] {
   return slowest;
 }
 
-/** What the `Verify` step took in the latest CI run on `main` that passed, or `undefined` when
+/** What the `Verify` step took in the latest CI run that passed, which is a pull request's since
+ *  CI doesn't run on a push to `main`, or `undefined` when
  *  there's none or GitHub can't be read. A log that can't be read leaves out the slowest step. */
 export function verifyTook(repo: string): Verified | undefined {
   try {
@@ -295,8 +296,8 @@ export function verifyTook(repo: string): Verified | undefined {
         `${OWNER}/${repo}`,
         "--workflow",
         "ci.yml",
-        "--branch",
-        "main",
+        "--event",
+        "pull_request",
         "--status",
         "success",
         "--limit",

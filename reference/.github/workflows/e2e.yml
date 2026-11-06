@@ -6,8 +6,9 @@
 # ruleset doesn't require it, and a failure shows on the pull request. A failed run keeps its
 # Playwright report for a week, to open the trace.
 #
-# A job that runs past six minutes is stopped, where GitHub's own limit is six hours. That's for
-# a job that hangs. The `test:e2e` step is stopped at four minutes, twice its target, so a suite
+# It runs on every pull request, since a repository's markdown can be what its browser checks
+# read, and a skipped run would say nothing about it. A job that runs past six minutes is
+# stopped, where GitHub's own limit is six hours. That's for a job that hangs. The `test:e2e` step is stopped at four minutes, twice its target, so a suite
 # that has slowed that far fails and gets fixed. One over the target but under the stop passes, and
 # `craftz status` notes it, as [the rules](https://craftz.amitkaps.com/docs/rules.md#ci) say.
 name: E2E
@@ -43,10 +44,11 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
       # The headless shell is all a headless run needs, and it's far smaller than full Chromium.
-      # The libraries and the shell are two steps, so a run's page shows what each took.
-      - name: Chromium libraries
-        run: pnpm exec playwright install-deps chromium
+      # It launches on `ubuntu-latest` as it is, since `playwright install-deps chromium` only adds
+      # fonts there, and its `apt` step hung for six minutes in a run. Five seconds is the usual
+      # download, so a minute is for a download that has hung.
       - name: Chromium
+        timeout-minutes: 1
         run: pnpm exec playwright install --only-shell chromium
 
       - name: test:e2e
