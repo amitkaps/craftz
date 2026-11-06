@@ -32,7 +32,7 @@ Two values are worked out from source, the browsers from browser-compat-data and
 
 ## Beta packages
 
-The packages still on a beta are the ones [`versions-beta`](rules.md#versions-beta) names, and `package.json` has their builds. align leaves them alone, since their tags don't say which build goes with which. One is listed once npm's latest for it is a release at the beta's major or later.
+The packages still on a beta are the ones [`versions-beta`](rules.md#versions-beta) names, and `package.json` has their builds. align leaves them alone, since their tags don't say which build goes with which, and `pnpm bump` lists a newer build under `Left for review`, with a newer pnpm or Node, so one isn't missed. One is listed once npm's latest for it is a release at the beta's major or later.
 
 A newer beta is moved by hand too. Pin it in the reference's `package.json`, after reading its `engines`. The next run from source reads the workerd it brings from npm into [src/workerd.json](../src/workerd.json), whose date is the Workers' compatibility date, so commit that with it. To move one to its release, pin the release and take it out of `versions-beta`. Then run `pnpm run verify` and a deploy from the Git-connected Worker before you rely on it.
 
