@@ -1,26 +1,31 @@
 # @prose
 # # End-to-end tests
 #
-# Runs a repository's browser checks, `pnpm run test:e2e`, on every pull request. It's a workflow
-# beside `ci.yml`, so `ci` stays the same in every repository and finishes first. The `main`
-# ruleset doesn't require it, and a failure shows on the pull request. A failed run keeps its
-# Playwright report for a week, to open the trace.
+# Runs a repository's browser checks, `pnpm run test:e2e`, after each merge to `main`. It's a
+# workflow beside `ci.yml`, so `ci` stays the same in every repository and finishes first. The
+# `main` ruleset doesn't require it. `craftz status` and `pnpm gone` say how the latest run ended,
+# and a failed run keeps its Playwright report for a week, to open the trace.
 #
-# It runs on every pull request, since a repository's markdown can be what its browser checks
-# read, and a skipped run would say nothing about it. A job that runs past six minutes is
-# stopped, where GitHub's own limit is six hours. That's for a job that hangs. The `test:e2e` step is stopped at four minutes, twice its target, so a suite
+# It runs once for each merge, since on a pull request it finished after the merge and gated
+# nothing, and every push and branch update ran it again. `workflow_dispatch` runs it by hand,
+# on a branch too, where a risky change needs a browser run before it merges. A run is never
+# cancelled by a later merge, since a cancelled run says nothing about its commit.
+#
+# A job that runs past six minutes is stopped, where GitHub's own limit is six hours. That's for a
+# job that hangs. The `test:e2e` step is stopped at four minutes, twice its target, so a suite
 # that has slowed that far fails and gets fixed. One over the target but under the stop passes, and
 # `craftz status` notes it, as [the rules](https://craftz.amitkaps.com/docs/rules.md#ci) say.
 name: E2E
 
 on:
-  pull_request:
+  push:
     branches: [main]
+  workflow_dispatch:
 
-# A new push cancels the run before it.
+# Each commit has its own run, and a later merge doesn't cancel it.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
