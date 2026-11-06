@@ -13,9 +13,10 @@
  * A failed or cancelled run is to be fixed before the next change, or the reason it isn't written
  * down. That is [the rule](../docs/rules.md#ci), and the line repeats it where it is read.
  *
- * A repository without the workflow, or a `gh` that can't answer, says nothing.
+ * A repository without the workflow, or without `gh`, says nothing. Any other error is said in a
+ * line of its own and never fails the command, since a result that can't be read isn't a pass.
  */
-import { type Where, api } from "./github.ts";
+import { type Where, api, repoIn } from "./github.ts";
 
 /** The workflow file a repository's browser checks run from. */
 export const E2E_WORKFLOW = "e2e.yml";
@@ -26,7 +27,14 @@ const RUNS = 5;
 /** A workflow run, as REST gives it. */
 export type Run = { status: string; conclusion: string | null; head_sha: string };
 
+/** What to say of an error from `gh`, or `undefined` when it is an expected one. A repository
+ *  with no `e2e` workflow answers `HTTP 404`, and a machine without `gh` fails with `ENOENT`. */
+export const unread = (message: string): string | undefined =>
+  /HTTP 404|ENOENT/.test(message) ? undefined : `e2e on main wasn't read. ${message}`;
+
 const done = (run: Run): boolean => run.status === "completed";
+// Anything but a pass or a cancel reads as failed, so a `skipped` or `startup_failure` run, which
+// never ran the browser checks, raises the same alarm as a red one.
 const ended = (run: Run): string =>
   run.conclusion === "success"
     ? "passed"
@@ -52,20 +60,26 @@ export function e2eWords(runs: Run[]): string {
   return `e2e failed on main at ${at}. Fix it before the next change, or write down why not`;
 }
 
-/** How the latest `e2e` run on `main` ended, in a sentence, or `undefined` when the repository
- *  has no `e2e` workflow or GitHub can't be read. */
+/** How the latest `e2e` run on `main` ended, in a sentence. It is `undefined` when the repository
+ *  has no `e2e` workflow, no GitHub origin or no `gh`. Any other error is said, since a result
+ *  that can't be read isn't a pass. */
 export function e2eOnMain(where: Where = {}): string | undefined {
+  let repo = where.repo;
+  try {
+    repo ??= repoIn(where.cwd);
+  } catch {
+    // A folder with no origin has no repository on GitHub to ask.
+    return undefined;
+  }
   try {
     const { workflow_runs } = api<{ workflow_runs: Run[] }>(
       "GET",
       `repos/{repo}/actions/workflows/${E2E_WORKFLOW}/runs?branch=main&per_page=${RUNS}`,
       undefined,
-      where,
+      { ...where, repo },
     );
     return e2eWords(workflow_runs);
-  } catch {
-    // A repository with no `e2e` workflow answers 404, and a missing `gh` or a rate limit leaves
-    // nothing to say, so none of them stops `status` or `gone`.
-    return undefined;
+  } catch (error) {
+    return unread((error as Error).message);
   }
 }

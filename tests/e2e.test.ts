@@ -6,7 +6,7 @@
  * test with GitHub faked says only that the fake agrees.
  */
 import { expect, test } from "vite-plus/test";
-import { type Run, e2eWords } from "../src/e2e.ts";
+import { type Run, e2eWords, unread } from "../src/e2e.ts";
 
 const run = (conclusion: string | null, status = "completed"): Run => ({
   status,
@@ -38,4 +38,21 @@ test("a run going on top of a red one says the red one is there", () => {
   expect(e2eWords([run(null, "in_progress"), run(null, "in_progress"), run("cancelled")])).toBe(
     "e2e is still running on main, and the run before it was cancelled",
   );
+});
+
+test("a missing workflow or a missing gh says nothing, and any other error is said", () => {
+  expect(
+    unread("GET repos/o/r/actions/workflows/e2e.yml/runs?branch=main: gh: Not Found (HTTP 404)"),
+  ).toBeUndefined();
+  expect(unread("spawnSync gh ENOENT")).toBeUndefined();
+  expect(
+    unread("GET repos/o/r/actions/workflows/e2e.yml/runs: gh: API rate limit exceeded (HTTP 403)"),
+  ).toBe(
+    "e2e on main wasn't read. GET repos/o/r/actions/workflows/e2e.yml/runs: gh: API rate limit exceeded (HTTP 403)",
+  );
+});
+
+test("a skipped or failed-to-start run reads as failed", () => {
+  expect(e2eWords([run("skipped")])).toContain("e2e failed on main");
+  expect(e2eWords([run("startup_failure")])).toContain("e2e failed on main");
 });
