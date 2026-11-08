@@ -207,6 +207,37 @@ test("every command prints its help for --help, and -h is the same flag", () => 
   }
 }, 60_000);
 
+test("align and bump print their help, and refuse what they don't take, before any run", () => {
+  const root = join(import.meta.dirname, "..");
+  const align = (...args: string[]) =>
+    spawnSync("node", ["src/align.ts", ...args], { cwd: root, encoding: "utf8", timeout: 20_000 });
+
+  for (const flag of ["--help", "-h"]) {
+    const aligned = align(flag);
+    expect([flag, aligned.status, aligned.stdout]).toEqual([
+      flag,
+      0,
+      expect.stringContaining("pnpm align --candidate"),
+    ]);
+    const bumped = align("craftz", flag);
+    expect([flag, bumped.status, bumped.stdout]).toEqual([
+      flag,
+      0,
+      expect.stringContaining("The reference pins the versions"),
+    ]);
+  }
+
+  // A flag align doesn't take, and the word help, are refused, since each would read as a name.
+  for (const arg of ["--nope", "-x", "--", "help"]) {
+    const refused = align(arg);
+    expect([arg, refused.status, refused.stderr]).toEqual([
+      arg,
+      1,
+      expect.stringContaining("pnpm align --help"),
+    ]);
+  }
+}, 60_000);
+
 test("the word help after pr or release is an error, and never starts a branch", () => {
   const pr = craftz("pr", "help");
   expect([pr.status, pr.stderr]).toEqual([1, expect.stringContaining("pnpm pr --help")]);

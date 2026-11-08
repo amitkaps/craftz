@@ -151,6 +151,17 @@ export function printedPart(name: string, markdown = doc(), site = SITE): string
   return printed(wanted.map(slice).join("\n"), site);
 }
 
+/** The usage doc's section under a third-level heading, as a script's help, for a script of a
+ *  checkout that the package has no command for. `undefined` when no heading has that label. */
+export function scriptHelp(label: string, markdown = usage()): string | undefined {
+  const tree = parse(markdown);
+  const outline = headings(tree).filter((h) => h.depth <= 3);
+  const at = outline.findIndex((h) => h.depth === 3 && h.label === label);
+  if (at < 0) return undefined;
+  const end = outline[at + 1] ? tree.start(outline[at + 1]!.node) : markdown.length;
+  return printed(markdown.slice(tree.start(outline[at]!.node), end), USAGE_SITE);
+}
+
 /** craftz's commands, each stated in the usage doc, as markz's `printHelp` prints them. */
 export const commands = (markdown = usage()): Commands =>
   readCommands("craftz", markdown, USAGE_SITE);
