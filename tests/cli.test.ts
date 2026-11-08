@@ -98,6 +98,26 @@ test("a repository's browser workflow is compared with the reference's", () => {
   writeFileSync(file, JSON.stringify(pkg, null, 2));
 }, 30_000);
 
+test("a leftover e2e name is named, since the browser rule doesn't apply to it", () => {
+  const file = join(dir, "package.json");
+  const pkg = JSON.parse(readFileSync(file, "utf8")) as { scripts: Record<string, string> };
+  pkg.scripts["test:e2e"] = "playwright test";
+  writeFileSync(file, JSON.stringify(pkg, null, 2));
+  const workflow = join(dir, ".github/workflows/e2e.yml");
+  mkdirSync(join(dir, ".github/workflows"), { recursive: true });
+  writeFileSync(workflow, "name: E2E\n");
+
+  const found = craftz("check", dir).stdout;
+  expect(found).toContain("github-browser-renamed: the script test:e2e is test:browser now");
+  expect(found).toContain("github-browser-renamed: .github/workflows/e2e.yml is");
+
+  // The later tests use the same folder, so it goes back as it was.
+  rmSync(workflow);
+  delete pkg.scripts["test:e2e"];
+  writeFileSync(file, JSON.stringify(pkg, null, 2));
+  expect(craftz("check", dir).stdout).not.toContain("github-browser-renamed");
+}, 30_000);
+
 test("a rule prints with its address", () => {
   const { status, stdout } = craftz("rules", "releases-packing");
   expect([status, stdout]).toEqual([

@@ -52,4 +52,16 @@ export const GITHUB_RULES: Rule[] = [
     },
   },
   owns("github-browser", [BROWSER], (pkg) => Boolean(pkg.scripts?.["test:browser"])),
+  {
+    // Browser checks were `e2e` until 0.22.0. A repository renames the script and the workflow by
+    // hand, and until it does, `github-browser` doesn't apply, so this names what's left.
+    id: "github-browser-renamed",
+    check: (repo) =>
+      drifted([
+        ...(repo.pkg.scripts?.["test:e2e"] ? ["the script test:e2e is test:browser now"] : []),
+        ...(repo.files[".github/workflows/e2e.yml"]
+          ? [".github/workflows/e2e.yml is .github/workflows/browser.yml now"]
+          : []),
+      ]),
+  },
 ];

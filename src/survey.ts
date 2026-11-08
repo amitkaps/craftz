@@ -63,6 +63,8 @@ const FILES = [
   "CLAUDE.md",
   ".github/workflows/ci.yml",
   ".github/workflows/browser.yml",
+  // The browser workflow before 0.22.0, which `github-browser-renamed` names if it is left.
+  ".github/workflows/e2e.yml",
   ".github/workflows/release.yml",
   ".github/workflows/label.yml",
   ".github/notes.yml",
