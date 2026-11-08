@@ -138,8 +138,11 @@ export function joined(args: string[], text: string[]): string[] {
  */
 export function parsed(name: Command | Script, argv: string[]): Parsed {
   const spec: Spec = name in SCRIPTS ? SCRIPTS[name as Script] : SPECS[name as Command];
-  const refuse = (message: string): never => {
-    const said = `${spec.run}: ${message}, and \`${spec.run} --help\` says what it takes`;
+  const refuse = (
+    message: string,
+    instead = `and \`${spec.run} --help\` says what it takes`,
+  ): never => {
+    const said = `${spec.run}: ${message}, ${instead}`;
     console.error(finding({ tool: "craftz", level: "error", message: said }));
     process.exit(1);
   };
@@ -174,7 +177,10 @@ export function parsed(name: Command | Script, argv: string[]): Parsed {
 
   const { values, positionals: words } = read;
   if (spec.takes !== "command" && words.some((word) => word.trim().toLowerCase() === "help")) {
-    refuse("`help` isn't an argument here");
+    refuse(
+      "`help` isn't an argument",
+      `and it has no help word. Run \`${spec.run} --help\` for what it does`,
+    );
   }
   if (spec.takes === "none" && words.length) refuse("it takes no arguments");
   if (spec.takes === "dir" && words.length > 1) refuse("it takes one folder");
