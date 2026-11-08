@@ -12,7 +12,8 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { expect, test } from "vite-plus/test";
 import { goneIn, keptBecause, writeOutline } from "../src/gone.ts";
-import { branchOf, joined, labelsIn, startOn, timingOf, titled, took } from "../src/pr.ts";
+import { joined } from "../src/args.ts";
+import { branchOf, labelsIn, startOn, timingOf, titled, took } from "../src/pr.ts";
 import { here } from "../src/reference.ts";
 import { RULES } from "../src/rules.ts";
 
@@ -91,19 +92,21 @@ test("a branch's pull request decides where a change goes", () => {
   expect(startOn("plan", "Fix", pr("CLOSED"))).toHaveProperty("stop");
 });
 
+const TEXT = ["label", "body", "title"];
+
 test("a body or label is read as given, even one that opens with a dash", () => {
-  expect(joined(["t", "--body", "- a list", "--label", "fixed", "--wait"])).toEqual([
+  expect(joined(["t", "--body", "- a list", "--label", "fixed", "--wait"], TEXT)).toEqual([
     "t",
     "--body=- a list",
     "--label=fixed",
     "--wait",
   ]);
-  expect(joined(["t", "--body=-x", "--body"])).toEqual(["t", "--body=-x", "--body"]);
+  expect(joined(["t", "--body=-x", "--body"], TEXT)).toEqual(["t", "--body=-x", "--body"]);
 });
 
 test("--title is read as given, and what follows -- is left alone", () => {
-  expect(joined(["--title", "-fix it", "--wait"])).toEqual(["--title=-fix it", "--wait"]);
-  expect(joined(["--label", "fixed", "--", "--label", "x"])).toEqual([
+  expect(joined(["--title", "-fix it", "--wait"], TEXT)).toEqual(["--title=-fix it", "--wait"]);
+  expect(joined(["--label", "fixed", "--", "--label", "x"], TEXT)).toEqual([
     "--label=fixed",
     "--",
     "--label",

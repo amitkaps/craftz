@@ -33,6 +33,7 @@ import { api, autoMerge, createPull } from "./github.ts";
 import { OWNER, onMain } from "./reference.ts";
 import { origin } from "./survey.ts";
 import { temporary } from "./temp.ts";
+import { type Parsed } from "./args.ts";
 
 /** Why the plan isn't ready for this version, or undefined when it is. */
 export function unready(plan: string, version: string): string | undefined {
@@ -73,10 +74,9 @@ function author(): NodeJS.ProcessEnv {
 }
 
 /** Opens the pull request that releases the folder's package at a version. */
-export function release(dir: string, args: string[]): void {
-  const at = args.indexOf("--notes");
-  const given = at === -1 ? undefined : args.splice(at, 2)[1];
-  const [version, ...extra] = args;
+export function release(dir: string, input: Parsed): void {
+  const given = input.text("notes");
+  const [version, ...extra] = input.words;
 
   if (!version || extra.length || !/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/.test(version)) {
     fail('Give a version: craftz release <X.Y.Z> [--notes "…"]');

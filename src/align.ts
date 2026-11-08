@@ -51,29 +51,15 @@ import { keep, temporary } from "./temp.ts";
 import { type Run, upgrade } from "./upgrade.ts";
 import { workerIn } from "./worker.ts";
 import { cloudflareLogin, githubLogin } from "./settings.ts";
-import { scriptHelp } from "./stated.ts";
+import { parsed } from "./args.ts";
 
 const SELF = "craftz";
 const run = promisify(execFile);
 
 // What the script is asked for is read before anything else, since a run clones every repository
 // and opens pull requests. `bump` is this script with craftz as the one repository.
-const args = process.argv.slice(2);
-const script = args[0] === SELF ? "bump" : "align";
-if (args.some((arg) => arg === "--help" || arg === "-h")) {
-  const heading = script === "bump" ? "Moving the reference" : "Aligning every repository";
-  process.stdout.write(scriptHelp(heading)!);
-  process.exit(0);
-}
-const unknown = args.filter(
-  (arg) => (arg.startsWith("-") && !["--candidate", "--local"].includes(arg)) || arg === "help",
-);
-if (unknown.length) {
-  console.error(
-    `pnpm ${script}: ${unknown.map((arg) => `\`${arg}\``).join(", ")} isn't an option. \`pnpm ${script} --help\` says what it takes.`,
-  );
-  process.exit(1);
-}
+const script = process.argv[2] === SELF ? "bump" : "align";
+const given = parsed(script, process.argv.slice(script === "bump" ? 3 : 2));
 
 if (!githubLogin()) {
   console.error("pnpm align needs gh logged in as the owner.");
@@ -82,9 +68,9 @@ if (!githubLogin()) {
 const noCloudflare = cloudflareLogin();
 if (noCloudflare) console.log(`not written: the Workers' build settings, since ${noCloudflare}`);
 
-const candidate = args.includes("--candidate");
-const local = candidate || args.includes("--local");
-const named = args.filter((arg) => !arg.startsWith("--"));
+const candidate = given.flag("candidate");
+const local = candidate || given.flag("local");
+const named = script === "bump" ? [SELF] : given.words;
 const targets = named.length ? named : await repos();
 const work = temporary("align-");
 const tarball = candidate ? pack() : undefined;

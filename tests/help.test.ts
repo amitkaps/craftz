@@ -8,14 +8,20 @@
  */
 import { readFileSync } from "node:fs";
 import { expect, test } from "vite-plus/test";
-import { commands, help, helpOn } from "../src/stated.ts";
+import { SCRIPTS, SPECS } from "../src/args.ts";
+import { commands, help, helpOn, scriptHelp } from "../src/stated.ts";
 
 const read = (path: string): string => readFileSync(new URL(path, import.meta.url), "utf8");
 const stated = commands().commands.map((c) => c.id);
 
-test("cli.ts runs each command usage states, and no other", () => {
-  const run = [...read("../src/cli.ts").matchAll(/command === "([a-z]+)"/g)].map((m) => m[1]);
-  expect(new Set(run)).toEqual(new Set(stated));
+test("each command usage states has a spec for its arguments, and no other has", () => {
+  expect(new Set(Object.keys(SPECS))).toEqual(new Set(stated));
+});
+
+test("a script of a checkout has a usage heading that holds its help", () => {
+  for (const [name, spec] of Object.entries(SCRIPTS)) {
+    expect([name, scriptHelp(spec.heading)]).toEqual([name, expect.stringContaining(spec.run)]);
+  }
 });
 
 test("the README links each command", () => {

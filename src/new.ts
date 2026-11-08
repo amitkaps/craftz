@@ -37,6 +37,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { type Parsed } from "./args.ts";
 import { type Shape, fixFiles, listed, shipping } from "./rules.ts";
 import { CRAFTZ, OWNER, VERSIONS, here, root } from "./reference.ts";
 import { writeSettings } from "./apply.ts";
@@ -336,28 +337,18 @@ export async function write(
 }
 
 /** Starts a repository from `craftz new`'s arguments, in a folder of the current one. */
-export async function start(argv: string[]): Promise<void> {
-  const args = [...argv];
-  const flag = (name: string): boolean => {
-    const at = args.indexOf(name);
-    if (at !== -1) args.splice(at, 1);
-    return at !== -1;
-  };
-  const value = (name: string): string | undefined => {
-    const at = args.indexOf(name);
-    return at === -1 ? undefined : args.splice(at, 2)[1];
-  };
-  const description = value("--description");
-  const push = flag("--push");
+export async function start(input: Parsed): Promise<void> {
+  const description = input.text("description");
+  const push = input.flag("push");
   // `--site` names the deploy axis, and `static` is the one site `new` starts.
-  const site = value("--site");
+  const site = input.text("site");
   const start: Start = {
-    package: flag("--package"),
+    package: input.flag("package"),
     site: site !== undefined,
-    private: flag("--private"),
-    internal: flag("--internal"),
+    private: input.flag("private"),
+    internal: input.flag("internal"),
   };
-  const [name] = args;
+  const [name] = input.words;
   const problem =
     site === "app"
       ? "An app starts from base, a SvelteKit site on Cloudflare, not from new."
@@ -366,7 +357,13 @@ export async function start(argv: string[]): Promise<void> {
         : start.internal && !start.site
           ? "--internal is for a site, since it puts the site behind Cloudflare Access."
           : undefined;
-  if (!name || !description || !/^[a-z][a-z0-9-]*$/.test(name) || args.length > 1 || problem) {
+  if (
+    !name ||
+    !description ||
+    !/^[a-z][a-z0-9-]*$/.test(name) ||
+    input.words.length > 1 ||
+    problem
+  ) {
     console.error(
       [
         'Usage: craftz new <name> [--package] [--site static] [--private] [--internal] --description "What it is, in a sentence." [--push]',

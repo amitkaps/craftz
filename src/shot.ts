@@ -24,6 +24,7 @@
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { type Parsed } from "./args.ts";
 
 const QUIET_MS = 10_000;
 const DRAWN_MS = 5_000;
@@ -48,10 +49,9 @@ type Playwright = {
 };
 
 /** Saves the page at a URL as a PNG, 1280 pixels wide unless `--width` says otherwise. */
-export async function shot(dir: string, args: string[]): Promise<number> {
-  const at = args.indexOf("--width");
-  const width = at === -1 ? 1280 : Number(args.splice(at, 2)[1]);
-  const [url, file, ...extra] = args;
+export async function shot(dir: string, input: Parsed): Promise<number> {
+  const width = Number(input.text("width") ?? 1280);
+  const [url, file, ...extra] = input.words;
   if (!url || !file || extra.length || !Number.isInteger(width) || width < 1) {
     console.error("Give a page and a file: craftz shot <url> <file.png> [--width <pixels>]");
     return 1;
