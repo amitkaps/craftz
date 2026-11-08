@@ -22,7 +22,7 @@ pnpm craftz help       # every command, with how it's run
 pnpm craftz help deps  # what one does, from this page
 ```
 
-`craftz help` reads this page from the installed version, as `craftz rules` reads the rules. `craftz --help` lists the commands too, and `craftz <command> --help` or `-h` prints one's section.
+`craftz help` reads this page from the installed version, as `craftz rules` reads the rules. `craftz --help` lists the commands too, and `craftz <command> --help` or `-h` prints one's section. A command stops, in one line and before it reads or writes a file, at an option it doesn't take, at the word `help`, and at a folder that isn't there. So `pnpm craftz fix help` never writes a folder called `help`.
 
 ## Reading the rules
 

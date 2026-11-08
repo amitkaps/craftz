@@ -212,16 +212,30 @@ async function settings(dir: string, checking: boolean, yes: boolean): Promise<b
   return off.length > 0;
 }
 
-// The flags and the one folder a command takes, or its usage when it was given anything else.
+// The flags and the one folder a command takes. Anything else stops the command with a line that
+// names it, before the command reads or writes a file, since a word it doesn't take would be read
+// as a folder otherwise. That includes `help`, which is `--help` here as it is for `pr`.
 function flagged(allowed: string[]): { flags: string[]; dir: string } {
   const given = [arg, ...rest].filter((it) => it !== undefined);
-  const flags = given.filter((it) => it.startsWith("--"));
-  const dirs = given.filter((it) => !it.startsWith("--"));
-  if (dirs.length > 1 || flags.some((flag) => !allowed.includes(flag))) {
-    console.error(help());
+  const flags = given.filter((it) => it.startsWith("-"));
+  const dirs = given.filter((it) => !it.startsWith("-"));
+  const refuse = (message: string): never => {
+    console.error(
+      finding({
+        tool: "craftz",
+        level: "error",
+        message: `${command}: ${message}, and \`craftz ${command} --help\` says what it takes`,
+      }),
+    );
     process.exit(1);
-  }
-  return { flags, dir: resolve(dirs[0] ?? ".") };
+  };
+  const stray = flags.find((flag) => !allowed.includes(flag));
+  if (stray) refuse(`\`${stray}\` isn't an option`);
+  if (dirs.length > 1) refuse("it takes one folder");
+  if (dirs[0] === "help") refuse("`help` isn't a folder");
+  const dir = resolve(dirs[0] ?? ".");
+  if (!existsSync(dir)) refuse(`${dir} isn't a folder`);
+  return { flags, dir };
 }
 
 // `--help` or `-h` on any command prints its section, as `craftz help <command>` does, before the
@@ -245,10 +259,10 @@ if (section) {
     }
     process.stdout.write(rule);
   }
-} else if (command === "check" && !rest.length) {
-  process.exitCode = (await check(resolve(arg ?? "."))) ? 1 : 0;
-} else if (command === "fix" && !rest.length) {
-  const dir = resolve(arg ?? ".");
+} else if (command === "check") {
+  process.exitCode = (await check(flagged([]).dir)) ? 1 : 0;
+} else if (command === "fix") {
+  const { dir } = flagged([]);
   const changed = fixFiles(dir, here);
   if (!changed.length) console.log("Changed nothing.\n");
   else {
@@ -272,8 +286,8 @@ if (section) {
     flags.includes("--timing"),
   );
   process.exitCode = failed ? 1 : 0;
-} else if (command === "deps" && !rest.length) {
-  process.exitCode = deps(resolve(arg ?? "."));
+} else if (command === "deps") {
+  process.exitCode = deps(flagged([]).dir);
 } else if (command === "deploy" && !arg) {
   process.exitCode = await deploy(process.cwd());
 } else if (command === "pr") {
