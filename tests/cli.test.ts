@@ -207,6 +207,23 @@ test("every command prints its help for --help, and -h is the same flag", () => 
   }
 }, 60_000);
 
+test("every command refuses an option it doesn't take and the word help, in a line", () => {
+  // Each runs in a repository, so one that read the word as a folder or a title would act on it.
+  const asked = commands().commands.flatMap((c) =>
+    ["--nope", "help"].filter((arg) => !(c.id === "help" && arg === "help")).map((arg) => [c.id, arg]),
+  );
+  for (const [id, arg] of asked) {
+    const out = craftz(id ?? "", arg ?? "");
+    expect([id, arg, out.status, /node:|\n\s+at |<anonymous_script>/.test(out.stderr)]).toEqual([
+      id,
+      arg,
+      1,
+      false,
+    ]);
+    expect([id, arg, out.stderr.trim() !== ""]).toEqual([id, arg, true]);
+  }
+}, 60_000);
+
 test("align and bump print their help, and refuse what they don't take, before any run", () => {
   const root = join(import.meta.dirname, "..");
   const align = (...args: string[]) =>

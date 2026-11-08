@@ -135,16 +135,25 @@ export function joined(args: string[]): string[] {
 
 /** Opens the pull request for what's in the working tree, and waits for it with `--wait`. */
 export async function pr(args: string[]): Promise<void> {
-  const { values, positionals } = parseArgs({
-    args: joined(args),
-    allowPositionals: true,
-    options: {
-      title: { type: "string" },
-      label: { type: "string" },
-      body: { type: "string", default: "" },
-      wait: { type: "boolean", default: false },
-    },
-  });
+  // An option pr doesn't take stops it here, in a line, before git is touched.
+  const parsed = (() => {
+    try {
+      return parseArgs({
+        args: joined(args),
+        allowPositionals: true,
+        options: {
+          title: { type: "string" },
+          label: { type: "string" },
+          body: { type: "string", default: "" },
+          wait: { type: "boolean", default: false },
+        },
+      });
+    } catch (error) {
+      const why = error instanceof Error ? error.message.split(".")[0] : String(error);
+      return fail(`pnpm pr: ${why}. \`pnpm pr --help\` says what it takes.`);
+    }
+  })();
+  const { values, positionals } = parsed;
   // The title is the argument or `--title`, never both, and it has to name a branch.
   const title = values.title ?? positionals[0];
   const spare = values.title === undefined ? positionals.length > 1 : positionals.length > 0;
