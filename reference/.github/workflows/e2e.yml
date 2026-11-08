@@ -7,7 +7,9 @@
 # and a failed run keeps its Playwright report for a week, to open the trace.
 #
 # It runs once for each merge, since on a pull request it finished after the merge and gated
-# nothing, and every push and branch update ran it again. `workflow_dispatch` runs it by hand,
+# nothing, and every push and branch update ran it again. A merge that changes only Markdown,
+# unit tests or their fixtures skips it, since a browser can't see those change. `workflow_dispatch`
+# runs it by hand,
 # on a branch too, where a risky change needs a browser run before it merges. A run is never
 # cancelled by a later merge, since a cancelled run says nothing about its commit.
 #
@@ -20,6 +22,10 @@ name: E2E
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "**/*.md"
+      - tests/unit/**
+      - tests/fixtures/**
   workflow_dispatch:
 
 # Each commit has its own run, and a later merge doesn't cancel it.
