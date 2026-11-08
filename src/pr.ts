@@ -28,7 +28,7 @@
  * [Nothing new](#nothing-new) says.
  */
 import { existsSync, readFileSync } from "node:fs";
-import { parseArgs } from "node:util";
+import { type Parsed } from "./args.ts";
 import { gone, step, writeOutline } from "./gone.ts";
 import {
   addLabel,
@@ -112,51 +112,11 @@ export type OpenPr = { title: string; headRefName: string };
 export const titled = (prs: OpenPr[], title: string): OpenPr | undefined =>
   prs.find((it) => it.title === title);
 
-/**
- * The arguments with each value joined to its option, as `--body=<text>`, so a body can open with
- * a dash. What follows a `--` is left as it is, since it's the title and no option.
- */
-export function joined(args: string[]): string[] {
-  const out: string[] = [];
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i] ?? "";
-    const value = args[i + 1];
-    if (arg === "--") {
-      out.push(...args.slice(i));
-      break;
-    }
-    if (/^--(?:label|body|title)$/.test(arg) && value !== undefined) {
-      out.push(`${arg}=${value}`);
-      i++;
-    } else out.push(arg);
-  }
-  return out;
-}
-
 /** Opens the pull request for what's in the working tree, and waits for it with `--wait`. */
-export async function pr(args: string[]): Promise<void> {
-  // An option pr doesn't take stops it here, in a line, before git is touched.
-  const parsed = (() => {
-    try {
-      return parseArgs({
-        args: joined(args),
-        allowPositionals: true,
-        options: {
-          title: { type: "string" },
-          label: { type: "string" },
-          body: { type: "string", default: "" },
-          wait: { type: "boolean", default: false },
-        },
-      });
-    } catch (error) {
-      const why = error instanceof Error ? error.message.split(".")[0] : String(error);
-      return fail(`pnpm pr: ${why}. \`pnpm pr --help\` says what it takes.`);
-    }
-  })();
-  const { values, positionals } = parsed;
+export async function pr(given: Parsed): Promise<void> {
   // The title is the argument or `--title`, never both, and it has to name a branch.
-  const title = values.title ?? positionals[0];
-  const spare = values.title === undefined ? positionals.length > 1 : positionals.length > 0;
+  const title = given.text("title") ?? given.words[0];
+  const spare = given.text("title") === undefined ? given.words.length > 1 : given.words.length > 0;
   if (!title || spare) {
     fail(
       'Give a title once: craftz pr "<title>" or craftz pr --title "<title>", then [--label <label>] [--body <text>] [--wait]',
@@ -171,7 +131,7 @@ export async function pr(args: string[]): Promise<void> {
 
   const NOTES = ".github/notes.yml";
   const known = existsSync(NOTES) ? labelsIn(readFileSync(NOTES, "utf8")) : [];
-  const label = values.label;
+  const label = given.text("label");
   if (known.length && !label) fail(`Label this pull request with one of ${known.join(", ")}.`);
   if (label && !known.includes(label)) {
     fail(
@@ -252,13 +212,14 @@ export async function pr(args: string[]): Promise<void> {
   // labelled again by the next run, which finds it open.
   const opened = onGitHub(() => {
     const existing = pullFrom(branch);
-    if (existing?.state !== "OPEN") return createPull(branch, title, values.body, label);
+    if (existing?.state !== "OPEN")
+      return createPull(branch, title, given.text("body") ?? "", label);
     if (label) addLabel(existing.number, label);
     return existing;
   });
   onGitHub(() => autoMerge(opened.number));
   console.log(`${opened.url}, after verify took ${verified}`);
-  if (values.wait) await merged(branch, opened.number, opened.url);
+  if (given.flag("wait")) await merged(branch, opened.number, opened.url);
 }
 
 /** @prose

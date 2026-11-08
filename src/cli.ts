@@ -8,7 +8,7 @@
  *
  * Each command is stated once, in [usage](../docs/usage.md), as the list item that opens its
  * section. `craftz help` lists them from there, and `craftz help <command>` prints one's section,
- * so the help can't drift from the docs. A test holds each command below to an id there.
+ * so the help can't drift from the docs. A test holds the commands below to the ids there, and `SPECS` says what each takes.
  *
  * `craftz rules` prints [the rules](../docs/rules.md), or one by id, as `prose rules` does, so an
  * agent that knows one knows the other.
@@ -17,7 +17,7 @@
  */
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { type Outcome, type Target, checkSettings, writeSettings } from "./apply.ts";
 import { deploy as upload } from "./deploy.ts";
@@ -34,10 +34,9 @@ import { upgrade } from "./upgrade.ts";
 import { finding, printOne } from "@amitkaps/markz/rules";
 import { craftzRules, help, helpOn, printed, printedPart } from "./stated.ts";
 import { notes } from "./notes.ts";
+import { type Command, type Parsed, SPECS, parsed } from "./args.ts";
 import { type Finding, checkFolder, origin } from "./survey.ts";
 import { workerIn } from "./worker.ts";
-
-const [command, arg, ...rest] = process.argv.slice(2);
 
 // Each drift a finding, in markz's line. Drift is a warning, and a held rule's drift ends with
 // its reason.
@@ -212,114 +211,75 @@ async function settings(dir: string, checking: boolean, yes: boolean): Promise<b
   return off.length > 0;
 }
 
-// The flags and the one folder a command takes. Anything else stops the command with a line that
-// names it, before the command reads or writes a file, since a word it doesn't take would be read
-// as a folder otherwise. That includes `help`, which is `--help` here as it is for `pr`.
-function flagged(allowed: string[]): { flags: string[]; dir: string } {
-  const given = [arg, ...rest].filter((it) => it !== undefined);
-  const flags = given.filter((it) => it.startsWith("-"));
-  const dirs = given.filter((it) => !it.startsWith("-"));
-  const refuse = (message: string): never => {
-    console.error(
-      finding({
-        tool: "craftz",
-        level: "error",
-        message: `${command}: ${message}, and \`craftz ${command} --help\` says what it takes`,
-      }),
-    );
-    process.exit(1);
-  };
-  const stray = flags.find((flag) => !allowed.includes(flag));
-  if (stray) refuse(`\`${stray}\` isn't an option`);
-  if (dirs.length > 1) refuse("it takes one folder");
-  if (dirs[0] === "help") refuse("`help` isn't a folder");
-  const dir = resolve(dirs[0] ?? ".");
-  if (!existsSync(dir)) refuse(`${dir} isn't a folder`);
-  return { flags, dir };
-}
+// What each command does with what it was given. `Record<Command, …>` makes the compiler hold
+// this table to the commands `SPECS` states, so one can't ship without the other.
+type Handler = (given: Parsed) => number | void | Promise<number | void>;
 
-// `--help` or `-h` on any command prints its section, as `craftz help <command>` does, before the
-// command reads its arguments. What follows a `--` is input, so it's never a request for help.
-// The bare word `help` after a command isn't one, as in git, so `pr` refuses it as a title.
-const asked = [arg, ...rest].filter((it) => it !== undefined);
-const options = asked.includes("--") ? asked.slice(0, asked.indexOf("--")) : asked;
-const wantsHelp = options.some((it) => it === "--help" || it === "-h");
-const section = wantsHelp && command ? helpOn(command) : undefined;
-if (section) {
-  process.stdout.write(section);
-} else if (command === "rules" && !rest.length) {
-  if (!arg) {
-    process.stdout.write(printed());
-  } else {
-    const rule = printOne([craftzRules()], arg) ?? printedPart(arg);
+const handlers: Record<Command, Handler> = {
+  rules: ({ words: [id] }) => {
+    if (!id) {
+      process.stdout.write(printed());
+      return 0;
+    }
+    const rule = printOne([craftzRules()], id) ?? printedPart(id);
     if (!rule) {
-      const message = `no rule or part \`${arg}\`, and \`craftz rules\` prints every one`;
+      const message = `no rule or part \`${id}\`, and \`craftz rules\` prints every one`;
       console.error(finding({ tool: "craftz", level: "error", message }));
-      process.exit(1);
+      return 1;
     }
     process.stdout.write(rule);
-  }
-} else if (command === "check") {
-  process.exitCode = (await check(flagged([]).dir)) ? 1 : 0;
-} else if (command === "fix") {
-  const { dir } = flagged([]);
-  const changed = fixFiles(dir, here);
-  if (!changed.length) console.log("Changed nothing.\n");
-  else {
-    console.log("Changed:");
-    for (const file of changed) console.log(`    ${file}`);
-    console.log("Run pnpm install, then pnpm run fix.\n");
-  }
-  process.exitCode = (await check(dir)) ? 1 : 0;
-} else if (command === "upgrade" && !arg) {
-  process.exitCode = await moveOn(process.cwd());
-} else if (command === "settings") {
-  const { flags, dir } = flagged(["--check", "--yes"]);
-  const off = await settings(dir, flags.includes("--check"), flags.includes("--yes"));
-  process.exitCode = off ? 1 : 0;
-} else if (command === "status") {
-  const { flags, dir } = flagged(["--log", "--notes", "--timing"]);
-  const failed = await live(
-    dir,
-    flags.includes("--log"),
-    flags.includes("--notes"),
-    flags.includes("--timing"),
-  );
-  process.exitCode = failed ? 1 : 0;
-} else if (command === "deps") {
-  process.exitCode = deps(flagged([]).dir);
-} else if (command === "deploy" && !arg) {
-  process.exitCode = await deploy(process.cwd());
-} else if (command === "pr") {
-  await pr([arg, ...rest].filter((it) => it !== undefined));
-} else if (command === "release") {
-  release(
-    process.cwd(),
-    [arg, ...rest].filter((it) => it !== undefined),
-  );
-} else if (command === "shot") {
-  const { shot } = await import("./shot.ts");
-  process.exitCode = await shot(
-    process.cwd(),
-    [arg, ...rest].filter((it) => it !== undefined),
-  );
-} else if (command === "gone" && !arg) {
-  gone();
-} else if (command === "new") {
-  // Loaded only here, since it brings the formatter. It's the one command that works outside a
-  // repository, as `pnpm dlx @amitkaps/craftz new`.
-  const { start } = await import("./new.ts");
-  await start([arg, ...rest].filter((it) => it !== undefined));
-} else if (command === "help" && !rest.length) {
-  const text = arg ? helpOn(arg) : help();
-  if (!text) {
-    const message = `no command \`${arg}\`, and \`craftz help\` lists every one`;
-    console.error(finding({ tool: "craftz", level: "error", message }));
-    process.exit(1);
-  }
-  process.stdout.write(text);
-} else if (command === "-h" || command === "--help") {
+    return 0;
+  },
+  check: async ({ dir }) => ((await check(dir)) ? 1 : 0),
+  fix: async ({ dir }) => {
+    const changed = fixFiles(dir, here);
+    if (!changed.length) console.log("Changed nothing.\n");
+    else {
+      console.log("Changed:");
+      for (const file of changed) console.log(`    ${file}`);
+      console.log("Run pnpm install, then pnpm run fix.\n");
+    }
+    return (await check(dir)) ? 1 : 0;
+  },
+  upgrade: () => moveOn(process.cwd()),
+  settings: async ({ dir, flag }) => ((await settings(dir, flag("check"), flag("yes"))) ? 1 : 0),
+  status: async ({ dir, flag }) =>
+    (await live(dir, flag("log"), flag("notes"), flag("timing"))) ? 1 : 0,
+  deps: ({ dir }) => deps(dir),
+  deploy: () => deploy(process.cwd()),
+  pr: (given) => pr(given),
+  release: (given) => release(process.cwd(), given),
+  shot: async (given) => {
+    const { shot } = await import("./shot.ts");
+    return shot(process.cwd(), given);
+  },
+  gone: () => gone(),
+  new: async (given) => {
+    // Loaded only here, since it brings the formatter. It's the one command that works outside a
+    // repository, as `pnpm dlx @amitkaps/craftz new`.
+    const { start } = await import("./new.ts");
+    await start(given);
+  },
+  help: ({ words: [name] }) => {
+    const text = name ? helpOn(name) : help();
+    if (!text) {
+      const message = `no command \`${name}\`, and \`craftz help\` lists every one`;
+      console.error(finding({ tool: "craftz", level: "error", message }));
+      return 1;
+    }
+    process.stdout.write(text);
+    return 0;
+  },
+};
+
+const command = process.argv[2];
+if (command === "-h" || command === "--help") {
   process.stdout.write(help());
+} else if (command !== undefined && Object.hasOwn(SPECS, command)) {
+  const done = await handlers[command as Command](
+    parsed(command as Command, process.argv.slice(3)),
+  );
+  if (typeof done === "number") process.exitCode = done;
 } else {
   console.error(help());
   process.exit(1);

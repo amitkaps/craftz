@@ -247,7 +247,7 @@ test("align and bump print their help, and refuse what they don't take, before a
   }
 
   // A flag align doesn't take, and the word help, are refused, since each would read as a name.
-  for (const arg of ["--nope", "-x", "--", "help"]) {
+  for (const arg of ["--nope", "-x", "help"]) {
     const refused = align(arg);
     expect([arg, refused.status, refused.stderr]).toEqual([
       arg,
@@ -263,7 +263,10 @@ test("the word help after pr or release is an error, and never starts a branch",
   const dashed = craftz("pr", "--", "help");
   expect(dashed.status).toBe(1);
   const release = craftz("release", "help");
-  expect([release.status, release.stderr]).toEqual([1, expect.stringContaining("<X.Y.Z>")]);
+  expect([release.status, release.stderr]).toEqual([
+    1,
+    expect.stringContaining("pnpm craftz release --help"),
+  ]);
 });
 
 test("pr wants one title, in words, before it touches git", () => {

@@ -13,6 +13,7 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test, vi } from "vite-plus/test";
+import { parsed } from "../src/args.ts";
 import { shot } from "../src/shot.ts";
 
 /** A folder whose Playwright logs each page call to `calls.txt`, and fails the calls it's told to. */
@@ -46,7 +47,7 @@ const calls = (dir: string) => readFileSync(join(dir, "calls.txt"), "utf8").trim
 test("it waits for the network and for something drawn before the picture", async () => {
   const log = vi.spyOn(console, "log").mockImplementation(() => {});
   const dir = fakePlaywright();
-  expect(await shot(dir, ["http://x", "a.png"])).toBe(0);
+  expect(await shot(dir, parsed("shot", ["http://x", "a.png"]))).toBe(0);
   expect(calls(dir)).toEqual(["goto", "idle", "drawn", "screenshot"]);
   log.mockRestore();
 });
@@ -54,7 +55,7 @@ test("it waits for the network and for something drawn before the picture", asyn
 test("a network that never goes quiet still gets its picture", async () => {
   const log = vi.spyOn(console, "log").mockImplementation(() => {});
   const dir = fakePlaywright(["idle"]);
-  expect(await shot(dir, ["http://x", "a.png"])).toBe(0);
+  expect(await shot(dir, parsed("shot", ["http://x", "a.png"]))).toBe(0);
   expect(calls(dir)).toEqual(["goto", "idle", "drawn", "screenshot"]);
   log.mockRestore();
 });
@@ -63,7 +64,7 @@ test("a page with nothing drawn saves its picture and fails, saying so", async (
   const log = vi.spyOn(console, "log").mockImplementation(() => {});
   const error = vi.spyOn(console, "error").mockImplementation(() => {});
   const dir = fakePlaywright(["drawn"]);
-  expect(await shot(dir, ["http://x", "a.png"])).toBe(1);
+  expect(await shot(dir, parsed("shot", ["http://x", "a.png"]))).toBe(1);
   expect(calls(dir)).toContain("screenshot");
   expect(error.mock.calls[0]?.[0]).toContain("nothing drawn");
   log.mockRestore();
@@ -72,8 +73,8 @@ test("a page with nothing drawn saves its picture and fails, saying so", async (
 
 test("it asks for a page and a file", async () => {
   const error = vi.spyOn(console, "error").mockImplementation(() => {});
-  expect(await shot(tmpdir(), ["http://x"])).toBe(1);
-  expect(await shot(tmpdir(), ["http://x", "a.png", "--width", "0"])).toBe(1);
+  expect(await shot(tmpdir(), parsed("shot", ["http://x"]))).toBe(1);
+  expect(await shot(tmpdir(), parsed("shot", ["http://x", "a.png", "--width", "0"]))).toBe(1);
   expect(error.mock.calls[0]?.[0]).toContain("craftz shot <url> <file.png>");
   error.mockRestore();
 });
@@ -81,7 +82,7 @@ test("it asks for a page and a file", async () => {
 test("it says so in a folder with no Playwright", async () => {
   const error = vi.spyOn(console, "error").mockImplementation(() => {});
   const dir = mkdtempSync(join(tmpdir(), "shot-"));
-  expect(await shot(dir, ["http://x", "a.png"])).toBe(1);
+  expect(await shot(dir, parsed("shot", ["http://x", "a.png"]))).toBe(1);
   expect(error.mock.calls[0]?.[0]).toContain("no @playwright/test");
   error.mockRestore();
 });
