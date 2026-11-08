@@ -210,7 +210,9 @@ test("every command prints its help for --help, and -h is the same flag", () => 
 test("every command refuses an option it doesn't take and the word help, in a line", () => {
   // Each runs in a repository, so one that read the word as a folder or a title would act on it.
   const asked = commands().commands.flatMap((c) =>
-    ["--nope", "help"].filter((arg) => !(c.id === "help" && arg === "help")).map((arg) => [c.id, arg]),
+    ["--nope", "help"]
+      .filter((arg) => !(c.id === "help" && arg === "help"))
+      .map((arg) => [c.id, arg]),
   );
   for (const [id, arg] of asked) {
     const out = craftz(id ?? "", arg ?? "");
