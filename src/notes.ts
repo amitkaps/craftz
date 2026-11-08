@@ -34,8 +34,8 @@ const EXACT = /^\d+\.\d+\.\d+$/;
 /** The seconds `verify` should take on CI, at most. */
 export const VERIFY_TARGET = 10;
 
-/** The seconds a repository's `test:e2e` should take on CI, at most. */
-export const E2E_TARGET = 120;
+/** The seconds a repository's `test:browser` should take on CI, at most. */
+export const BROWSER_TARGET = 120;
 const numbers = (version: string): number[] => version.split("-")[0]?.split(".").map(Number) ?? [];
 
 // Whether `a` is a later release than `b`, by its numbers.
@@ -66,17 +66,17 @@ function later(a: string, b: string): boolean {
  * It names the step that ended last ([The slowest step](status.ts#the-slowest-step)), so a slow
  * one is measured before anyone guesses at it.
  *
- * # A slow test:e2e
+ * # A slow test:browser
  *
- * A repository with browser checks runs `test:e2e` in an `e2e` workflow, after each merge, with a
+ * A repository with browser checks runs `test:browser` in an `browser` workflow, after each merge, with a
  * target of two minutes ([the rules](../docs/rules.md#ci)). The time is that step in the latest
- * `e2e` run that passed, so it's a note too, and a repository without the workflow has none.
+ * `browser` run that passed, so it's a note too, and a repository without the workflow has none.
  */
 export async function notes(
   pkg: Pkg,
   latest: Latest = fromNpm,
   verified?: Verified,
-  e2e?: number,
+  browser?: number,
 ): Promise<string[]> {
   const deps = { ...pkg.dependencies, ...pkg.devDependencies };
   const found: string[] = [];
@@ -87,8 +87,8 @@ export async function notes(
       `verify took ${verified.seconds}s on CI in a job of ${verified.job}s, over its ${VERIFY_TARGET}s target${slowest}`,
     );
   }
-  if (e2e !== undefined && e2e > E2E_TARGET) {
-    found.push(`test:e2e took ${e2e}s on CI, over its ${E2E_TARGET}s target`);
+  if (browser !== undefined && browser > BROWSER_TARGET) {
+    found.push(`test:browser took ${browser}s on CI, over its ${BROWSER_TARGET}s target`);
   }
   const own = deps[CRAFTZ];
   if (own && EXACT.test(own)) {

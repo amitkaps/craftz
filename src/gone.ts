@@ -30,8 +30,8 @@
  * Git won't delete a branch that another worktree has checked out, so that worktree is removed
  * first. One git won't remove, such as one with changes, is kept with its branch, and `gone` goes on.
  *
- * Then it writes `outline.md` ([the outline](#the-outline)), and last it says how the latest `e2e`
- * run on `main` ended ([the e2e result](e2e.ts)), so a red one is the last thing read before a change.
+ * Then it writes `outline.md` ([the outline](#the-outline)), and last it says how the latest `browser`
+ * run on `main` ended ([the browser result](browser.ts)), so a red one is the last thing read before a change.
  *
  * # Catching up a checkout
  *
@@ -55,7 +55,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { finding } from "@amitkaps/markz/rules";
 import { capture } from "./reference.ts";
-import { e2eOnMain } from "./e2e.ts";
+import { browserOnMain } from "./browser.ts";
 
 /** Runs a step of `pr` or `gone`, with its output shown. A step that fails stops the command with
  *  one line, since its own output, above it, says why. */
@@ -199,8 +199,8 @@ export function gone({ others = false } = {}): void {
   if (!branches.length && !others) console.log("No merged branches to delete.");
   if (!others) {
     writeOutline();
-    const e2e = e2eOnMain();
-    if (e2e) console.log(e2e);
+    const browser = browserOnMain();
+    if (browser) console.log(browser);
   }
 }
 

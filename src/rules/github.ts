@@ -2,14 +2,14 @@
  * # The GitHub rules
  *
  * The rules under [GitHub](../../docs/rules.md#github): the `main` ruleset a repository has, the
- * CI workflow it runs, and the browser workflow of one with `test:e2e`. The ruleset is read from
+ * CI workflow it runs, and the browser workflow of one with `test:browser`. The ruleset is read from
  * GitHub, so `pnpm align` writes it directly.
  */
 import { type Pkg } from "../reference.ts";
 import { rulesetFor, writeRuleset } from "../settings.ts";
 import type { Rule } from "../rules.ts";
 import type { BranchRule } from "../survey.ts";
-import { CI, E2E, drifted, owns, unread } from "./shared.ts";
+import { CI, BROWSER, drifted, owns, unread } from "./shared.ts";
 
 // Each rule in the file has to be there, with the parameters the file sets. Other parameters,
 // and rules the file doesn't name, are the repository's own.
@@ -51,5 +51,5 @@ export const GITHUB_RULES: Rule[] = [
       return drifted([...(finding?.drift ?? []), ...dependabot]);
     },
   },
-  owns("github-e2e", [E2E], (pkg) => Boolean(pkg.scripts?.["test:e2e"])),
+  owns("github-browser", [BROWSER], (pkg) => Boolean(pkg.scripts?.["test:browser"])),
 ];

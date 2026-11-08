@@ -4,7 +4,7 @@
  * `pnpm bump` lists each action in the reference's workflows that has a later major release, like
  * `actions/checkout@v7` against a v8. It lists them in craftz's pull request and doesn't take them.
  *
- * A major can change what an action does, and the `e2e` workflow doesn't run on craftz's own pull
+ * A major can change what an action does, and the `browser` workflow doesn't run on craftz's own pull
  * requests. So a person reads the list, as they read a library's new major.
  *
  * Being on the latest action doesn't matter, as it doesn't for pnpm. Being on the same one does,

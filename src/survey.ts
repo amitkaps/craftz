@@ -62,7 +62,7 @@ const FILES = [
   "AGENTS.md",
   "CLAUDE.md",
   ".github/workflows/ci.yml",
-  ".github/workflows/e2e.yml",
+  ".github/workflows/browser.yml",
   ".github/workflows/release.yml",
   ".github/workflows/label.yml",
   ".github/notes.yml",
