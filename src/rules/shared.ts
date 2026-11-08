@@ -153,7 +153,24 @@ const withHolds = (want: string, have: string): string => {
   return block ? `${want.trimEnd()}\n\n${block.trimEnd()}\n` : want;
 };
 
+// The browser workflow's `on:` block is the repository's, as `ignoreDependencies` is in pnpm's
+// file. It's the lines from `on:` to the next top-level line.
+const TRIGGER = /^on:[ \t]*\n(?:(?:[ \t]+.*)?\n)*/m;
+
+// The reference's workflow with the `on:` block the repository's file has.
+const withTrigger = (want: string, have: string): string => {
+  const block = TRIGGER.exec(have)?.[0];
+  return block ? want.replace(TRIGGER, () => block) : want;
+};
+
+// Both workflows without `on:` have to match word for word, and the repository's `on:` keeps
+// `workflow_dispatch`, so a run by hand is always there.
+const sameWorkflow = (have: string, want: string): boolean =>
+  /^ {2}workflow_dispatch:/m.test(TRIGGER.exec(have)?.[0] ?? "") &&
+  have.replace(TRIGGER, "") === want.replace(TRIGGER, "");
+
 export function same(file: string, have: string, want: string): boolean {
+  if (file === BROWSER) return sameWorkflow(have, want);
   if (file === WORKSPACE) return split(have)[0].trimEnd() === split(want)[0].trimEnd();
   if (!file.endsWith(".json")) return have === want;
   try {
@@ -193,7 +210,16 @@ export function owns(
           const have = existsSync(path) ? read(path) : undefined;
           if (have !== undefined && same(file, have, made)) continue;
           mkdirSync(dirname(path), { recursive: true });
-          writeFileSync(path, file === WORKSPACE && have ? withHolds(made, have) : made);
+          writeFileSync(
+            path,
+            !have
+              ? made
+              : file === WORKSPACE
+                ? withHolds(made, have)
+                : file === BROWSER
+                  ? withTrigger(made, have)
+                  : made,
+          );
         }
       },
     },
@@ -202,7 +228,7 @@ export function owns(
 
 export const WORKSPACE = "pnpm-workspace.yaml";
 export const CI = ".github/workflows/ci.yml";
-export const E2E = ".github/workflows/e2e.yml";
+export const BROWSER = ".github/workflows/browser.yml";
 
 /** Claude Code's settings and the two hooks they run, the same in every repository. */
 export const CLAUDE = [

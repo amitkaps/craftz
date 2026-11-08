@@ -25,8 +25,8 @@ import { deps } from "./deps.ts";
 import { gone } from "./gone.ts";
 import { pr } from "./pr.ts";
 import { release } from "./release.ts";
-import { e2eOnMain } from "./e2e.ts";
-import { buildLog, e2eTook, status, timing, verifyTook } from "./status.ts";
+import { browserOnMain } from "./browser.ts";
+import { buildLog, browserTook, status, timing, verifyTook } from "./status.ts";
 import { CRAFTZ, OWNER, type Pkg, here, isCraftz, read, readPkg } from "./reference.ts";
 import { fixFiles } from "./rules.ts";
 import { cloudflareLogin, githubLogin, hasClassic } from "./settings.ts";
@@ -132,10 +132,10 @@ async function live(dir: string, log: boolean, full: boolean, timed: boolean): P
   for (const line of lines) {
     console.log(`    ${line.ok ? "✓" : "✗"} ${line.what.padEnd(width)}  ${line.found}`);
   }
-  for (const message of await notes(pkg, undefined, verifyTook(repo), e2eTook(repo)))
+  for (const message of await notes(pkg, undefined, verifyTook(repo), browserTook(repo)))
     console.log(`    ${finding({ tool: "craftz", level: "note", message })}`);
-  const e2e = e2eOnMain({ repo: `${OWNER}/${repo}` });
-  if (e2e) console.log(`    ${finding({ tool: "craftz", level: "note", message: e2e })}`);
+  const browser = browserOnMain({ repo: `${OWNER}/${repo}` });
+  if (browser) console.log(`    ${finding({ tool: "craftz", level: "note", message: browser })}`);
   if (full && release) console.log(`\n${release.body.trim()}`);
   else if (summary) console.log(`\n${summary}`);
   if (log && build) console.log(`\n${buildLog(build).join("\n")}`);

@@ -6,7 +6,7 @@
  *
  * A folder holds a stand-in Playwright that writes down each call, since a real screenshot needs a
  * browser, which `verify` doesn't install. A real one is checked by hand with `pnpm craftz shot` in
- * this repository. A browser test is ruled out for now, since it would need the `e2e` workflow for
+ * this repository. A browser test is ruled out for now, since it would need the `browser` workflow for
  * one small command.
  */
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";

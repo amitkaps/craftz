@@ -42,9 +42,9 @@ test("a verify over its target is noted", async () => {
   expect(await notes({}, npm({}))).toEqual([]);
 });
 
-test("an e2e over its target is noted", async () => {
+test("a browser over its target is noted", async () => {
   expect(await notes({}, npm({}), undefined, 130)).toEqual([
-    "test:e2e took 130s on CI, over its 120s target",
+    "test:browser took 130s on CI, over its 120s target",
   ]);
   expect(await notes({}, npm({}), undefined, 120)).toEqual([]);
   expect(await notes({}, npm({}), undefined, undefined)).toEqual([]);

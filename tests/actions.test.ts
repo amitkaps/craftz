@@ -11,9 +11,9 @@ import { type LatestTag, staleActions, usesIn } from "../src/actions.ts";
 import { tmp } from "./temp.ts";
 
 const workflow = `
-name: E2E
+name: Browser
 jobs:
-  e2e:
+  browser:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -32,7 +32,7 @@ const releases =
 function reference(text: string): string {
   const dir = tmp("craftz-actions-");
   mkdirSync(join(dir, ".github", "workflows"), { recursive: true });
-  writeFileSync(join(dir, ".github", "workflows", "e2e.yml"), text);
+  writeFileSync(join(dir, ".github", "workflows", "browser.yml"), text);
   return dir;
 }
 

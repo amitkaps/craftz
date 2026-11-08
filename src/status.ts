@@ -344,10 +344,10 @@ export function verifyTook(repo: string): Verified | undefined {
   }
 }
 
-/** What the `test:e2e` step took in the latest `e2e` run that passed, in seconds, or `undefined`
- *  when a repository has no `e2e` workflow, no run passed, or GitHub can't be read. It's the
+/** What the `test:browser` step took in the latest `browser` run that passed, in seconds, or `undefined`
+ *  when a repository has no `browser` workflow, no run passed, or GitHub can't be read. It's the
  *  latest run on any branch, `main` after a merge or one started by hand. */
-export function e2eTook(repo: string): number | undefined {
+export function browserTook(repo: string): number | undefined {
   try {
     const [run] = JSON.parse(
       gh(
@@ -356,7 +356,7 @@ export function e2eTook(repo: string): number | undefined {
         "-R",
         `${OWNER}/${repo}`,
         "--workflow",
-        "e2e.yml",
+        "browser.yml",
         "--status",
         "success",
         "--limit",
@@ -369,7 +369,7 @@ export function e2eTook(repo: string): number | undefined {
     const { jobs } = JSON.parse(
       gh("api", `repos/${OWNER}/${repo}/actions/runs/${run.databaseId}/jobs`),
     ) as { jobs: { steps: { name: string; started_at: string; completed_at: string }[] }[] };
-    const step = jobs.flatMap((job) => job.steps).find((it) => it.name.includes("test:e2e"));
+    const step = jobs.flatMap((job) => job.steps).find((it) => it.name.includes("test:browser"));
     if (!step) return undefined;
     return Math.round((Date.parse(step.completed_at) - Date.parse(step.started_at)) / 1000);
   } catch {

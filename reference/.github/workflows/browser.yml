@@ -1,31 +1,27 @@
 # @prose
-# # End-to-end tests
+# # Browser checks
 #
-# Runs a repository's browser checks, `pnpm run test:e2e`, after each merge to `main`. It's a
-# workflow beside `ci.yml`, so `ci` stays the same in every repository and finishes first. The
-# `main` ruleset doesn't require it. `craftz status` and `pnpm gone` say how the latest run ended,
-# and a failed run keeps its Playwright report for a week, to open the trace.
+# Runs a repository's browser checks, `pnpm run test:browser`. It's a workflow beside `ci.yml`, so
+# `ci` stays the same in every repository and finishes first. The `main` ruleset doesn't require it.
+# `craftz status` and `pnpm gone` say how the latest run ended, and a failed run keeps its
+# Playwright report for a week, to open the trace.
 #
-# It runs once for each merge, since on a pull request it finished after the merge and gated
-# nothing, and every push and branch update ran it again. A merge that changes only Markdown,
-# unit tests or their fixtures skips it, since a browser can't see those change. `workflow_dispatch`
-# runs it by hand,
-# on a branch too, where a risky change needs a browser run before it merges. A run is never
-# cancelled by a later merge, since a cancelled run says nothing about its commit.
+# When it runs is the repository's choice, and `on:` is the one part of this file that may differ.
+# The default is once for each merge to `main`, since on a pull request it finished after the merge
+# and gated nothing. A repository narrows that with `paths-ignore`, or adds `workflow_call` and
+# runs it from its release, where it stops the release. `workflow_dispatch` stays, so a run by hand
+# is always there, on a branch too, where a risky change needs a browser run before it merges.
+# A run is never cancelled by a later merge, since a cancelled run says nothing about its commit.
 #
 # A job that runs past six minutes is stopped, where GitHub's own limit is six hours. That's for a
-# job that hangs. The `test:e2e` step is stopped at four minutes, twice its target, so a suite
+# job that hangs. The `test:browser` step is stopped at four minutes, twice its target, so a suite
 # that has slowed that far fails and gets fixed. One over the target but under the stop passes, and
 # `craftz status` notes it, as [the rules](https://craftz.amitkaps.com/docs/rules.md#ci) say.
-name: E2E
+name: Browser
 
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - "**/*.md"
-      - tests/unit/**
-      - tests/fixtures/**
   workflow_dispatch:
 
 # Each commit has its own run, and a later merge doesn't cancel it.
@@ -37,7 +33,7 @@ permissions:
   contents: read
 
 jobs:
-  e2e:
+  browser:
     runs-on: ubuntu-latest
     timeout-minutes: 6
     steps:
@@ -62,9 +58,9 @@ jobs:
         timeout-minutes: 1
         run: pnpm exec playwright install --only-shell chromium
 
-      - name: test:e2e
+      - name: test:browser
         timeout-minutes: 4
-        run: pnpm run test:e2e
+        run: pnpm run test:browser
 
       - name: Report
         if: failure()

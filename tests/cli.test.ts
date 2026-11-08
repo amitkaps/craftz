@@ -59,27 +59,42 @@ test("check finds what fix puts back", () => {
   expect([again.status, again.stdout]).toEqual([0, expect.stringMatching(/^Changed nothing\./)]);
 }, 30_000);
 
-test("a repository's e2e workflow is compared with the reference's", () => {
+test("a repository's browser workflow is compared with the reference's", () => {
   const file = join(dir, "package.json");
   const pkg = JSON.parse(readFileSync(file, "utf8")) as { scripts: Record<string, string> };
-  pkg.scripts["test:e2e"] = "playwright test";
+  pkg.scripts["test:browser"] = "playwright test";
   writeFileSync(file, JSON.stringify(pkg, null, 2));
-  const workflow = join(dir, ".github/workflows/e2e.yml");
+  const workflow = join(dir, ".github/workflows/browser.yml");
   mkdirSync(join(dir, ".github/workflows"), { recursive: true });
 
   // Without the workflow the repository is told it has none.
-  expect(craftz("check", dir).stdout).toContain("github-e2e: no .github/workflows/e2e.yml");
+  expect(craftz("check", dir).stdout).toContain("github-browser: no .github/workflows/browser.yml");
 
   // With the reference's, it isn't told anything, so the survey reads the file it has.
-  copyFileSync(join(here, ".github/workflows/e2e.yml"), workflow);
-  expect(craftz("check", dir).stdout).not.toContain("github-e2e");
+  copyFileSync(join(here, ".github/workflows/browser.yml"), workflow);
+  expect(craftz("check", dir).stdout).not.toContain("github-browser");
 
-  writeFileSync(workflow, `${readFileSync(workflow, "utf8")}# changed\n`);
-  expect(craftz("check", dir).stdout).toContain("github-e2e: .github/workflows/e2e.yml differs");
+  // The trigger is the repository's own, so a narrower one with `workflow_dispatch` kept is fine.
+  const reference = readFileSync(workflow, "utf8");
+  writeFileSync(
+    workflow,
+    reference.replace("branches: [main]", "branches: [main]\n    paths-ignore: ['**/*.md']"),
+  );
+  expect(craftz("check", dir).stdout).not.toContain("github-browser");
+
+  // Without `workflow_dispatch` there is no run by hand, and a changed step isn't the trigger.
+  writeFileSync(workflow, reference.replace("  workflow_dispatch:\n", ""));
+  expect(craftz("check", dir).stdout).toContain(
+    "github-browser: .github/workflows/browser.yml differs",
+  );
+  writeFileSync(workflow, reference.replace("timeout-minutes: 4", "timeout-minutes: 9"));
+  expect(craftz("check", dir).stdout).toContain(
+    "github-browser: .github/workflows/browser.yml differs",
+  );
 
   // The later tests use the same folder, so it goes back as it was.
   rmSync(workflow);
-  delete pkg.scripts["test:e2e"];
+  delete pkg.scripts["test:browser"];
   writeFileSync(file, JSON.stringify(pkg, null, 2));
 }, 30_000);
 
