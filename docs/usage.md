@@ -185,7 +185,7 @@ The commands use the logins `gh` and `cf` already have, so there's no token to k
 
 ## Keeping every repository
 
-These are scripts in a checkout of craftz, not commands of the package, after `pnpm install`. They're for whoever keeps the repositories, and a repository needs none of them to follow the rules. align and bump need `gh`, and align writes the Worker settings only with `cf`.
+These are scripts in a checkout of craftz, not commands of the package, after `pnpm install`. They're for whoever keeps the repositories, and a repository needs none of them to follow the rules. align and bump need `gh`, and align writes the Worker settings only with `cf`. Each prints its section for `--help` or `-h`, before it reads `gh` or clones anything, and refuses an option it doesn't take, and the word `help`, so neither starts a run over every repository.
 
 ### Aligning every repository
 
