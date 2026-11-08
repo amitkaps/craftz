@@ -223,6 +223,13 @@ test("every command refuses an option it doesn't take and the word help, in a li
       false,
     ]);
     expect([id, arg, out.stderr.trim() !== ""]).toEqual([id, arg, true]);
+    // The word help is refused with what to run instead, since that is what was being looked for.
+    if (arg === "help") {
+      expect([id, out.stderr]).toEqual([
+        id,
+        expect.stringMatching(/no help word\. Run `[^`]+ --help` for what it does/),
+      ]);
+    }
   }
 }, 60_000);
 
