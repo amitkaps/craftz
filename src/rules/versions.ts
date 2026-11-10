@@ -157,12 +157,17 @@ export const VERSION_RULES: Rule[] = [
   version("versions-cf", "cf"),
   {
     id: "versions-beta",
-    check: ({ deps }) => {
+    check: ({ deps, files }) => {
       const pre = Object.entries(deps).filter(([, value]) => PRERELEASE.test(value));
       if (!pre.length) return undefined;
+      // A library the repository ignores in pnpm's settings, with its reason, may be on a
+      // pre-release. `versions-ignored` holds it to an exact version.
+      const text = files[WORKSPACE];
+      const ignored = (text ? heldIn(text).held : []).filter((it) => it.reason);
       return drifted(
         pre.flatMap(([name, value]) => {
-          if (!betas().includes(name)) return [`${name} is on a pre-release, ${value}`];
+          const allowed = betas().includes(name) || ignored.some((it) => it.name === name);
+          if (!allowed) return [`${name} is on a pre-release, ${value}`];
           return /^\d/.test(value) ? [] : [`${name} is ${value}, not an exact build`];
         }),
       );
