@@ -139,15 +139,28 @@ export const VERSION_RULES: Rule[] = [
   {
     id: "versions-vite-plus",
     holdable: true,
-    check: ({ deps, vitePlus: own }) => {
+    check: ({ pkg, deps, vitePlus: own }) => {
       if (!own) return { drift: ["not on Vite+"] };
       const drift: string[] = [];
       if (own !== vitePlus) drift.push(`vite-plus is ${own}, not ${vitePlus}`);
+      const peer = pkg.peerDependencies?.["vite-plus"];
+      if (peer && peer !== `^${vitePlus}`) {
+        drift.push(`the peer vite-plus is ${peer}, not ^${vitePlus}`);
+      }
       if (deps.vite) drift.push(`depends on vite ${deps.vite} directly`);
       return { value: own, drift };
     },
     // A repository not on Vite+ moves by hand. The override moves with it, in versions-workspace.
-    fix: { in: "files", apply: (dir, std) => pin(dir, std, "vite-plus") },
+    fix: {
+      in: "files",
+      apply: (dir, std) => {
+        pin(dir, std, "vite-plus");
+        const pkg = readPkg(dir);
+        if (!pkg.peerDependencies?.["vite-plus"]) return;
+        pkg.peerDependencies["vite-plus"] = `^${versionsIn(std)["vite-plus"]}`;
+        writePkg(dir, pkg);
+      },
+    },
   },
   version("versions-typescript", "typescript"),
   atLeast("versions-prose", "@amitkaps/prose"),
