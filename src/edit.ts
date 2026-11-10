@@ -182,8 +182,10 @@ export function allRuns(vite: string): string[] | undefined {
   const defined = tasks && typeof tasks === "object" ? (tasks as Record<string, unknown>) : {};
   return names.map((name) => {
     const task = defined[name];
-    const command = task && typeof task === "object" ? (task as { command?: unknown }).command : undefined;
-    const script = typeof command === "string" ? /^pnpm run ([\w:-]+)$/.exec(command)?.[1] : undefined;
+    const command =
+      task && typeof task === "object" ? (task as { command?: unknown }).command : undefined;
+    const script =
+      typeof command === "string" ? /^pnpm run ([\w:-]+)$/.exec(command)?.[1] : undefined;
     return script ?? name;
   });
 }
