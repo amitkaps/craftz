@@ -72,7 +72,7 @@ const candidate = given.flag("candidate");
 const local = candidate || given.flag("local");
 const named = script === "bump" ? [SELF] : given.words;
 const targets = named.length ? named : await repos();
-const work = temporary("align-");
+const work = temporary("craftz-align-");
 const tarball = candidate ? pack() : undefined;
 const many = targets.length > 1 ? "repositories" : "repository";
 console.log(
