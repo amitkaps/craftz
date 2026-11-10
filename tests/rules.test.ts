@@ -94,7 +94,8 @@ test("AGENTS.md names the parts the rules have, and no other", () => {
 
 test("only the rules' betas are on a pre-release, each an exact build", () => {
   const rule = RULES.find((r) => r.id === "versions-beta");
-  const drift = (deps: Record<string, string>) => rule?.check({ deps, files: {} } as unknown as Repo)?.drift;
+  const drift = (deps: Record<string, string>) =>
+    rule?.check({ deps, files: {} } as unknown as Repo)?.drift;
   const [beta = ""] = betas();
   expect(drift({ [beta]: "1.0.0-beta.17" })).toEqual([]);
   expect(drift({ [beta]: "^1.0.0-beta.17" })).toEqual([
