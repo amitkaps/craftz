@@ -29,7 +29,8 @@ export const PREFIX = "craftz-";
 /** The file that says a process still owns its folder. A folder without it is kept. */
 const OWNER = "owner";
 /** How long a kept folder stays. */
-const DAY = 24 * 60 * 60 * 1000;
+const HOUR = 60 * 60 * 1000;
+const DAY = 24 * HOUR;
 
 const made = new Map<string, boolean>();
 
@@ -78,42 +79,61 @@ const running = (pid: number): boolean => {
   }
 };
 
-/** Why a folder is stale, or `undefined` while it is still wanted. */
-function staleBecause(folder: string): string | undefined {
+/** Whether a folder goes, and the reason in words either way. */
+function judged(folder: string): { clears: boolean; why: string } {
   let pid = Number.NaN;
   try {
     pid = Number(readFileSync(join(folder, OWNER), "utf8"));
   } catch {
     // No owner: the folder was kept.
   }
-  if (!Number.isNaN(pid)) return running(pid) ? undefined : "its run had gone";
-  return Date.now() - statSync(folder).mtimeMs > DAY ? "kept for more than a day" : undefined;
+  if (!Number.isNaN(pid)) {
+    return running(pid)
+      ? { clears: false, why: "its run is still going" }
+      : { clears: true, why: "its run has gone" };
+  }
+  const left = DAY - (Date.now() - statSync(folder).mtimeMs);
+  return left <= 0
+    ? { clears: true, why: "kept, and over a day old" }
+    : { clears: false, why: `kept, under a day old, so it clears in ${Math.ceil(left / HOUR)} h` };
 }
 
 const kilobytes = (folder: string): number =>
   Number(/^\d+/.exec(spawnSync("du", ["-sk", folder], { encoding: "utf8" }).stdout)?.[0] ?? 0);
 
-export type Cleared = { folder: string; why: string; kilobytes: number };
+export type Found = { folder: string; clears: boolean; why: string; kilobytes: number };
 
-/** Removes, or with `only` lists, the stale folders craftz made in `base`. */
-export function clear(base = tmpdir(), only = false): Cleared[] {
-  const found: Cleared[] = [];
+/** Every folder craftz made in `base`, judged, and removed when it clears unless `only`. */
+export function clear(base = tmpdir(), only = false): Found[] {
+  const found: Found[] = [];
   for (const name of readdirSync(base).filter((it) => it.startsWith(PREFIX))) {
     const folder = join(base, name);
-    const why = staleBecause(folder);
-    if (!why) continue;
-    found.push({ folder, why, kilobytes: kilobytes(folder) });
-    if (!only) rmSync(folder, { recursive: true, force: true });
+    const judgment = judged(folder);
+    found.push({ folder, ...judgment, kilobytes: kilobytes(folder) });
+    if (judgment.clears && !only) rmSync(folder, { recursive: true, force: true });
   }
   return found;
 }
 
-/** What `clear` did, one line for each folder, and nothing when there was none. */
-export function cleared(found: Cleared[], only = false): string[] {
-  const size = (kb: number) =>
-    kb > 1024 * 1024 ? `${(kb / 1024 / 1024).toFixed(1)} GB` : `${Math.round(kb / 1024)} MB`;
-  return found.map(
-    ({ folder, why, kilobytes }) =>
-      `${only ? "Would clear" : "Cleared"} ${folder}, ${size(kilobytes)}, since ${why}.`,
-  );
+const size = (kb: number) =>
+  kb > 1024 * 1024 ? `${(kb / 1024 / 1024).toFixed(1)} GB` : `${Math.round(kb / 1024)} MB`;
+
+/** A line for each folder that was cleared, and nothing for the rest. */
+export const cleared = (found: Found[]): string[] =>
+  found
+    .filter((it) => it.clears)
+    .map((it) => `Cleared ${it.folder}, ${size(it.kilobytes)}, since ${it.why}.`);
+
+/** What `clear` says: the folders that clear, and the folders that stay, each with why. */
+export function report(found: Found[], only: boolean): string {
+  const line = (it: Found) => `  ${it.folder}  ${size(it.kilobytes)}  ${it.why}`;
+  const goes = found.filter((it) => it.clears);
+  const stays = found.filter((it) => !it.clears);
+  if (!found.length) return "No craftz folders in the temporary folder.";
+  return [
+    goes.length
+      ? `${only ? "Will clear" : "Cleared"}:\n${goes.map(line).join("\n")}`
+      : "Nothing to clear.",
+    ...(stays.length ? [`Stays:\n${stays.map(line).join("\n")}`] : []),
+  ].join("\n\n");
 }

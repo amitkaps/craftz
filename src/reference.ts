@@ -92,6 +92,7 @@ export type Pkg = {
   };
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
+  peerDependencies?: Record<string, string>;
   scripts?: Record<string, string>;
   engines?: { node?: string };
   // The rules this repository holds, each with its reason, as the rules' Holds say.

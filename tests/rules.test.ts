@@ -114,6 +114,32 @@ test("only the rules' betas are on a pre-release, each an exact build", () => {
   expect(drift({ zod: "^4.0.0", vite: "npm:@voidzero-dev/vite-plus-core@1.3.0" })).toBeUndefined();
 });
 
+test("a peer vite-plus is the reference's version as a floor, and the fix moves it", () => {
+  const want = `^${VERSIONS["vite-plus"]}`;
+  const rule = RULES.find((r) => r.id === "versions-vite-plus");
+  const drift = (peer: string) =>
+    rule?.check({
+      pkg: { peerDependencies: { "vite-plus": peer } },
+      deps: {},
+      vitePlus: VERSIONS["vite-plus"],
+    } as unknown as Repo)?.drift;
+  expect(drift(want)).toEqual([]);
+  expect(drift("^1.3.0")).toEqual([`the peer vite-plus is ^1.3.0, not ${want}`]);
+
+  const dir = tmp("craftz-peer-");
+  writeFileSync(
+    join(dir, "package.json"),
+    JSON.stringify({
+      devDependencies: { "vite-plus": "1.0.0" },
+      peerDependencies: { "vite-plus": "^1.3.0" },
+    }),
+  );
+  if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
+  const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as Pkg;
+  expect(pkg.peerDependencies?.["vite-plus"]).toBe(want);
+  expect(pkg.devDependencies?.["vite-plus"]).toBe(VERSIONS["vite-plus"]);
+});
+
 test("our own package is exact and at least the reference's, and its fix only raises", () => {
   const name = "@amitkaps/markz";
   const want = VERSIONS[name] ?? "";
