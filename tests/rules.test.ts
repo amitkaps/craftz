@@ -592,6 +592,30 @@ test("a step that ran after one it may need is named, and left in the chain", ()
   ]);
 });
 
+test("a SvelteKit build and preview write apart from check, and the fix prefixes them", () => {
+  const dir = tmp("craftz-sveltekit-");
+  const scripts = { build: "vp build", preview: "vp preview" };
+  const pkg = { private: true, scripts, devDependencies: { "@sveltejs/kit": "3.0.0" } };
+  writeFileSync(join(dir, "package.json"), JSON.stringify(pkg));
+  const rule = RULES.find((r) => r.id === "scripts-sveltekit");
+  const read = () => JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as Pkg;
+  const check = (files: Record<string, string>) =>
+    rule?.check({ pkg: read(), files } as unknown as Repo)?.drift;
+  const out = "SVELTEKIT_OUT_DIR=.svelte-kit/build";
+  expect(check({})).toEqual([
+    `build doesn't start with ${out}, so it writes where check reads`,
+    `preview doesn't start with ${out}, so it writes where check reads`,
+    "vite.config.ts doesn't set outDir from process.env.SVELTEKIT_OUT_DIR",
+  ]);
+  if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
+  expect(read().scripts).toEqual({ build: `${out} vp build`, preview: `${out} vp preview` });
+  const vite = { "vite.config.ts": "outDir: process.env.SVELTEKIT_OUT_DIR" };
+  expect(check(vite)).toEqual([]);
+  const other = { ...pkg, devDependencies: {} };
+  writeFileSync(join(dir, "package.json"), JSON.stringify(other));
+  expect(check({})).toBeUndefined();
+});
+
 test(".gitignore lists outline.md, and the fix adds it once", () => {
   const dir = tmp("craftz-outline-");
   const file = join(dir, ".gitignore");

@@ -73,6 +73,14 @@ export function chain(verify: string): { kept: string[]; own: string[]; late: [s
   return { kept, own, late };
 }
 
+// Where a SvelteKit repository's `build` and `preview` keep their generated files, apart from the
+// `.svelte-kit` that `check` reads. The config reads it as `outDir`.
+export const SVELTEKIT_OUT = "SVELTEKIT_OUT_DIR=.svelte-kit/build";
+export const onSvelteKit = (pkg: Pkg): boolean =>
+  Boolean(pkg.dependencies?.["@sveltejs/kit"] ?? pkg.devDependencies?.["@sveltejs/kit"]);
+const apart = (pkg: Pkg, script: string): string =>
+  onSvelteKit(pkg) ? `${SVELTEKIT_OUT} ${script}` : script;
+
 export const onVitePlus = (pkg: Pkg): boolean =>
   Boolean(pkg.dependencies?.["vite-plus"] ?? pkg.devDependencies?.["vite-plus"]);
 
@@ -270,11 +278,35 @@ export const SCRIPT_RULES: Rule[] = [
       const preview = pkg.scripts?.preview;
       if (!preview) return undefined;
       if (!pkg.private) return drifted(["has a preview script, which is a site's"]);
-      return drifted(
-        preview === standardScripts.preview
-          ? []
-          : [`preview is ${preview}, not ${standardScripts.preview}`],
-      );
+      const want = apart(pkg, standardScripts.preview ?? "vp preview");
+      return drifted(preview === want ? [] : [`preview is ${preview}, not ${want}`]);
+    },
+  },
+  {
+    id: "scripts-sveltekit",
+    check: ({ pkg, files }) => {
+      if (!onSvelteKit(pkg)) return undefined;
+      const drift = ["build", "preview"]
+        .filter((name) => pkg.scripts?.[name] && !pkg.scripts[name].startsWith(`${SVELTEKIT_OUT} `))
+        .map(
+          (name) => `${name} doesn't start with ${SVELTEKIT_OUT}, so it writes where check reads`,
+        );
+      if (!files["vite.config.ts"]?.includes("process.env.SVELTEKIT_OUT_DIR"))
+        drift.push("vite.config.ts doesn't set outDir from process.env.SVELTEKIT_OUT_DIR");
+      return drifted(drift);
+    },
+    fix: {
+      in: "files",
+      apply: (dir) => {
+        const pkg = readPkg(dir);
+        if (!onSvelteKit(pkg)) return;
+        for (const name of ["build", "preview"]) {
+          const script = pkg.scripts?.[name];
+          if (script && !script.startsWith(`${SVELTEKIT_OUT} `))
+            pkg.scripts = { ...pkg.scripts, [name]: `${SVELTEKIT_OUT} ${script}` };
+        }
+        writePkg(dir, pkg);
+      },
     },
   },
   {
