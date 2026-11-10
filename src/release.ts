@@ -124,7 +124,7 @@ export function release(dir: string, input: Parsed): void {
   function editor(): string {
     if (!process.stdin.isTTY)
       fail(`There's no terminal for an editor, so give the summary: --notes "…"`);
-    const path = join(temporary("release-"), `${tag}.md`);
+    const path = join(temporary("craftz-release-"), `${tag}.md`);
     writeFileSync(path, "");
     const edit = process.env["VISUAL"] ?? process.env["EDITOR"] ?? "vi";
     console.log(`Write ${repo} ${tag}'s summary, or leave it empty, then save and close.`);
@@ -158,7 +158,7 @@ export function release(dir: string, input: Parsed): void {
     fail(`${repo}'s package.json changed on main while this ran. Run it again.`);
 
   // A commit built apart from the folder's index, so what the folder has changed stays as it is.
-  const apart = { GIT_INDEX_FILE: join(temporary("release-"), "index") };
+  const apart = { GIT_INDEX_FILE: join(temporary("craftz-release-"), "index") };
   const bumpedBlob = git(["hash-object", "-w", "--stdin"], {}, bumped);
   git(["read-tree", "origin/main"], apart);
   git(["update-index", "--cacheinfo", `${mode},${bumpedBlob},package.json`], apart);

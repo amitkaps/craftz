@@ -184,7 +184,7 @@ A lifecycle script, one pnpm runs on its own like `prepare` on install or `prepa
 
 ### A run removes what it writes
 
-A temporary folder, a clone or a stale lockfile entry outlived the run that made it, and each held tens of gigabytes before anyone looked. So a run removes what it wrote when it ends, and keeps only what it says it kept, and where. Nothing in a repository's files shows it, so it has no id. craftz's own commands take each folder from one module, and a test fails a folder made anywhere else.
+A temporary folder, a clone or a stale lockfile entry outlived the run that made it, and each held tens of gigabytes before anyone looked. So a run removes what it wrote when it ends, and keeps only what it says it kept, and where. Nothing in a repository's files shows it, so it has no id. craftz's own commands take each folder from one module, and a test fails a folder made anywhere else. A run that is stopped can't remove its folder, so each is named `craftz-<what>-`, and `craftz clear` removes the ones whose run has gone, and a kept one after a day.
 
 ## Cloudflare
 

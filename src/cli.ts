@@ -23,6 +23,7 @@ import { type Outcome, type Target, checkSettings, writeSettings } from "./apply
 import { deploy as upload } from "./deploy.ts";
 import { deps } from "./deps.ts";
 import { gone } from "./gone.ts";
+import { clear, cleared } from "./temp.ts";
 import { pr } from "./pr.ts";
 import { release } from "./release.ts";
 import { browserOnMain } from "./browser.ts";
@@ -254,6 +255,12 @@ const handlers: Record<Command, Handler> = {
     return shot(process.cwd(), given);
   },
   gone: () => gone(),
+  clear: ({ flag }) => {
+    const found = clear(undefined, flag("list"));
+    const lines = cleared(found, flag("list"));
+    console.log(lines.length ? lines.join("\n") : "Nothing to clear.");
+    return 0;
+  },
   new: async (given) => {
     // Loaded only here, since it brings the formatter. It's the one command that works outside a
     // repository, as `pnpm dlx @amitkaps/craftz new`.

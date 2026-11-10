@@ -16,6 +16,7 @@ Every repository makes the same choices, like its toolchain, versions, workflows
 | [`craftz deploy`](docs/usage.md#deploy) | deploys a site the way its Worker config says |
 | [`craftz pr`](docs/usage.md#pr) | opens a pull request that merges itself once CI passes |
 | [`craftz gone`](docs/usage.md#gone) | deletes the local branches that merged |
+| [`craftz clear`](docs/usage.md#clear) | removes the temporary folders a run left |
 | [`craftz release`](docs/usage.md#release) | opens the pull request that releases a package |
 | [`craftz deps`](docs/usage.md#deps) | says what the install holds, and which dependency brings it |
 | [`craftz shot`](docs/usage.md#shot) | saves a page as a PNG, with the repository's Playwright |

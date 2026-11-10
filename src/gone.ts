@@ -56,6 +56,7 @@ import { join } from "node:path";
 import { finding } from "@amitkaps/markz/rules";
 import { capture } from "./reference.ts";
 import { browserOnMain } from "./browser.ts";
+import { clear, cleared } from "./temp.ts";
 
 /** Runs a step of `pr` or `gone`, with its output shown. A step that fails stops the command with
  *  one line, since its own output, above it, says why. */
@@ -171,6 +172,7 @@ function mergeReady(branch: string): void {
 /** Deletes each local branch that merged, and pulls `main` when it's on it. With `others`, the branch you're on stays, and a
  *  run that deletes nothing prints nothing. */
 export function gone({ others = false } = {}): void {
+  for (const line of cleared(clear())) console.log(line);
   const current = output("branch", "--show-current");
   if (!others && current !== "main") mergeReady(current);
   const branches = mergedIn(".").filter(({ branch }) => !(others && branch === current));
