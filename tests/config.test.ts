@@ -7,7 +7,7 @@
  */
 import { expect, test } from "vite-plus/test";
 import { exported, jsonc, pluginCall, valueAt } from "../src/config.ts";
-import { allOf, withVerify } from "../src/edit.ts";
+import { allOf, allRuns, withVerify } from "../src/edit.ts";
 
 const VITE = `import { defineConfig } from "vite-plus";
 
@@ -28,6 +28,14 @@ test("a value is read where it sits, and only when it's written out", () => {
   expect(valueAt(VITE, ["build", "minify"])).toBeUndefined();
   expect(valueAt(VITE, ["lint", "options"])).toEqual({ typeAware: true });
   expect(allOf(VITE)).toEqual(["check", "test"]);
+});
+
+test("a task that runs a script stands for it in `all`", () => {
+  const vite = `export default { run: { tasks: {
+    built: { command: "pnpm run build", dependsOn: ["check"] },
+    all: { command: "true", dependsOn: ["check", "built"] },
+  } } }`;
+  expect(allRuns(vite)).toEqual(["check", "build"]);
 });
 
 test("a plugin is a call in the config's own plugins", () => {

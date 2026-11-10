@@ -170,6 +170,26 @@ export function allOf(vite: string): string[] | undefined {
   return Array.isArray(list) ? list.filter((it) => typeof it === "string") : undefined;
 }
 
+/**
+ * The scripts `all` runs, each as the task that runs it: the script's own name, or a task of the
+ * repository's whose command is `pnpm run <script>`. A task can't share a script's name, so
+ * `built` is how `build` waits for `check`. `undefined` without an `all` task.
+ */
+export function allRuns(vite: string): string[] | undefined {
+  const names = allOf(vite);
+  if (!names) return undefined;
+  const tasks = literal(at(exported(vite), ["run", "tasks"]));
+  const defined = tasks && typeof tasks === "object" ? (tasks as Record<string, unknown>) : {};
+  return names.map((name) => {
+    const task = defined[name];
+    const command =
+      task && typeof task === "object" ? (task as { command?: unknown }).command : undefined;
+    const script =
+      typeof command === "string" ? /^pnpm run ([\w:-]+)$/.exec(command)?.[1] : undefined;
+    return script ?? name;
+  });
+}
+
 /** The `run` block whose `all` task runs these scripts, as a config's key, indented. */
 export const runBlock = (scripts: string[]): string => `  run: {
     cache: false,

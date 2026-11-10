@@ -9,7 +9,7 @@ import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from "no
 import { join } from "node:path";
 import { type Pkg, isCraftz, readPkg, standard, read } from "../reference.ts";
 import {} from "../config.ts";
-import { allOf, withVerify } from "../edit.ts";
+import { allRuns, withVerify } from "../edit.ts";
 import {} from "../ruled.ts";
 import { workerIn } from "../worker.ts";
 import type { Rule } from "../rules.ts";
@@ -205,7 +205,7 @@ export const SCRIPT_RULES: Rule[] = [
           ),
         ]);
       }
-      const all = allOf(files["vite.config.ts"] ?? "");
+      const all = allRuns(files["vite.config.ts"] ?? "");
       if (!all) return drifted(["vite.config.ts has no all task"]);
       return drifted(
         allFor(pkg)
