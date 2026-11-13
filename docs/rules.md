@@ -89,7 +89,7 @@ A target only rewrites syntax, like CSS nesting or a regular expression's flags.
 ```
 
 - [`versions-pnpm`]{#versions-pnpm}: pnpm is pinned exactly, with `onFail: download`. Whatever pnpm is installed globally, pnpm fetches and runs the pinned one, so a new pnpm release never breaks a checkout. CI reads `packageManager`, so keep the two equal.
-- [`versions-node`]{#versions-node}: `devEngines` asks for the reference's Node with `onFail: error`, and `engines` asks for the same. The wrong Node stops loudly. A package supports the Node it's built and tested on, and nothing older, so CI runs on one Node. Node 26 is the LTS release from October 2026. The floor is 26.13.1, its November security release. cf's beta needs at least 26.13.0, where craftz works out the compatibility date. When the next LTS arrives, every repository moves to it at once, and for a package that's a breaking release.
+- [`versions-node`]{#versions-node}: `devEngines` asks for the reference's Node with `onFail: error`, and `engines` asks for the same. The wrong Node stops loudly. A package supports the Node it's built and tested on, and nothing older, so CI runs on one Node. Node 26 is the LTS release from October 2026. The floor is 26.13.1, its November security release. cf's beta needs at least 26.12.0, where craftz works out the compatibility date. When the next LTS arrives, every repository moves to it at once, and for a package that's a breaking release.
 
 Bump deliberately, everywhere at once. Being on the latest pnpm doesn't matter. Being on the same one does.
 
@@ -216,7 +216,7 @@ export default {
     name: "prose",
     domains: ["prose.amitkaps.com"],
     assets: { directory: ".prose" },
-    compatibilityDate: "2026-11-04",
+    compatibilityDate: "2026-11-10",
     workersDev: false,
     previewUrls: false,
   },

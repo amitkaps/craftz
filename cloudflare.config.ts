@@ -18,7 +18,7 @@ export default {
       // Serve the 404.html prose writes for any missing address.
       notFoundHandling: "404-page",
     },
-    compatibilityDate: "2026-11-04",
+    compatibilityDate: "2026-11-10",
     workersDev: false,
     previewUrls: false,
   },

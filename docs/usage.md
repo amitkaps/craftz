@@ -74,7 +74,7 @@ export default {
     name: "prose",
     domains: ["prose.amitkaps.com"],
     assets: { directory: ".prose" },
-    compatibilityDate: "2026-11-04",
+    compatibilityDate: "2026-11-10",
     workersDev: false,
     previewUrls: false,
   },
