@@ -40,8 +40,8 @@ export default defineConfig({
   run: {
     cache: { scripts: false, tasks: true },
     tasks: {
-      tested: { command: "pnpm run test" },
-      built: { command: "pnpm run build" },
+      tested: { command: "pnpm run test", cache: { input: [{ auto: true }, "!.prose/**"] } },
+      built: { command: "pnpm run build", cache: { input: [{ auto: true }, "!.prose/**"] } },
       all: { command: "true", cache: false, dependsOn: ["check", "tested", "built", "site"] },
     },
   },
