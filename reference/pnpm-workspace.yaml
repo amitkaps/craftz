@@ -30,7 +30,7 @@ allowBuilds:
 # npm alias, pnpm can't check it against the usual `vite` peer ranges, so those checks
 # are off for `vite`.
 overrides:
-  "vite@*": "npm:@voidzero-dev/vite-plus-core@1.5.1"
+  "vite@*": "npm:@voidzero-dev/vite-plus-core@1.6.0"
 
 peerDependencyRules:
   allowAny:
