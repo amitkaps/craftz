@@ -65,7 +65,7 @@ Nothing about oxc goes in VS Code's user settings. A path to oxfmt there, or a c
 
 Code shipped to browsers works in the browsers people use, with a floor for each engine rather than a date. Vite's default, Baseline Widely Available, waits 30 months for every browser and is frozen at each Vite major. But only one engine holds people back that long.
 
-- **Blink**, which is Chrome, Edge, Opera, Samsung Internet and Android's WebView: the oldest Chromium released in the last 12 months. Chrome and Firefox release every two weeks now, so a count of versions shrinks each time they speed up, and a window of time doesn't. Samsung Internet runs on a Chromium about ten months old, which is why the window is a year.
+- **Blink**, which is Chrome, Edge, Opera, Samsung Internet and Android's WebView: the oldest Chromium released in the last six months. Chrome and Firefox release every few weeks now, so a count of versions shrinks each time they speed up, and a window of time doesn't. Six months is about six majors, a margin for a Chrome that lags. Samsung Internet isn't a reason to go further back. It runs on an older Chromium, and MDN's data for it arrives late, so the floor would wait on a third party's release.
 - **Gecko**, which is Firefox: the oldest ESR Mozilla supports. It's the oldest Firefox that still gets fixes.
 - **WebKit**, which is Safari and every browser on iOS, in-app browsers too: the newest release of the major two before the current one. An iPhone that a new iOS drops stays on its last major and keeps getting point releases, so that's the oldest Safari in use. Chrome on iOS and an app's WebView run this engine too, so it covers more people than Safari's own share.
 

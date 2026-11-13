@@ -5,8 +5,7 @@
  * browser-compat-data. The date is the data's own, not today's, so the list moves only when
  * `pnpm bump` moves the package, and two runs on one version agree.
  *
- * A release counts once it's out, so a beta or a planned one doesn't. Samsung Internet names
- * the Chromium it runs on as its engine version.
+ * A release counts once it's out, so a beta or a planned one doesn't.
  */
 import { createRequire } from "node:module";
 
@@ -30,17 +29,16 @@ function released(browser: string): [string, Release][] {
 
 const major = (version: string): number => Number(version.split(".")[0]);
 
-// Blink: the oldest Chromium released in the year before the data's date, or the current
-// Samsung Internet's, when that's older.
+// Blink: the oldest Chromium released in the six months before the data's date.
 function blink(): number {
-  const year = new Date(bcd.__meta.timestamp);
-  year.setFullYear(year.getFullYear() - 1);
-  const since = year.toISOString();
-  const chrome = released("chrome")
-    .filter(([, r]) => (r.release_date ?? "") >= since)
-    .map(([version]) => major(version));
-  const samsung = released("samsunginternet_android").find(([, r]) => r.status === "current");
-  return Math.min(...chrome, major(samsung?.[1].engine_version ?? "Infinity"));
+  const window = new Date(bcd.__meta.timestamp);
+  window.setMonth(window.getMonth() - 6);
+  const since = window.toISOString();
+  return Math.min(
+    ...released("chrome")
+      .filter(([, r]) => (r.release_date ?? "") >= since)
+      .map(([version]) => major(version)),
+  );
 }
 
 // Gecko: the oldest ESR Mozilla supports.
