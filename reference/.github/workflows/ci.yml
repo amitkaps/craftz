@@ -63,6 +63,9 @@ jobs:
           key: vp-task-${{ runner.os }}-${{ runner.arch }}-${{ github.run_id }}
           restore-keys: vp-task-${{ runner.os }}-${{ runner.arch }}-
 
+      - name: Probe
+        run: pnpm exec vp run --dry-run -v tested built; ls -la node_modules/.vite/task-cache
+
       - name: Verify
         timeout-minutes: 2
         run: pnpm run verify
