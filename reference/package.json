@@ -23,11 +23,11 @@
     "@amitkaps/prose": "0.12.0",
     "@playwright/test": "1.63.0",
     "@types/node": "26.6.6",
-    "cf": "1.0.0-beta.28",
+    "cf": "1.0.0-beta.31",
     "publint": "0.3.25",
     "typescript": "7.0.2",
     "vite-plus": "1.6.0",
-    "wrangler": "4.159.0"
+    "wrangler": "4.161.0"
   },
   "devEngines": {
     "packageManager": {
