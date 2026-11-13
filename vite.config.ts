@@ -38,9 +38,14 @@ export default defineConfig({
   },
 
   run: {
-    cache: false,
+    cache: { scripts: false, tasks: true },
     tasks: {
-      all: { command: "true", dependsOn: ["check", "test", "build", "site"] },
+      tested: { command: "pnpm run test" },
+      built: {
+        command: "pnpm run build",
+        cache: { input: [{ auto: true }, "!dist/**"], output: ["dist/**"] },
+      },
+      all: { command: "true", cache: false, dependsOn: ["check", "tested", "built", "site"] },
     },
   },
 
