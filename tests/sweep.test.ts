@@ -50,7 +50,9 @@ test("a folder goes once its run has gone or it has been kept for six hours, and
     why: "kept, and --all was given",
   });
   expect(existsSync(fresh)).toBe(true);
-  expect(clear(base, true, true).some((it) => it.folder.endsWith("alive") && it.clears)).toBe(false);
+  expect(clear(base, true, true).some((it) => it.folder.endsWith("alive") && it.clears)).toBe(
+    false,
+  );
 
   clear(base);
   expect([dead, old].some((it) => existsSync(it))).toBe(false);

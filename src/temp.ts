@@ -96,7 +96,10 @@ function judged(folder: string, all: boolean): { clears: boolean; why: string } 
   const left = KEPT - (Date.now() - statSync(folder).mtimeMs);
   return left <= 0
     ? { clears: true, why: "kept, and over 6 hours old" }
-    : { clears: false, why: `kept, under 6 hours old, so it clears in ${Math.ceil(left / HOUR)} h` };
+    : {
+        clears: false,
+        why: `kept, under 6 hours old, so it clears in ${Math.ceil(left / HOUR)} h`,
+      };
 }
 
 const kilobytes = (folder: string): number =>
