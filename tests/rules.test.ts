@@ -325,6 +325,14 @@ test("a config writes out the format and lint the rules set, and the fix writes 
     "lint.options.typeCheck isn't true",
     'lint.rules.no-empty isn\'t "error"',
   ]);
+  // A repository adds the plugins its own lint rules need, and the rule asks only for its three.
+  const more = ruled.replace('"import"]', '"import", "react"]');
+  expect(drift("toolchain-lint", more)).toEqual([]);
+  const short = ruled.replace('["typescript", "unicorn", "import"]', '["react", "typescript"]');
+  expect(drift("toolchain-lint", short)).toEqual([
+    'lint.plugins is ["react", "typescript"], not ["react", "typescript", "unicorn", "import"]',
+  ]);
+  expect(fixed(short)).toContain('plugins: ["react", "typescript", "unicorn", "import"]');
   // A config with neither block gains both, after its last key.
   expect(fixed(config("plugins: [sveltekit()],"))).toBe(
     config(
@@ -332,12 +340,12 @@ test("a config writes out the format and lint the rules set, and the fix writes 
     ),
   );
   // A block of the config's own keeps its keys, and gains the rules' after them, or has them
-  // replaced.
+  // replaced. Its plugins keep what it added.
   expect(
     fixed(config('fmt: { ignorePatterns: generated },\n  lint: {\n    plugins: ["oxc"],\n  },')),
   ).toBe(
     config(
-      'fmt: { ignorePatterns: generated, proseWrap: "never" },\n  lint: {\n    plugins: ["typescript", "unicorn", "import"],\n    categories: { correctness: "error" },\n    options: { typeAware: true, typeCheck: true },\n    rules: { "no-empty": "error" },\n  },',
+      'fmt: { ignorePatterns: generated, proseWrap: "never" },\n  lint: {\n    plugins: ["oxc", "typescript", "unicorn", "import"],\n    categories: { correctness: "error" },\n    options: { typeAware: true, typeCheck: true },\n    rules: { "no-empty": "error" },\n  },',
     ),
   );
   // A block the config works out is left by hand.

@@ -110,11 +110,28 @@ const leaves = (value: unknown, path: string[] = []): [string[], unknown][] =>
 const compared = (value: unknown): string | undefined =>
   JSON.stringify(value, (_, it: unknown) => (it instanceof RegExp ? String(it) : it));
 
+// Lists a repository may add to, like the plugins its own lint rules need. The rule asks that its
+// entries are there, and the fix keeps what else the list holds.
+const ADDITIVE = ["lint.plugins"];
+
+// What a path's value is to be, by what the config has. An additive list is the config's own with
+// the missing entries after it, or nothing where it holds them all.
+function wanted(have: unknown, path: string[], value: unknown): unknown {
+  if (!ADDITIVE.includes(path.join(".")) || !Array.isArray(have) || !Array.isArray(value)) {
+    return value;
+  }
+  const missing = value.filter((it) => !have.includes(it));
+  return missing.length ? [...have, ...missing] : have;
+}
+
 /** Each value in `values` that a config sets otherwise, or not at all, by its path. */
 export const unlike = (vite: string, values: Config): [string[], unknown][] =>
-  leaves(values).filter(
-    ([path, value]) => compared(literal(at(exported(vite), path))) !== compared(value),
-  );
+  leaves(values)
+    .map(([path, value]): [string[], unknown] => {
+      const have = literal(at(exported(vite), path));
+      return [path, wanted(have, path, value)];
+    })
+    .filter(([path, value]) => compared(literal(at(exported(vite), path))) !== compared(value));
 
 // Adds `key: value` to an object node, after its last key, or as its only one.
 function withKey(text: string, object: Node, key: string, value: string, top: boolean): string {
