@@ -57,7 +57,7 @@ jobs:
       # Vite+'s task cache, so a `test` or `build` whose files are unchanged replays. The key is
       # new each run and restores the latest, since a cache can't be overwritten.
       - name: Task cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: node_modules/.vite/task-cache
           key: vp-task-${{ runner.os }}-${{ runner.arch }}-${{ github.run_id }}

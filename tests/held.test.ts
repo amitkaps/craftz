@@ -5,7 +5,7 @@
  * newer version exists, left out when they're current, and named when they can't be compared.
  */
 import { expect, test } from "vite-plus/test";
-import { type Latest, heldTools, later } from "../src/held.ts";
+import { HELD_BY_HAND, type Latest, heldTools, later } from "../src/held.ts";
 
 const reference = {
   devEngines: {
@@ -57,4 +57,14 @@ test("versions compare by their numbers, and a tag's number counts", () => {
   expect(later("12.18.0", "12.9.0")).toBe(true);
   expect(later("1.0.0-beta.28", "1.0.0-beta.21")).toBe(true);
   expect(later("1.0.0-beta.9", "1.0.0-beta.10")).toBe(false);
+});
+
+// pnpm 12's `outdated` lists both as dev dependencies, and updating one rewrites a floor as an exact
+// version, so `bump` skips what `heldTools` lists.
+test("the tools bump never updates are the ones heldTools lists", async () => {
+  const listed = await heldTools(
+    reference,
+    versions({ pnpm: "99.0.0", node: "99.0.0", cf: "1.0.0-beta.21" }),
+  );
+  expect([...HELD_BY_HAND].sort()).toEqual(listed.map((line) => line.split(" ")[0]!).sort());
 });

@@ -196,19 +196,23 @@ export function allRuns(vite: string): string[] | undefined {
 // The cached scripts, and the task each is run as, since a task can't share a script's name.
 const CACHED: Record<string, string> = { test: "tested", build: "built" };
 
+// What a cached task leaves out of its inputs: `.prose`, which `site` writes, `dist` for `tested`,
+// which `built` writes, and for a SvelteKit repository what `check` rewrites as they read it.
+const left = (it: string, scripts: string[], kit: boolean): string[] => [
+  ...(scripts.includes("site") ? ["!.prose/**"] : []),
+  ...(it === "test" && scripts.includes("build") ? ["!dist/**"] : []),
+  ...(kit ? ["!.svelte-kit/**", "!node_modules/$app/**"] : []),
+];
+
 /**
  * The `run` block whose `all` task runs these scripts, as a config's key, indented. `tested` and
  * `built` leave out what runs beside them: `.prose`, which `site` writes, and for `tested`, the
  * `dist` that `built` writes. A fresh checkout has neither, so a cache that counted them missed.
  */
-export const runBlock = (scripts: string[]): string => {
+export const runBlock = (scripts: string[], kit = false): string => {
   const cached = scripts.filter((it) => CACHED[it]);
-  const left = (it: string): string[] => [
-    ...(scripts.includes("site") ? ["!.prose/**"] : []),
-    ...(it === "test" && scripts.includes("build") ? ["!dist/**"] : []),
-  ];
   const tasks = cached.map((it) => {
-    const input = left(it);
+    const input = left(it, scripts, kit);
     const cache = input.length
       ? `, cache: { input: [{ auto: true }, ${input.map((i) => JSON.stringify(i)).join(", ")}] }`
       : "";
@@ -225,12 +229,89 @@ ${tasks.join("")}      all: { command: "true", cache: false, dependsOn: [${names
 };
 
 /** A Vite config whose `all` task runs these scripts, added after its last key. */
-export function withVerify(vite: string, scripts: string[]): string {
+export function withVerify(vite: string, scripts: string[], kit = false): string {
   const config = exported(vite);
   const last = properties(config).at(-1);
   if (!last || at(config, ["run"])) return vite;
   const comma = vite[last.end] === ",";
   const after = last.end + (comma ? 1 : 0);
-  const block = runBlock(scripts).trimEnd();
+  const block = runBlock(scripts, kit).trimEnd();
   return `${vite.slice(0, after)}${comma ? "" : ","}\n\n${block}${vite.slice(after)}`;
+}
+
+/** @prose
+ * # The cached form
+ *
+ * A repository whose `all` ran `test` and `build` as scripts is moved to the cached form. It gets
+ * `run.cache`, the tasks `tested` and `built`, an uncached `all`, and `dependsOn` lists that name
+ * the tasks.
+ *
+ * A task of the repository's own stays as it is, and so does a cache it set on `tested` or
+ * `built`, since only it knows what they read. A `run` block that isn't plain values, or has no
+ * `all`, is left alone, so its check still drifts.
+ */
+
+// The values the cached form sets in a config, or `undefined` where it has no `all` to go on.
+function cachedValues(vite: string, scripts: string[], kit: boolean): Config | undefined {
+  const names = allOf(vite);
+  if (!names) return undefined;
+  const found = literal(at(exported(vite), ["run", "tasks"]));
+  const defined = (found && typeof found === "object" ? found : {}) as Record<string, unknown>;
+  const own = (name: string): { command?: unknown; cache?: unknown; dependsOn?: unknown } => {
+    const task = defined[name];
+    return task && typeof task === "object" ? task : {};
+  };
+  // `test` or `build` as the script, which no task of that name stands in for.
+  const renamed = (list: unknown): string[] | undefined =>
+    Array.isArray(list) && list.some((it) => typeof it === "string" && CACHED[it] && !defined[it])
+      ? list.map((it: string) => (!defined[it] ? (CACHED[it] ?? it) : it))
+      : undefined;
+  const tasks: Config = {};
+  for (const script of Object.keys(CACHED)) {
+    const task = CACHED[script]!;
+    const runs = names.includes(script) || names.includes(task);
+    if (!scripts.includes(script) || !runs) continue;
+    const command = own(task).command;
+    if (command !== undefined && command !== `pnpm run ${script}`) continue;
+    const input = left(script, scripts, kit);
+    tasks[task] = {
+      command: `pnpm run ${script}`,
+      ...(input.length && own(task).cache === undefined
+        ? { cache: { input: [{ auto: true }, ...input] } }
+        : {}),
+    };
+  }
+  tasks["all"] = { cache: false, dependsOn: renamed(names) ?? names };
+  for (const name of Object.keys(defined)) {
+    const dependsOn = renamed(own(name).dependsOn);
+    if (name !== "all" && dependsOn) tasks[name] = { dependsOn };
+  }
+  return { run: { cache: CACHE, tasks } };
+}
+
+/** What the cached form sets that a config sets otherwise, by its path, for the check to name. */
+export function uncached(vite: string, scripts: string[], kit = false): [string[], unknown][] {
+  const values = cachedValues(vite, scripts, kit);
+  if (!values) return [];
+  const found = unlike(vite, values);
+  // `cache: false` is no block to set keys in, so it's the one thing to set.
+  return plainCache(vite)
+    ? found
+    : [[["run", "cache"], CACHE], ...found.filter(([path]) => path[1] !== "cache")];
+}
+
+const CACHE = { scripts: false, tasks: true };
+
+// Whether `run.cache` is a block of keys, or not there, as the cached form sets keys in it.
+const plainCache = (vite: string): boolean => {
+  const node = at(exported(vite), ["run", "cache"]);
+  return !node || node.type === "ObjectExpression";
+};
+
+/** A Vite config in the cached form, where its `run` block can be edited. */
+export function withCached(vite: string, scripts: string[], kit = false): string {
+  const values = cachedValues(vite, scripts, kit);
+  if (!values) return vite;
+  const text = plainCache(vite) ? vite : withValue(vite, ["run", "cache"], {});
+  return withValues(text, values);
 }

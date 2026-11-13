@@ -9,7 +9,7 @@ import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from "no
 import { join } from "node:path";
 import { type Pkg, isCraftz, readPkg, standard, read } from "../reference.ts";
 import {} from "../config.ts";
-import { allRuns, withVerify } from "../edit.ts";
+import { allRuns, uncached, withCached, withVerify } from "../edit.ts";
 import {} from "../ruled.ts";
 import { workerIn } from "../worker.ts";
 import type { Rule } from "../rules.ts";
@@ -213,13 +213,17 @@ export const SCRIPT_RULES: Rule[] = [
           ),
         ]);
       }
-      const all = allRuns(files["vite.config.ts"] ?? "");
+      const vite = files["vite.config.ts"] ?? "";
+      const all = allRuns(vite);
       if (!all) return drifted(["vite.config.ts has no all task"]);
-      return drifted(
-        allFor(pkg)
+      return drifted([
+        ...allFor(pkg)
           .filter((name) => !all.includes(name))
           .map((name) => `all doesn't run ${name}`),
-      );
+        ...uncached(vite, allFor(pkg), onSvelteKit(pkg)).map(
+          ([path, value]) => `${path.join(".")} isn't ${JSON.stringify(value)}, the cached form`,
+        ),
+      ]);
     },
     fix: {
       in: "files",
@@ -227,7 +231,17 @@ export const SCRIPT_RULES: Rule[] = [
         const pkg = readPkg(dir);
         const verify = pkg.scripts?.verify;
         const want = readPkg(std).scripts?.verify;
-        if (!verify || !want || verify === want || !onVitePlus(pkg) || pkg.name === PROSE) return;
+        if (!verify || !want || !onVitePlus(pkg)) return;
+        const file = join(dir, "vite.config.ts");
+        const kit = onSvelteKit(pkg);
+        if (verify === want) {
+          const vite = read(file);
+          const edited = withCached(vite, allFor(pkg), kit);
+          if (vite && edited !== vite) writeFileSync(file, edited);
+          return;
+        }
+        // prose's chain is its own, so its `verify` is left as it is.
+        if (pkg.name === PROSE) return;
         const { kept, own, late } = chain(verify);
         const site: Record<string, string> = steps(verify).includes("pnpm prose build")
           ? { site: standardScripts.site ?? "prose build" }
@@ -236,12 +250,12 @@ export const SCRIPT_RULES: Rule[] = [
           pkg.scripts = { ...pkg.scripts, ...site, verify: kept.join(" && ") };
           return writePkg(dir, pkg);
         }
-        const file = join(dir, "vite.config.ts");
         const vite = read(file);
         if (!vite) return;
         const edited = withVerify(
           vite,
           kept.map((step) => step.slice(5)),
+          kit,
         );
         if (edited === vite) return;
         writeFileSync(file, edited);

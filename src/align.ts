@@ -29,7 +29,7 @@ import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from "no
 import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 import { staleActions } from "./actions.ts";
-import { heldTools } from "./held.ts";
+import { HELD_BY_HAND, heldTools } from "./held.ts";
 import { checkSettings, writeSettings } from "./apply.ts";
 import { catchUp } from "./gone.ts";
 import { fixFiles } from "./rules.ts";
@@ -134,7 +134,9 @@ async function update(dir: string, log: string[], skip: string[]): Promise<strin
   const minor: string[] = [];
   const majors: string[] = [];
   for (const [name, { current, latest }] of Object.entries(found)) {
-    if (skip.includes(name)) continue;
+    // pnpm 12 lists the `devEngines` runtime and package manager as dev dependencies. Updating
+    // one rewrites a floor as an exact version, so they're left to `heldTools`, which lists them.
+    if (skip.includes(name) || HELD_BY_HAND.includes(name)) continue;
     if (isPrerelease(current)) {
       if (graduated(current, latest)) {
         majors.push(`${name} ${latest}, a release of the beta ${current}`);
