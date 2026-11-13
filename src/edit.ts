@@ -196,10 +196,24 @@ export function allRuns(vite: string): string[] | undefined {
 // The cached scripts, and the task each is run as, since a task can't share a script's name.
 const CACHED: Record<string, string> = { test: "tested", build: "built" };
 
-/** The `run` block whose `all` task runs these scripts, as a config's key, indented. */
+/**
+ * The `run` block whose `all` task runs these scripts, as a config's key, indented. `tested` and
+ * `built` leave out what runs beside them: `.prose`, which `site` writes, and for `tested`, the
+ * `dist` that `built` writes. A fresh checkout has neither, so a cache that counted them missed.
+ */
 export const runBlock = (scripts: string[]): string => {
   const cached = scripts.filter((it) => CACHED[it]);
-  const tasks = cached.map((it) => `      ${CACHED[it]}: { command: "pnpm run ${it}" },\n`);
+  const left = (it: string): string[] => [
+    ...(scripts.includes("site") ? ["!.prose/**"] : []),
+    ...(it === "test" && scripts.includes("build") ? ["!dist/**"] : []),
+  ];
+  const tasks = cached.map((it) => {
+    const input = left(it);
+    const cache = input.length
+      ? `, cache: { input: [{ auto: true }, ${input.map((i) => JSON.stringify(i)).join(", ")}] }`
+      : "";
+    return `      ${CACHED[it]}: { command: "pnpm run ${it}"${cache} },\n`;
+  });
   const names = scripts.map((it) => JSON.stringify(CACHED[it] ?? it)).join(", ");
   return `  run: {
     cache: { scripts: false, tasks: true },

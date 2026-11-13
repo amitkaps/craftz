@@ -575,8 +575,8 @@ test("a chained verify moves to the all task, and the fix moves it once", () => 
   run: {
     cache: { scripts: false, tasks: true },
     tasks: {
-      tested: { command: "pnpm run test" },
-      built: { command: "pnpm run build" },
+      tested: { command: "pnpm run test", cache: { input: [{ auto: true }, "!.prose/**", "!dist/**"] } },
+      built: { command: "pnpm run build", cache: { input: [{ auto: true }, "!.prose/**"] } },
       all: { command: "true", cache: false, dependsOn: ["check", "tested", "built", "site"] },
     },
   },
