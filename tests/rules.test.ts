@@ -586,6 +586,46 @@ test("a chained verify moves to the all task, and the fix moves it once", () => 
   expect(drift()).toEqual([]);
 });
 
+test("an all that runs test and build as scripts drifts, and the fix moves it to the cached form", () => {
+  const dir = tmp("craftz-cached-");
+  const scripts = {
+    check: "vp check",
+    test: "vp test --run",
+    build: "vp pack",
+    site: "prose build",
+    verify: "vp run --log grouped all",
+  };
+  writeFileSync(
+    join(dir, "package.json"),
+    JSON.stringify({ scripts, devDependencies: { "vite-plus": "0.0.0" } }),
+  );
+  const old = `export default {
+  run: {
+    tasks: {
+      size: { command: "pnpm run size", dependsOn: ["build"] },
+      all: { command: "true", cache: false, dependsOn: ["check", "test", "build", "size", "site"] },
+    },
+  },
+};
+`;
+  writeFileSync(join(dir, "vite.config.ts"), old);
+  const rule = RULES.find((r) => r.id === "scripts-verify");
+  const vite = () => readFileSync(join(dir, "vite.config.ts"), "utf8");
+  const drift = () =>
+    rule?.check({
+      pkg: JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as Pkg,
+      files: { "vite.config.ts": vite() },
+      vitePlus: "0.0.0",
+    } as unknown as Repo)?.drift;
+  expect(drift()?.length).toBeGreaterThan(0);
+  for (let i = 0; i < 2; i++) if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
+  expect(drift()).toEqual([]);
+  const after = vite();
+  expect(after).toContain('dependsOn: ["check", "tested", "built", "size", "site"]');
+  expect(after).toContain('size: { command: "pnpm run size", dependsOn: ["built"] }');
+  expect(after).toContain('"!.prose/**", "!dist/**"');
+});
+
 // A verify the fix moves as far as it can, with what the check says of the steps it leaves.
 function leftByHand(verify: string) {
   const dir = tmp("craftz-verify-");

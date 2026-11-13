@@ -17,6 +17,9 @@
 import { type Pkg, isPrerelease, graduated } from "./reference.ts";
 import { betas } from "./rules/versions.ts";
 
+/** The tools `pnpm outdated` lists that `pnpm bump` never updates, since `heldTools` lists them. */
+export const HELD_BY_HAND = ["node", "pnpm"];
+
 /** The newest version of a tool, or `undefined` when it couldn't be read. `node` is the newest
  *  LTS release from nodejs.org, and any other name is npm's `latest` tag. */
 export type Latest = (name: string) => Promise<string | undefined>;

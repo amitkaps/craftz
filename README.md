@@ -37,7 +37,7 @@ pnpm exec craftz fix
 
 The first fix writes the `craftz`, `pr` and `gone` scripts, and the rest of what can be fixed. From then on, `pnpm craftz` runs it.
 
-It needs Node 26.13.0 or newer, the Node it's built and tested on.
+It needs Node 26.13.1 or newer, the Node it's built and tested on.
 
 ## Use
 
