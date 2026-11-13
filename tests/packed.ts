@@ -49,12 +49,23 @@ export default function setup({ provide }: { provide: (key: "tarball", value: st
 /**
  * Points a repository's craftz at the tarball, in its pnpm settings, leaving `package.json` as it
  * is. It gives back a function that puts the settings back, for after the install, since they're
- * craftz's and `craftz check` reads them word for word.
+ * craftz's and `craftz check` reads them word for word. It puts back pnpm's record of them too, so
+ * a `pnpm run` in a cached task doesn't install the released craftz over the packed one.
  */
 export function usePacked(dir: string, tarball: string): () => void {
   const settings = join(dir, "pnpm-workspace.yaml");
   const text = readFileSync(settings, "utf8");
   const override = `  "@amitkaps/craftz": "file:${tarball}"`;
   writeFileSync(settings, text.replace(/^overrides:\n/m, `$&${override}\n`));
-  return () => writeFileSync(settings, text);
+  return () => {
+    writeFileSync(settings, text);
+    // pnpm records the settings it installed with, and a `pnpm run` in a Vite+ task installs again
+    // when they differ. The install is done, so the record goes back with the settings.
+    const state = join(dir, "node_modules/.pnpm-workspace-state-v1.json");
+    const recorded = JSON.parse(readFileSync(state, "utf8")) as {
+      settings: { overrides?: Record<string, string> };
+    };
+    delete recorded.settings.overrides?.["@amitkaps/craftz"];
+    writeFileSync(state, JSON.stringify(recorded, null, 2));
+  };
 }
