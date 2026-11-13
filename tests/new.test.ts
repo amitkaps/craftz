@@ -89,7 +89,11 @@ for (const [what, start] of verified) {
     const git = (...args: string[]) => promisify(execFile)("git", args, { cwd: dir, env });
     await git("add", "-A");
     await git("commit", "-q", "-m", "Start");
-    await expect(run("run", "verify")).resolves.toBeTruthy();
+    // This is `verify`, uncached. A cached task tracks the files its processes read, and a
+    // cached `vp run` inside one, as craftz's own `tested` is, fails to spawn.
+    await expect(
+      run("exec", "vp", "run", "--no-cache", "--log", "grouped", "all"),
+    ).resolves.toBeTruthy();
   });
 }
 

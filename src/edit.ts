@@ -160,8 +160,10 @@ export const withValues = (vite: string, values: Config): string =>
  * the `run` block after the config's last key. A config that already has a `run` block comes
  * back unchanged, so the task is added by hand.
  *
- * The cache is off. A cached step replays its output without running, so a check could pass on
- * files it never read, and `verify` is what CI, `pr` and a release trust.
+ * Only `test` and `build` are cached, as the tasks `tested` and `built`, since everything they
+ * read is a file. `all`, `check` and `site` stay uncached, because a cached step replays its
+ * output without running, and `prose build` and `craftz check` read the last commit and GitHub,
+ * which the cache can't see. `verify` is what CI, `pr` and a release trust.
  */
 
 /** The scripts the config's `all` task depends on, or `undefined` without one. */
@@ -173,7 +175,8 @@ export function allOf(vite: string): string[] | undefined {
 /**
  * The scripts `all` runs, each as the task that runs it: the script's own name, or a task of the
  * repository's whose command is `pnpm run <script>`. A task can't share a script's name, so
- * `built` is how `build` waits for `check`. `undefined` without an `all` task.
+ * `tested` and `built` are how `test` and `build` are cached, and `built` is also how `build`
+ * waits for `check`. `undefined` without an `all` task.
  */
 export function allRuns(vite: string): string[] | undefined {
   const names = allOf(vite);
@@ -190,14 +193,22 @@ export function allRuns(vite: string): string[] | undefined {
   });
 }
 
+// The cached scripts, and the task each is run as, since a task can't share a script's name.
+const CACHED: Record<string, string> = { test: "tested", build: "built" };
+
 /** The `run` block whose `all` task runs these scripts, as a config's key, indented. */
-export const runBlock = (scripts: string[]): string => `  run: {
-    cache: false,
+export const runBlock = (scripts: string[]): string => {
+  const cached = scripts.filter((it) => CACHED[it]);
+  const tasks = cached.map((it) => `      ${CACHED[it]}: { command: "pnpm run ${it}" },\n`);
+  const names = scripts.map((it) => JSON.stringify(CACHED[it] ?? it)).join(", ");
+  return `  run: {
+    cache: { scripts: false, tasks: true },
     tasks: {
-      all: { command: "true", dependsOn: [${scripts.map((it) => JSON.stringify(it)).join(", ")}] },
+${tasks.join("")}      all: { command: "true", cache: false, dependsOn: [${names}] },
     },
   },
 `;
+};
 
 /** A Vite config whose `all` task runs these scripts, added after its last key. */
 export function withVerify(vite: string, scripts: string[]): string {

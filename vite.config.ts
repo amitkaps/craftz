@@ -19,9 +19,9 @@
  * config to write out. craftz's site is its docs, the folder `prose build` writes, which
  * [cloudflare.config.ts](cloudflare.config.ts) names, so Vite doesn't build it.
  *
- * `verify` runs `all`, as [the rules](docs/rules.md#scripts-verify) say. The tests pack from a
- * build of their own, in a folder of their own, so `build` runs beside them
- * ([packed.ts](tests/packed.ts)).
+ * `verify` runs `all`, as [the rules](docs/rules.md#scripts-verify) say. `tested` and `built` are
+ * the cached tasks for `test` and `build`. The tests pack from a build of their own, in a folder
+ * of their own, so `build` runs beside them ([packed.ts](tests/packed.ts)).
  */
 import { defineConfig } from "vite-plus";
 import { BROWSERS } from "./src/browsers.ts";

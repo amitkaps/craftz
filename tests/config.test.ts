@@ -56,9 +56,9 @@ test("the run block goes after the last key, with the comma it needs", () => {
   const block = `
 
   run: {
-    cache: false,
+    cache: { scripts: false, tasks: true },
     tasks: {
-      all: { command: "true", dependsOn: ["check"] },
+      all: { command: "true", cache: false, dependsOn: ["check"] },
     },
   },`;
   const bare = `export default defineConfig({\n  test: {}\n});\n`;
