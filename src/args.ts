@@ -43,7 +43,7 @@ const RUN = { flag: "flag", text: "text" } as const;
 /** The commands of the package, each an id that usage states. */
 export const SPECS = {
   rules: { run: `${CRAFTZ} rules`, takes: "one" },
-  check: { run: `${CRAFTZ} check`, takes: "dir" },
+  check: { run: `${CRAFTZ} check`, options: { all: RUN.flag }, takes: "dir" },
   fix: { run: `${CRAFTZ} fix`, takes: "dir" },
   upgrade: { run: `${CRAFTZ} upgrade`, takes: "none" },
   settings: {

@@ -40,11 +40,14 @@ import { type Finding, checkFolder, origin } from "./survey.ts";
 import { workerIn } from "./worker.ts";
 
 // Each drift a finding, in markz's line. Drift is a warning, and a held rule's drift ends with
-// its reason.
-const lines = (f: Finding): string[] =>
-  f.drift.map((message) =>
+// its reason. A held rule with more than one is one line, the first and the count, unless `all`.
+const lines = (f: Finding, all = true): string[] => {
+  const [first, ...rest] = f.drift;
+  const said = f.held && !all && rest.length ? [`${first}, and ${rest.length} more`] : f.drift;
+  return said.map((message) =>
     finding({ tool: "craftz", level: "warning", code: f.rule, message, held: f.held }),
   );
+};
 
 /** @prose
  * # Check and fix
@@ -60,12 +63,13 @@ const lines = (f: Finding): string[] =>
  * `fix` writes every fix, the same ones `pnpm align` runs, then checks again. A fix can move
  * versions, so `pnpm install` comes next, then `pnpm run fix` for the format.
  */
-async function check(dir: string): Promise<boolean> {
+async function check(dir: string, all = false): Promise<boolean> {
   const { findings } = await checkFolder(dir);
   const drift = findings.filter((f) => !f.held && f.drift.length);
   console.log(drift.length ? `✗ ${dir}` : `✓ ${dir}`);
-  for (const line of drift.flatMap(lines)) console.log(`    ${line}`);
-  for (const line of findings.filter((f) => f.held).flatMap(lines)) console.log(`    ${line}`);
+  for (const line of drift.flatMap((f) => lines(f))) console.log(`    ${line}`);
+  for (const line of findings.filter((f) => f.held).flatMap((f) => lines(f, all)))
+    console.log(`    ${line}`);
   const said = findings.flatMap((f) => (f.unchecked ? [`not checked: ${f.unchecked}`] : []));
   for (const message of said)
     console.log(`    ${finding({ tool: "craftz", level: "note", message })}`);
@@ -231,7 +235,7 @@ const handlers: Record<Command, Handler> = {
     process.stdout.write(rule);
     return 0;
   },
-  check: async ({ dir }) => ((await check(dir)) ? 1 : 0),
+  check: async ({ dir, flag }) => ((await check(dir, flag("all"))) ? 1 : 0),
   fix: async ({ dir }) => {
     const changed = fixFiles(dir, here);
     if (!changed.length) console.log("Changed nothing.\n");

@@ -49,16 +49,17 @@ An agent looks at a page it built with this, then reads the PNG. It uses the rep
 
 ## Checking one repository
 
-- [`craftz check [dir]`]{#check}: runs every rule on a folder, the current one by default.
+- [`craftz check [--all] [dir]`]{#check}: runs every rule on a folder, the current one by default.
 - [`craftz fix [dir]`]{#fix}: writes every fix that can be automated, then checks what's left.
 
 ```sh
 pnpm craftz check          # this folder
 pnpm craftz check ../markz # another one, with this folder's craftz
+pnpm craftz check --all    # every difference a held rule has, not only its first
 pnpm craftz fix            # write every fix, then check again
 ```
 
-`craftz check` runs every rule on the folder's files, with the installed version's rules, and prints each drift as a warning, in markz's line, like `craftz: warning: versions-markz: …`. It exits 1 when anything has drifted. It reads no settings and asks GitHub nothing, so it needs no login. A rule the repository [holds](rules.md#holds) prints its warning with `; held:` and its reason, and doesn't fail. It asks npm nothing, so it reads only the folder's files.
+`craftz check` runs every rule on the folder's files, with the installed version's rules, and prints each drift as a warning, in markz's line, like `craftz: warning: versions-markz: …`. It exits 1 when anything has drifted. It reads no settings and asks GitHub nothing, so it needs no login. A rule the repository [holds](rules.md#holds) prints its warning with `; held:` and its reason, and doesn't fail. A held rule with several differences prints the first and the count of the rest, and `--all` prints each. It asks npm nothing, so it reads only the folder's files.
 
 `craftz fix` writes every fix that can be automated. It lists each file it changed, then checks again and prints what's left to do by hand. A second run changes nothing. A fix can move versions, so run `pnpm install` next, then `pnpm run fix` for the format.
 

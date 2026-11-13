@@ -174,6 +174,29 @@ test("a hold lets a holdable rule's warning pass, with its reason", () => {
   // Three checks in a row, beside new's verify runs, can pass five seconds.
 }, 30_000);
 
+test("a held rule with several differences is one line, and --all lists each", () => {
+  const pkgFile = join(dir, "package.json");
+  const tsFile = join(dir, "tsconfig.json");
+  const [pkgText, tsText] = [readFileSync(pkgFile, "utf8"), readFileSync(tsFile, "utf8")];
+  try {
+    const pkg = JSON.parse(pkgText) as { craftz?: { hold: Record<string, string> } };
+    pkg.craftz = { hold: { "toolchain-types": "A tool writes its own." } };
+    writeFileSync(pkgFile, JSON.stringify(pkg, null, 2));
+    writeFileSync(tsFile, JSON.stringify({ compilerOptions: {}, include: ["src"] }));
+    const lines = (stdout: string) =>
+      stdout.split("\n").filter((l) => l.includes("toolchain-types"));
+    const short = craftz("check", dir);
+    expect(short.status).toBe(0);
+    expect(lines(short.stdout)).toHaveLength(1);
+    expect(lines(short.stdout)[0]).toMatch(/, and \d+ more; held: A tool writes its own\./);
+    const all = craftz("check", "--all");
+    expect(lines(all.stdout).length).toBeGreaterThan(1);
+  } finally {
+    writeFileSync(pkgFile, pkgText);
+    writeFileSync(tsFile, tsText);
+  }
+}, 30_000);
+
 test("upgrade leaves craftz itself to pnpm bump", () => {
   const root = join(import.meta.dirname, "..");
   const upgraded = spawnSync("node", ["src/cli.ts", "upgrade"], { cwd: root, encoding: "utf8" });
