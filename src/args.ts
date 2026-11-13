@@ -64,7 +64,7 @@ export const SPECS = {
     takes: "any",
   },
   gone: { run: "pnpm gone", takes: "none" },
-  clear: { run: `${CRAFTZ} clear`, options: { list: RUN.flag }, takes: "none" },
+  clear: { run: `${CRAFTZ} clear`, options: { list: RUN.flag, all: RUN.flag }, takes: "none" },
   release: { run: `${CRAFTZ} release`, options: { notes: RUN.text }, takes: "any" },
   shot: { run: `${CRAFTZ} shot`, options: { width: RUN.text }, takes: "any" },
   new: {
