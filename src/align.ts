@@ -73,6 +73,7 @@ const local = candidate || given.flag("local");
 const named = script === "bump" ? [SELF] : given.words;
 const targets = named.length ? named : await repos();
 const work = temporary("craftz-align-");
+if (candidate) process.env.CRAFTZ_PACKED = "1";
 const tarball = candidate ? pack() : undefined;
 const many = targets.length > 1 ? "repositories" : "repository";
 console.log(
@@ -261,8 +262,7 @@ function versionsIn(dir: string, repo: string): Deps {
 }
 
 // What a failed step leaves by hand, read from its output by `leftByHand`, with oxlint's JSON when
-// it ran the lint, or the step's first line when it printed none. A candidate's own version is a
-// tarball, which versions-craftz names in every repository, so it's left out.
+// it ran the lint, or the step's first line when it printed none.
 async function findings(error: unknown, dir: string): Promise<string[]> {
   const {
     stdout = "",
@@ -276,10 +276,8 @@ async function findings(error: unknown, dir: string): Promise<string[]> {
   const output = `${stdout}\n${stderr}`;
   const ranLint = /^Found \d+ errors?/m.test(output);
   const lint = ranLint ? await lintJson(dir) : "";
-  const found = leftByHand(output, lint).filter(
-    (line) => !(candidate && line.startsWith("versions-craftz:")),
-  );
-  return found.length || candidate ? found : [message.split("\n")[0] ?? ""];
+  const found = leftByHand(output, lint);
+  return found.length ? found : [message.split("\n")[0] ?? ""];
 }
 
 // The lint again, in the format that names each error's rule and line. It exits 1 on an error, and

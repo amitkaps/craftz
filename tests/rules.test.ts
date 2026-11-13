@@ -1026,3 +1026,15 @@ updateConfig:
   expect(after).toContain("@observablehq/plot");
   expect(rule("versions-workspace").check(repoOf(after))?.drift).toEqual([]);
 });
+
+test("a packed candidate's tarball is not drift in versions-craftz, and anything else still is", () => {
+  const rule = RULES.find((r) => r.id === "versions-craftz")!;
+  const repo = { deps: { [CRAFTZ]: "file:/tmp/craftz.tgz" } } as unknown as Repo;
+  expect(rule.check(repo)?.drift).toHaveLength(1);
+  process.env.CRAFTZ_PACKED = "1";
+  try {
+    expect(rule.check(repo)).toBeUndefined();
+  } finally {
+    delete process.env.CRAFTZ_PACKED;
+  }
+});

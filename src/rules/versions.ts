@@ -28,6 +28,18 @@ export const version = (id: string, name: string, holdable = true): Rule => ({
 });
 
 /** @prose
+ * # A packed candidate
+ *
+ * `pnpm align --candidate` installs craftz from a tarball, whose version is a path and not craftz's
+ * own, so it sets `CRAFTZ_PACKED` and the rule that names craftz's version reads nothing. A step
+ * of a candidate that fails then fails for something else, and says so.
+ */
+const packed = (rule: Rule): Rule => ({
+  ...rule,
+  check: (context) => (process.env.CRAFTZ_PACKED ? undefined : rule.check(context)),
+});
+
+/** @prose
  * # Our own version
  *
  * A package of ours that another builds on, checked as at least the reference's, so the one
@@ -166,7 +178,7 @@ export const VERSION_RULES: Rule[] = [
   atLeast("versions-prose", "@amitkaps/prose"),
   atLeast("versions-markz", "@amitkaps/markz"),
   // No tool keeps a repository from craftz, so its version can't be held.
-  version("versions-craftz", CRAFTZ, false),
+  packed(version("versions-craftz", CRAFTZ, false)),
   version("versions-cf", "cf"),
   {
     id: "versions-beta",
