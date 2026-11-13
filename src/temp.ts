@@ -15,7 +15,7 @@
  * A run that is stopped can't remove its folder, and a kept one stays until someone looks. So
  * every folder is named `craftz-<what>-…`, which is how `clear` tells it from any other, and
  * holds the id of the process that made it for as long as that process owns it. `clear` removes
- * a folder whose process has gone, and one that is kept, once it is six hours old, or at once with `--all`. It never touches
+ * a folder whose process has gone, and one that is kept, once it is an hour old, or at once with `--all`. It never touches
  * a folder whose process is running, or one with another name. `craftz gone` runs it first, so
  * nobody has to remember to.
  */
@@ -30,7 +30,8 @@ export const PREFIX = "craftz-";
 const OWNER = "owner";
 /** How long a kept folder stays. */
 const HOUR = 60 * 60 * 1000;
-const KEPT = 6 * HOUR;
+const KEPT = HOUR;
+const MINUTE = 60 * 1000;
 
 const made = new Map<string, boolean>();
 
@@ -95,10 +96,10 @@ function judged(folder: string, all: boolean): { clears: boolean; why: string } 
   if (all) return { clears: true, why: "kept, and --all was given" };
   const left = KEPT - (Date.now() - statSync(folder).mtimeMs);
   return left <= 0
-    ? { clears: true, why: "kept, and over 6 hours old" }
+    ? { clears: true, why: "kept, and over an hour old" }
     : {
         clears: false,
-        why: `kept, under 6 hours old, so it clears in ${Math.ceil(left / HOUR)} h`,
+        why: `kept, under an hour old, so it clears in ${Math.ceil(left / MINUTE)} min`,
       };
 }
 
