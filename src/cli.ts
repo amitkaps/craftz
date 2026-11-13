@@ -256,7 +256,7 @@ const handlers: Record<Command, Handler> = {
   },
   gone: () => gone(),
   clear: ({ flag }) => {
-    console.log(report(clear(undefined, flag("list")), flag("list")));
+    console.log(report(clear(undefined, flag("list"), flag("all")), flag("list")));
     return 0;
   },
   new: async (given) => {

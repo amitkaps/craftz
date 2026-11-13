@@ -15,7 +15,7 @@
  * A run that is stopped can't remove its folder, and a kept one stays until someone looks. So
  * every folder is named `craftz-<what>-…`, which is how `clear` tells it from any other, and
  * holds the id of the process that made it for as long as that process owns it. `clear` removes
- * a folder whose process has gone, and one that is kept, once it is a day old. It never touches
+ * a folder whose process has gone, and one that is kept, once it is six hours old, or at once with `--all`. It never touches
  * a folder whose process is running, or one with another name. `craftz gone` runs it first, so
  * nobody has to remember to.
  */
@@ -30,7 +30,7 @@ export const PREFIX = "craftz-";
 const OWNER = "owner";
 /** How long a kept folder stays. */
 const HOUR = 60 * 60 * 1000;
-const DAY = 24 * HOUR;
+const KEPT = 6 * HOUR;
 
 const made = new Map<string, boolean>();
 
@@ -80,7 +80,7 @@ const running = (pid: number): boolean => {
 };
 
 /** Whether a folder goes, and the reason in words either way. */
-function judged(folder: string): { clears: boolean; why: string } {
+function judged(folder: string, all: boolean): { clears: boolean; why: string } {
   let pid = Number.NaN;
   try {
     pid = Number(readFileSync(join(folder, OWNER), "utf8"));
@@ -92,10 +92,11 @@ function judged(folder: string): { clears: boolean; why: string } {
       ? { clears: false, why: "its run is still going" }
       : { clears: true, why: "its run has gone" };
   }
-  const left = DAY - (Date.now() - statSync(folder).mtimeMs);
+  if (all) return { clears: true, why: "kept, and --all was given" };
+  const left = KEPT - (Date.now() - statSync(folder).mtimeMs);
   return left <= 0
-    ? { clears: true, why: "kept, and over a day old" }
-    : { clears: false, why: `kept, under a day old, so it clears in ${Math.ceil(left / HOUR)} h` };
+    ? { clears: true, why: "kept, and over 6 hours old" }
+    : { clears: false, why: `kept, under 6 hours old, so it clears in ${Math.ceil(left / HOUR)} h` };
 }
 
 const kilobytes = (folder: string): number =>
@@ -103,12 +104,13 @@ const kilobytes = (folder: string): number =>
 
 export type Found = { folder: string; clears: boolean; why: string; kilobytes: number };
 
-/** Every folder craftz made in `base`, judged, and removed when it clears unless `only`. */
-export function clear(base = tmpdir(), only = false): Found[] {
+/** Every folder craftz made in `base`, judged, and removed when it clears unless `only`. `all`
+ *  clears a kept folder at any age. */
+export function clear(base = tmpdir(), only = false, all = false): Found[] {
   const found: Found[] = [];
   for (const name of readdirSync(base).filter((it) => it.startsWith(PREFIX))) {
     const folder = join(base, name);
-    const judgment = judged(folder);
+    const judgment = judged(folder, all);
     found.push({ folder, ...judgment, kilobytes: kilobytes(folder) });
     if (judgment.clears && !only) rmSync(folder, { recursive: true, force: true });
   }
