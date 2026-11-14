@@ -27,4 +27,5 @@ Explanations go in `@prose` comments, and every Markdown file is prose too.
 
 - A rule is worded once, in [docs/rules.md](docs/rules.md), as a list item that opens with its id. Its check and its fix are in [src/rules/](src/rules/), under the same id. `pnpm craftz rules <id>` prints one.
 - [reference/](reference/) holds the files the rules compare against, laid out as a repository has them. Change a file there, not a copy of it elsewhere.
+- To release craftz, follow the steps in [docs/development.md](docs/development.md#release), in order. Don't start at `craftz release`, since the steps before it are what its notes say.
 - Never name a private repository in the docs, code, commits or pull requests. This repository is public. Say "a private repository" and describe what it is instead.
