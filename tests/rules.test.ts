@@ -678,9 +678,9 @@ test("a step that ran after one it may need is named, and left in the chain", ()
   ]);
 });
 
-test("a SvelteKit build and preview write apart from check, and the fix prefixes them", () => {
+test("a SvelteKit build, preview and test write apart from check, and the fix prefixes them", () => {
   const dir = tmp("craftz-sveltekit-");
-  const scripts = { build: "vp build", preview: "vp preview" };
+  const scripts = { build: "vp build", preview: "vp preview", test: "vp test --run" };
   const pkg = { private: true, scripts, devDependencies: { "@sveltejs/kit": "3.0.0" } };
   writeFileSync(join(dir, "package.json"), JSON.stringify(pkg));
   const rule = RULES.find((r) => r.id === "scripts-sveltekit");
@@ -688,13 +688,19 @@ test("a SvelteKit build and preview write apart from check, and the fix prefixes
   const check = (files: Record<string, string>) =>
     rule?.check({ pkg: read(), files } as unknown as Repo)?.drift;
   const out = "SVELTEKIT_OUT_DIR=.svelte-kit/build";
+  const apart = "SVELTEKIT_OUT_DIR=.svelte-kit/test";
   expect(check({})).toEqual([
     `build doesn't start with ${out}, so it writes where check reads`,
     `preview doesn't start with ${out}, so it writes where check reads`,
+    `test doesn't start with ${apart}, so it writes where check reads`,
     "vite.config.ts doesn't set outDir from process.env.SVELTEKIT_OUT_DIR",
   ]);
   if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
-  expect(read().scripts).toEqual({ build: `${out} vp build`, preview: `${out} vp preview` });
+  expect(read().scripts).toEqual({
+    build: `${out} vp build`,
+    preview: `${out} vp preview`,
+    test: `${apart} vp test --run`,
+  });
   const vite = { "vite.config.ts": "outDir: process.env.SVELTEKIT_OUT_DIR" };
   expect(check(vite)).toEqual([]);
   const other = { ...pkg, devDependencies: {} };

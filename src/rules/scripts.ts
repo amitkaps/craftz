@@ -73,13 +73,21 @@ export function chain(verify: string): { kept: string[]; own: string[]; late: [s
   return { kept, own, late };
 }
 
-// Where a SvelteKit repository's `build` and `preview` keep their generated files, apart from the
-// `.svelte-kit` that `check` reads. The config reads it as `outDir`.
-export const SVELTEKIT_OUT = "SVELTEKIT_OUT_DIR=.svelte-kit/build";
+// Where a SvelteKit repository's `build`, `preview` and `test` keep their generated files, apart
+// from the `.svelte-kit` that `check` reads, and from each other. The config reads it as `outDir`.
+// `test` has its own because Vitest's SvelteKit plugin runs `svelte-kit sync` as `check` does.
+const OUT_DIRS: Record<string, string> = {
+  build: "build",
+  preview: "build",
+  test: "test",
+};
+export const SVELTEKIT_SCRIPTS = Object.keys(OUT_DIRS);
+export const sveltekitOut = (script: string): string =>
+  `SVELTEKIT_OUT_DIR=.svelte-kit/${OUT_DIRS[script]}`;
 export const onSvelteKit = (pkg: Pkg): boolean =>
   Boolean(pkg.dependencies?.["@sveltejs/kit"] ?? pkg.devDependencies?.["@sveltejs/kit"]);
-const apart = (pkg: Pkg, script: string): string =>
-  onSvelteKit(pkg) ? `${SVELTEKIT_OUT} ${script}` : script;
+const apart = (pkg: Pkg, name: string, script: string): string =>
+  onSvelteKit(pkg) ? `${sveltekitOut(name)} ${script}` : script;
 
 export const onVitePlus = (pkg: Pkg): boolean =>
   Boolean(pkg.dependencies?.["vite-plus"] ?? pkg.devDependencies?.["vite-plus"]);
@@ -292,7 +300,7 @@ export const SCRIPT_RULES: Rule[] = [
       const preview = pkg.scripts?.preview;
       if (!preview) return undefined;
       if (!pkg.private) return drifted(["has a preview script, which is a site's"]);
-      const want = apart(pkg, standardScripts.preview ?? "vp preview");
+      const want = apart(pkg, "preview", standardScripts.preview ?? "vp preview");
       return drifted(preview === want ? [] : [`preview is ${preview}, not ${want}`]);
     },
   },
@@ -300,11 +308,12 @@ export const SCRIPT_RULES: Rule[] = [
     id: "scripts-sveltekit",
     check: ({ pkg, files }) => {
       if (!onSvelteKit(pkg)) return undefined;
-      const drift = ["build", "preview"]
-        .filter((name) => pkg.scripts?.[name] && !pkg.scripts[name].startsWith(`${SVELTEKIT_OUT} `))
-        .map(
-          (name) => `${name} doesn't start with ${SVELTEKIT_OUT}, so it writes where check reads`,
-        );
+      const drift = SVELTEKIT_SCRIPTS.filter(
+        (name) => pkg.scripts?.[name] && !pkg.scripts[name].startsWith(`${sveltekitOut(name)} `),
+      ).map(
+        (name) =>
+          `${name} doesn't start with ${sveltekitOut(name)}, so it writes where check reads`,
+      );
       if (!files["vite.config.ts"]?.includes("process.env.SVELTEKIT_OUT_DIR"))
         drift.push("vite.config.ts doesn't set outDir from process.env.SVELTEKIT_OUT_DIR");
       return drifted(drift);
@@ -314,10 +323,10 @@ export const SCRIPT_RULES: Rule[] = [
       apply: (dir) => {
         const pkg = readPkg(dir);
         if (!onSvelteKit(pkg)) return;
-        for (const name of ["build", "preview"]) {
+        for (const name of SVELTEKIT_SCRIPTS) {
           const script = pkg.scripts?.[name];
-          if (script && !script.startsWith(`${SVELTEKIT_OUT} `))
-            pkg.scripts = { ...pkg.scripts, [name]: `${SVELTEKIT_OUT} ${script}` };
+          if (script && !script.startsWith(`${sveltekitOut(name)} `))
+            pkg.scripts = { ...pkg.scripts, [name]: `${sveltekitOut(name)} ${script}` };
         }
         writePkg(dir, pkg);
       },
