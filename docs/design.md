@@ -173,4 +173,5 @@ Ruled out:
 - **Copies checked from one place.** That's how the rules were kept before craftz, and the checking is the admin this removes.
 - **A GitHub organization.** The repositories stay on the account.
 - **Using Void.** Its shape is borrowed, like reading the type from the project, and the framework isn't. Void runs apps, while craftz keeps repositories.
+- **`cf deploy` for a static site.** It serves the domain, `_headers` and `_redirects` as `craftz deploy` does, tried on rc.1. But it takes the folder as an argument, rejects `assets.directory`, and needs cf installed, which brings workerd, a third of a site's install. Every site would install more, to save one file.
 - **A command named `ship`.** It would share its name with the deploy script.
