@@ -459,7 +459,10 @@ test("the files craftz owns are its own word for word, and the fix writes them w
   writeFileSync(join(dir, "package.json"), JSON.stringify(pkg));
   mkdirSync(join(dir, ".github/workflows"), { recursive: true });
   writeFileSync(join(dir, ".github/workflows/ci.yml"), ci.replace("name: Verify", "name: Check"));
-  writeFileSync(join(dir, "pnpm-workspace.yaml"), workspace);
+  writeFileSync(
+    join(dir, "pnpm-workspace.yaml"),
+    workspace.replace("esbuild: true", "esbuild: false"),
+  );
   const files = () =>
     Object.fromEntries(
       [".github/workflows/ci.yml", "pnpm-workspace.yaml"].map((file) => [
