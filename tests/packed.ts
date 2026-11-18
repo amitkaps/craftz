@@ -56,7 +56,7 @@ export function usePacked(dir: string, tarball: string): () => void {
   const settings = join(dir, "pnpm-workspace.yaml");
   const text = readFileSync(settings, "utf8");
   const override = `  "@amitkaps/craftz": "file:${tarball}"`;
-  writeFileSync(settings, text.replace(/^overrides:\n/m, `$&${override}\n`));
+  writeFileSync(settings, `${text}\noverrides:\n${override}\n`);
   return () => {
     writeFileSync(settings, text);
     // pnpm records the settings it installed with, and a `pnpm run` in a Vite+ task installs again
@@ -66,6 +66,8 @@ export function usePacked(dir: string, tarball: string): () => void {
       settings: { overrides?: Record<string, string> };
     };
     delete recorded.settings.overrides?.["@amitkaps/craftz"];
+    // The settings had no overrides, so the record has none either.
+    if (!Object.keys(recorded.settings.overrides ?? {}).length) delete recorded.settings.overrides;
     writeFileSync(state, JSON.stringify(recorded, null, 2));
   };
 }

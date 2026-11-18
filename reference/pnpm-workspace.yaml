@@ -23,15 +23,3 @@ minimumReleaseAgeExclude:
 allowBuilds:
   esbuild: true
   workerd: true
-
-# @prose
-# Vite+ ships its own build of Vite, and every `vite` in the tree is pointed at it, at the
-# version of the `vite-plus` devDependency, so the two move together. Since that build is an
-# npm alias, pnpm can't check it against the usual `vite` peer ranges, so those checks
-# are off for `vite`.
-overrides:
-  "vite@*": "npm:@voidzero-dev/vite-plus-core@1.6.0"
-
-peerDependencyRules:
-  allowAny:
-    - vite

@@ -63,33 +63,24 @@ export const recommended = (json: Json): string[] =>
  * reference's, word for word, and the fix writes it whole. What a repository adds goes
  * elsewhere, a step in `verify` and a setting in its own config, so no fix edits one by its lines.
  *
- * Two follow from the repository's axes. pnpm's override points `vite` at the Vite+ the
- * repository installs, so a Vite+ that's behind drifts once, in `versions-vite-plus`. A
- * repository that depends on Svelte adds its editor settings, from
- * [svelte/](../../reference/svelte/README.md), whether it deploys an app or a static site. The
- * editor's files are compared as JSON, since `vp fmt` lays them out.
+ * One follows from the repository's axes. A repository that depends on Svelte adds its editor
+ * settings, from [svelte/](../../reference/svelte/README.md), whether it deploys an app or a
+ * static site. The editor's files are compared as JSON, since `vp fmt` lays them out.
  */
-export type Axes = { vitePlus?: string; svelte: boolean };
+export type Axes = { svelte: boolean };
 
-export const axesOf = (repo: Repo): Axes => ({
-  vitePlus: repo.vitePlus,
-  svelte: !!repo.deps?.["svelte"],
-});
+export const axesOf = (repo: Repo): Axes => ({ svelte: !!repo.deps?.["svelte"] });
 
 export function axesIn(dir: string): Axes {
   const pkg = readPkg(dir);
   const deps = { ...pkg.dependencies, ...pkg.devDependencies };
-  return { vitePlus: deps["vite-plus"], svelte: !!deps["svelte"] };
+  return { svelte: !!deps["svelte"] };
 }
 
 // A file craftz owns, as the reference in `std` writes it for a repository with these axes.
 export function owned(file: string, axes: Axes, std: string): string {
   if (RELEASE_FILES.includes(file)) return read(join(std, "package", file));
   const text = read(join(std, file));
-  if (file === WORKSPACE) {
-    const own = axes.vitePlus;
-    return own ? text.replace(/vite-plus-core@[\w.-]+/, `vite-plus-core@${own}`) : text;
-  }
   if (!EDITOR.includes(file) || !axes.svelte) return text;
   const ours = JSON.parse(text) as Json;
   const adds = readJson<Json>(join(std, "svelte", file));
