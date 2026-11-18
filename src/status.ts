@@ -232,7 +232,7 @@ export async function status(
     lines.push({ what: "build", found: `no Worker named ${site.name} on Cloudflare`, ok: false });
     return { lines: [...lines, ...(await addresses(site))], ...out };
   }
-  const builds = cf("builds", "list", "--external-script-id", found.id) as Build[];
+  const builds = cf("builds", "list", "--worker", found.id) as Build[];
   const build = builds[0];
   lines.push(buildIn(build));
   lines.push(...(await addresses(site, found.dev)), audienceOf(site));
@@ -379,7 +379,7 @@ export function browserTook(repo: string): number | undefined {
 
 /** The lines of a build's log. */
 export function buildLog(uuid: string): string[] {
-  const log = cf("builds", "logs", "get", uuid) as { lines: [number, string][] };
+  const log = cf("builds", "logs", uuid) as { lines: [number, string][] };
   return log.lines.map(([, text]) => text);
 }
 

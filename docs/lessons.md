@@ -198,6 +198,7 @@ What each tool does that its docs don't say.
 - **cf has no command to rename a Worker, but the dashboard does.** Rename it there first, then in the config, since a new name in the config deploys a new Worker.
 - **A domain set only in the dashboard can be dropped by a deploy.** Change one in the dashboard and the config together.
 - **cf needs `CLOUDFLARE_ACCOUNT_ID` when the login has several accounts.** craftz picks the account named like the GitHub owner, and a `pnpm ship` by hand needs it set.
+- **A new cf can rename a command craftz runs, and no test sees it.** rc.1 renamed `--external-script-id` to `--worker`, dropped `builds triggers` for `builds workers edit`, and renamed `builds logs get` to `builds logs`. `status` crashed. The calls need a login, so after moving cf, run `status` and `settings --check` on a site.
 - **cf can't deploy SvelteKit yet.** The adapter doesn't write cf's Build Output, so an app stays on wrangler, with `wrangler.toml`.
 - **A package's prose site can't build before the first commit.** `prose build` publishes a commit, so `new` commits before `verify`.
 - **A tool a repository doesn't have is fetched, not missing.** `status` said cf wasn't installed in the app on wrangler. When a command needs a tool only to read, it brings its own with pnpm.

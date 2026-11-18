@@ -253,6 +253,8 @@ export function workerTag(name: string): { id: string; dev?: string } | undefine
 
 const tag = (name: string): string | undefined => workerTag(name)?.id;
 
+const UNCONNECTED = "Worker isn't connected to its repository";
+
 // A Worker that isn't connected to its repository has no build settings, and Cloudflare says so
 // with error 12040.
 function buildDrift(tagId: string): string[] {
@@ -261,7 +263,7 @@ function buildDrift(tagId: string): string[] {
     builds = cf("builds", "workers", "get", tagId) as Builds;
   } catch (error) {
     if ((error as Error).message.includes("[12040]")) {
-      return ["Worker isn't connected to its repository"];
+      return [UNCONNECTED];
     }
     throw error;
   }
@@ -286,8 +288,9 @@ export function workerDrift(name: string): string[] {
  * # Writing a Worker's build settings
  *
  * Writes only what has drifted, so a Worker that's already right isn't touched. The commands sit
- * on the Worker's build trigger, and its variables beside them. A Worker that isn't connected to
- * its repository yet has no trigger, and connecting it is the one step left to the dashboard.
+ * in one `cf builds workers edit`, with its variables and previews. A Worker that isn't connected
+ * to its repository yet has no build settings, and connecting it is the one step left to the
+ * dashboard.
  *
  * It answers what it left, and nothing when it wrote. Whether the write landed is for reading
  * back, which [apply.ts](apply.ts) does.
@@ -297,36 +300,26 @@ export function writeWorker(name: string): string[] {
   if (!found) return [`left: no Worker named ${name} on Cloudflare`];
   const drift = buildDrift(found);
   if (!drift.length) return [];
-  const triggers = cf("builds", "triggers", "list", "--external-script-id", found) as {
-    trigger_uuid: string;
-  }[];
-  const trigger = triggers[0]?.trigger_uuid;
-  if (!trigger) return [`left: ${name} isn't connected to its repository yet`];
-  cf(
-    "builds",
-    "triggers",
-    "update",
-    trigger,
-    "--build-command",
-    BUILD.build_command,
-    "--deploy-command",
-    BUILD.deploy_command,
-    "--root-directory",
-    BUILD.root_directory,
-    "--build-caching-enabled",
-    String(BUILD.build_caching_enabled),
-  );
+  if (drift.includes(UNCONNECTED)) return [`left: ${name} isn't connected to its repository yet`];
   const node = { NODE_VERSION: { value: nodeMajor, is_secret: false } };
   cf(
     "builds",
-    "triggers",
-    "environment-variables",
-    "upsert",
-    trigger,
-    "--body",
+    "workers",
+    "edit",
+    found,
+    "--production-settings-build-command",
+    BUILD.build_command,
+    "--production-settings-deploy-command",
+    BUILD.deploy_command,
+    "--production-settings-root-directory",
+    BUILD.root_directory,
+    "--production-settings-build-caching-enabled",
+    String(BUILD.build_caching_enabled),
+    "--production-settings-environment-variables",
     JSON.stringify(node),
+    "--previews-enabled",
+    "false",
   );
-  cf("builds", "workers", "update", found, "--previews-enabled", "false");
   return [];
 }
 
