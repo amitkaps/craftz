@@ -28,7 +28,7 @@ A package can have a site, like markz and its docs. A repository with neither is
 
 One `vite.config.ts`, run through `vp`, covers dev, build, format, lint and test. A package builds with `vp pack`, which is part of Vite+, so there's no separate bundler. `defineConfig` comes from `vite-plus`.
 
-Vite+ ships its own build of Vite. Each repository points every `vite` at it with an override in `pnpm-workspace.yaml`, and turns off pnpm's peer checks for `vite`, since that build is an npm alias. Bump `vite-plus` and the override together, in every repository at once. A version that differs between repositories is the drift that makes Vite+ painful.
+Vite+ ships its own build of Vite, and `vite-plus` depends on it as an npm alias, whose version encodes the Vite it holds. So pnpm needs no override and no peer exception, and a plugin's `vite` range matches it. Bump `vite-plus` in every repository at once. A version that differs between repositories is the drift that makes Vite+ painful.
 
 Formatting runs at oxfmt's defaults, but for one setting.
 
@@ -98,7 +98,7 @@ Bump deliberately, everywhere at once. Being on the latest pnpm doesn't matter. 
 The tools every repository shares are on one version, written the same way, so moving one never leaves two repositories to reconcile. The reference's [package.json](../reference/package.json) has each at an exact version, not a range, so the version a repository names is the one it installs, and nothing moves but through a release of craftz. npm isn't read. A new release is drift only once the reference moves to it, past pnpm's one-day wait. Our own markz and prose may lead the reference, so a package that builds on one can take its release before craftz does.
 
 - [`versions-types-node`]{#versions-types-node}: `@types/node` is the reference's, where a repository has it. It's the major of the Node that `engines` allows, so code can't use newer APIs.
-- [`versions-vite-plus`]{#versions-vite-plus}: every repository is on the reference's `vite-plus`, with no direct `vite`. A package that names `vite-plus` as a peer asks for `^` and the reference's version, since craftz and pagez parse with Vite+'s own parser, so a range that reaches below the version they're tested on claims what nothing checks. pnpm's settings point `vite` at it, by `versions-workspace`. [Toolchain](#toolchain-vite) says why.
+- [`versions-vite-plus`]{#versions-vite-plus}: every repository is on the reference's `vite-plus`, with no direct `vite`. A package that names `vite-plus` as a peer asks for `^` and the reference's version, since craftz and pagez parse with Vite+'s own parser, so a range that reaches below the version they're tested on claims what nothing checks. [Toolchain](#toolchain-vite) says why.
 - [`versions-typescript`]{#versions-typescript}: `typescript` is the reference's, where a repository has it.
 - [`versions-prose`]{#versions-prose}: `@amitkaps/prose` is an exact version, at least the reference's, where a repository has it.
 - [`versions-markz`]{#versions-markz}: `@amitkaps/markz` is an exact version, at least the reference's, where a repository has it.
@@ -113,9 +113,9 @@ A beta's tags don't say which build goes with which, so it's moved by hand. `ali
 
 A repository's own libraries, like svelte or micromark, are its own to choose. `align` moves them within their major version, and lists a new major in its pull request for review.
 
-`pnpm-workspace.yaml` is a settings file, not a workspace. Every repository has the same three settings: the cooldown, `allowBuilds` and the Vite+ override. `allowBuilds` lets esbuild and workerd run their install scripts, where wrangler or cf is installed, and does nothing where neither is.
+`pnpm-workspace.yaml` is a settings file, not a workspace. Every repository has the same two settings: the cooldown and `allowBuilds`. `allowBuilds` lets esbuild and workerd run their install scripts, where wrangler or cf is installed, and does nothing where neither is.
 
-- [`versions-workspace`]{#versions-workspace}: `pnpm-workspace.yaml` is [the reference's](../reference/pnpm-workspace.yaml), word for word, with the override at the repository's own `vite-plus`. The fix writes it whole. A setting a repository wants for itself is a change to these rules.
+- [`versions-workspace`]{#versions-workspace}: `pnpm-workspace.yaml` is [the reference's](../reference/pnpm-workspace.yaml), word for word. The fix writes it whole. A setting a repository wants for itself is a change to these rules.
 
 A library can ship a release its tooling can't use, and `pnpm update` takes it all the same. The repository then tells pnpm to leave it, which `outdated` and `update` both respect, and `align` too. Its name goes under `updateConfig.ignoreDependencies` in `pnpm-workspace.yaml`, with the reason in the comment above it. The reason says when to look again, like a release that fixes what broke. That block is the one part of the file that is the repository's own, so the comparison above leaves it out, and the fix puts it back when it writes the file.
 
@@ -453,7 +453,7 @@ Every public repository that follows these rules has the GitHub topic `craftz`, 
 Each repository checks its own files in CI, with `craftz check` against the craftz it installs, so a pull request can't drift from the rules it names. What needs a login stays on the laptop.
 
 - **`craftz settings --check`** reads one repository's settings on GitHub and its Worker, and `craftz status` what's live.
-- **align** brings each repository in line with the reference, from a fresh clone of each `main`. Every shared tool, the override and the editor settings come from the reference, and each repository's own libraries move within their majors. A pull request opens where `verify` passes, with auto-merge on, and lists any new major left for review. GitHub's settings and the Worker's are written directly, since there's no file to review. `align --local` changes nothing, and lists every repository's settings that have drifted.
+- **align** brings each repository in line with the reference, from a fresh clone of each `main`. Every shared tool and the editor settings come from the reference, and each repository's own libraries move within their majors. A pull request opens where `verify` passes, with auto-merge on, and lists any new major left for review. GitHub's settings and the Worker's are written directly, since there's no file to review. `align --local` changes nothing, and lists every repository's settings that have drifted.
 
 A change to the rules, like a new check, is a pull request to craftz. It reaches the others in craftz's next release, which `align` moves them to.
 

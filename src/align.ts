@@ -160,8 +160,7 @@ async function update(dir: string, log: string[], skip: string[]): Promise<strin
  * its new reference. The others take those versions only once craftz is released.
  *
  * The reference is installed where it stands, as a project of its own, and moves its libraries and
- * tools as above, and the Vite+ override with `vite-plus`. What the install writes there is
- * removed, so only `package.json` and `pnpm-workspace.yaml` change. Every tool is in its
+ * tools as above. What the install writes there is removed, so only `package.json` changes. Every tool is in its
  * `package.json`, wrangler too, so one update moves them all, within pnpm's one-day wait, and each
  * stays exact.
  *
@@ -181,12 +180,6 @@ async function moveReference(dir: string, log: string[]): Promise<string[]> {
   await sh(dir, log, "pnpm", "install", "--ignore-scripts");
   // `@playwright/test` is held to the version whose Chromium the cloud image ships.
   const majors = await update(dir, log, ["@playwright/test"]);
-  const vitePlus = depsOf(readPkg(dir))["vite-plus"];
-  const workspace = join(dir, "pnpm-workspace.yaml");
-  writeFileSync(
-    workspace,
-    readFileSync(workspace, "utf8").replace(/vite-plus-core@[\w.-]+/, `vite-plus-core@${vitePlus}`),
-  );
   return [...majors, ...staleActions(dir), ...(await heldTools(readPkg(dir)))];
 }
 

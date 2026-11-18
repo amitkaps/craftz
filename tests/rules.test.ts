@@ -454,14 +454,15 @@ test("the files craftz owns are its own word for word, and the fix writes them w
   const read = (file: string) => readFileSync(join(here, file), "utf8");
   const ci = read(".github/workflows/ci.yml");
   const workspace = read("pnpm-workspace.yaml");
-  // A Vite+ that's behind keeps its override, so only versions-vite-plus says it's behind.
-  const held = workspace.replace(/vite-plus-core@[\w.-]+/, "vite-plus-core@1.0.0");
   const dir = tmp("craftz-owned-");
   const pkg = { name: "x", devDependencies: { "vite-plus": "1.0.0" } };
   writeFileSync(join(dir, "package.json"), JSON.stringify(pkg));
   mkdirSync(join(dir, ".github/workflows"), { recursive: true });
   writeFileSync(join(dir, ".github/workflows/ci.yml"), ci.replace("name: Verify", "name: Check"));
-  writeFileSync(join(dir, "pnpm-workspace.yaml"), workspace);
+  writeFileSync(
+    join(dir, "pnpm-workspace.yaml"),
+    workspace.replace("esbuild: true", "esbuild: false"),
+  );
   const files = () =>
     Object.fromEntries(
       [".github/workflows/ci.yml", "pnpm-workspace.yaml"].map((file) => [
@@ -477,7 +478,7 @@ test("the files craftz owns are its own word for word, and the fix writes them w
     [".github/workflows/ci.yml differs from craftz's"],
   ]);
   for (const rule of rules) if (rule.fix?.in === "files") rule.fix.apply(dir, here);
-  expect(files()).toEqual({ ".github/workflows/ci.yml": ci, "pnpm-workspace.yaml": held });
+  expect(files()).toEqual({ ".github/workflows/ci.yml": ci, "pnpm-workspace.yaml": workspace });
   expect(rules.map((rule) => rule.check(repo() as unknown as Repo)?.drift)).toEqual([[], []]);
 });
 
@@ -988,12 +989,9 @@ updateConfig:
   const repoOf = (text: string, deps: Record<string, string> = pkg.devDependencies) =>
     ({ pkg, files: { "pnpm-workspace.yaml": text }, deps, vitePlus: "1.0.0" }) as unknown as Repo;
   const rule = (id: string) => RULES.find((r) => r.id === id)!;
-  const own = workspace.replace(/vite-plus-core@[\w.-]+/, "vite-plus-core@1.0.0");
 
   // The block isn't drift from the reference, and the rule for it finds nothing.
-  expect(
-    rule("versions-workspace").check(repoOf(own.concat(held.slice(workspace.length))))?.drift,
-  ).toEqual([]);
+  expect(rule("versions-workspace").check(repoOf(held))?.drift).toEqual([]);
   expect(rule("versions-ignored").check(repoOf(held))?.drift).toEqual([]);
 
   // Each way the block goes wrong.
@@ -1020,14 +1018,11 @@ updateConfig:
 
   // The fix writes the reference's file and puts the block back.
   writeFileSync(join(dir, "package.json"), JSON.stringify(pkg));
-  writeFileSync(
-    join(dir, "pnpm-workspace.yaml"),
-    held.replace("vite-plus-core@", "vite-plus-core@0.0.1-"),
-  );
+  writeFileSync(join(dir, "pnpm-workspace.yaml"), held.replace("esbuild: true", "esbuild: false"));
   const fix = rule("versions-workspace").fix;
   if (fix?.in === "files") fix.apply(dir, here);
   const after = readFileSync(join(dir, "pnpm-workspace.yaml"), "utf8");
-  expect(after).toContain("vite-plus-core@1.0.0");
+  expect(after).toContain("esbuild: true");
   expect(after).toContain("# Plot 0.6.18 ships no types");
   expect(after).toContain("@observablehq/plot");
   expect(rule("versions-workspace").check(repoOf(after))?.drift).toEqual([]);

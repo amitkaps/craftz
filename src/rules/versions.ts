@@ -162,7 +162,7 @@ export const VERSION_RULES: Rule[] = [
       if (deps.vite) drift.push(`depends on vite ${deps.vite} directly`);
       return { value: own, drift };
     },
-    // A repository not on Vite+ moves by hand. The override moves with it, in versions-workspace.
+    // A repository not on Vite+ moves by hand.
     fix: {
       in: "files",
       apply: (dir, std) => {
