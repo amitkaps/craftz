@@ -988,9 +988,7 @@ updateConfig:
   const rule = (id: string) => RULES.find((r) => r.id === id)!;
 
   // The block isn't drift from the reference, and the rule for it finds nothing.
-  expect(
-    rule("versions-workspace").check(repoOf(held))?.drift,
-  ).toEqual([]);
+  expect(rule("versions-workspace").check(repoOf(held))?.drift).toEqual([]);
   expect(rule("versions-ignored").check(repoOf(held))?.drift).toEqual([]);
 
   // Each way the block goes wrong.
@@ -1017,10 +1015,7 @@ updateConfig:
 
   // The fix writes the reference's file and puts the block back.
   writeFileSync(join(dir, "package.json"), JSON.stringify(pkg));
-  writeFileSync(
-    join(dir, "pnpm-workspace.yaml"),
-    held.replace("esbuild: true", "esbuild: false"),
-  );
+  writeFileSync(join(dir, "pnpm-workspace.yaml"), held.replace("esbuild: true", "esbuild: false"));
   const fix = rule("versions-workspace").fix;
   if (fix?.in === "files") fix.apply(dir, here);
   const after = readFileSync(join(dir, "pnpm-workspace.yaml"), "utf8");
