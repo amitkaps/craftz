@@ -35,6 +35,7 @@ Nothing is queued. The next step comes from [Later](#later), or from what the re
 - `cli.ts` imports every command at startup, though only `new` loads lazily. It waits until startup time is a cost someone feels.
 - The beta packages that [`versions-beta`](rules.md#versions-beta) names move to their releases when they graduate, which align reports.
 - The app moves to cf when SvelteKit's adapter writes cf's Build Output, and wrangler leaves the reference with it. cf 1.0.0-rc.1 reads Build Output v1 and needs `@cloudflare/vite-plugin` 2.0.0-rc.0. The adapter's latest, 8.0.3, writes neither, and the pull request that does is still open in sveltejs/kit, [#17520](https://github.com/sveltejs/kit/pull/17520).
+- CSS lint comes from oxc, not Stylelint, once [oxc#26324](https://github.com/oxc-project/oxc/issues/26324) ships it. A repository's CSS rules are tests until then, and `pnpm bump` is when to look. [The design](design.md) says why not Stylelint.
 - The app moves to TypeScript 7 when svelte-check's peer range takes it.
 - A size budget for packages a browser loads, measured as markz's `pnpm size` does: bundled, minified and gzipped. It waits for a second package that needs one, since a Node tool like craftz pays for its install, not its bundle. Speed stays each package's own, since what it times differs.
 
