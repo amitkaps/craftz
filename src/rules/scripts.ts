@@ -8,9 +8,7 @@
 import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { type Pkg, isCraftz, readPkg, standard, read } from "../reference.ts";
-import {} from "../config.ts";
 import { allRuns, uncached, withCached, withVerify } from "../edit.ts";
-import {} from "../ruled.ts";
 import { workerIn } from "../worker.ts";
 import type { Rule } from "../rules.ts";
 import { writePkg, drifted } from "./shared.ts";

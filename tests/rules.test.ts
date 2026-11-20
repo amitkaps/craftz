@@ -375,7 +375,7 @@ test("every repository but craftz depends on craftz, and calls no craftz()", () 
       deps,
       files: { "vite.config.ts": config(keys) },
       vitePlus: "1",
-    } as unknown as Repo)?.drift;
+    })?.drift;
   expect(drift("x", { [CRAFTZ]: "^0.1.0" }, "")).toEqual([]);
   expect(drift(CRAFTZ, {}, "")).toEqual([]);
   expect(drift("x", {}, "plugins: [craftz()],")).toEqual([

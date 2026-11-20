@@ -32,8 +32,6 @@ import { SCRIPT_RULES } from "./rules/scripts.ts";
 import { TOOLCHAIN_RULES } from "./rules/toolchain.ts";
 import { VERSION_RULES } from "./rules/versions.ts";
 import type { Finding, Repo } from "./survey.ts";
-import {} from "./worker.ts";
-import {} from "./rules/shared.ts";
 
 export { type Shape, listed, shipping } from "./rules/docs.ts";
 export { betas } from "./rules/versions.ts";

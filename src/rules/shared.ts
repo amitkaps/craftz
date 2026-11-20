@@ -69,7 +69,7 @@ export const recommended = (json: Json): string[] =>
  */
 export type Axes = { svelte: boolean };
 
-export const axesOf = (repo: Repo): Axes => ({ svelte: !!repo.deps?.["svelte"] });
+export const axesOf = (repo: Repo): Axes => ({ svelte: !!repo.deps["svelte"] });
 
 export function axesIn(dir: string): Axes {
   const pkg = readPkg(dir);

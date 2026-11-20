@@ -66,8 +66,11 @@ export async function shot(dir: string, input: Parsed): Promise<number> {
     );
     return 1;
   }
-  const loaded = (await import(pathToFileURL(found).href)) as Playwright & { default?: Playwright };
-  const { chromium } = loaded.chromium ? loaded : (loaded.default as Playwright);
+  // A CommonJS package imports as its `default`, so `chromium` sits on the module or under it.
+  const loaded = (await import(pathToFileURL(found).href)) as Partial<Playwright> & {
+    default?: Playwright;
+  };
+  const { chromium } = (loaded.chromium ? loaded : loaded.default) as Playwright;
 
   const browser = await chromium.launch().catch((error: unknown) => {
     const first = String(error instanceof Error ? error.message : error).split("\n")[0];

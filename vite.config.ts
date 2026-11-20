@@ -34,7 +34,23 @@ export default defineConfig({
     plugins: ["typescript", "unicorn", "import"],
     categories: { correctness: "error" },
     options: { typeAware: true, typeCheck: true },
-    rules: { "no-empty": "error" },
+    // Beyond correctness, rules that caught real code in a trial across craftz, prose, markz and
+    // visframe: dead conditions and casts, leftover empty imports, and promises nobody awaits.
+    // The promise rules read `.ts` files, since type-aware rules don't run in a `.svelte` script.
+    rules: {
+      "no-empty": "error",
+      "no-case-declarations": "error",
+      "import/no-empty-named-blocks": "error",
+      "typescript/no-unnecessary-type-assertion": "error",
+      "typescript/no-unnecessary-condition": "error",
+      "typescript/no-floating-promises": "error",
+      "typescript/no-misused-promises": "error",
+      "typescript/await-thenable": "error",
+      "typescript/no-base-to-string": "error",
+      "typescript/no-deprecated": "error",
+      "typescript/require-array-sort-compare": "error",
+      "typescript/restrict-template-expressions": "error",
+    },
   },
 
   run: {
