@@ -132,9 +132,9 @@ test("a move reads as the pull request lists it", () => {
 });
 
 test("a dependency a repository tells pnpm to leave is listed with its reason, on every run", () => {
-  const held = { ...row("visframe"), status: "in line" as const };
+  const held = { ...row("frontend"), status: "in line" as const };
   held.held = ["@observablehq/plot: 0.6.18 ships no types. Look again when exports is fixed."];
   const text = report([held, { ...row("base"), status: "in line" }]).join("\n");
-  expect(text).toContain("Held\n  visframe   @observablehq/plot: 0.6.18 ships no types");
+  expect(text).toContain("Held\n  frontend   @observablehq/plot: 0.6.18 ships no types");
   expect(report([{ ...row("base"), status: "in line" }]).join("\n")).not.toContain("Held");
 });
