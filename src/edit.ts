@@ -42,7 +42,7 @@ export function withoutCraftz(vite: string): string {
   const plugins = properties(config).find((it) => at(config, ["plugins"]) === it["value"]);
   const elements = (at(config, ["plugins"])?.["elements"] ?? []) as Node[];
   const i = elements.findIndex(
-    (it) => it?.type === "CallExpression" && (it["callee"] as Node)["name"] === "craftz",
+    (it) => it.type === "CallExpression" && (it["callee"] as Node)["name"] === "craftz",
   );
   const [it, before] = [elements[i], elements[i - 1]];
   if (!it || !plugins) return vite;

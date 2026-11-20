@@ -94,7 +94,7 @@ export const valueAt = (text: string, path: string[]): unknown => literal(at(exp
 /** The call to `name` in a Vite config's own plugins, like `craftz()`. */
 export const pluginCall = (vite: string, name: string): Node | undefined =>
   nodes(at(exported(vite), ["plugins"])?.["elements"]).find(
-    (it) => it?.type === "CallExpression" && (it["callee"] as Node)["name"] === name,
+    (it) => it.type === "CallExpression" && (it["callee"] as Node)["name"] === name,
   );
 
 /** The value of a JSON file that allows comments and trailing commas, like `tsconfig.json`, or
