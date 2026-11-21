@@ -298,7 +298,7 @@ A package is any repository whose `package.json` isn't private, like markz, pros
 - [`releases-types`]{#releases-types}: a package's `pack` sets `dts: { generator: "oxc" }`, so `vp pack` writes the `.d.ts` files and fails on an export whose type isn't written out. A package has no `typescript` dependency.
 - [`releases-bundled`]{#releases-bundled}: our own packages bundle markz as a dev dependency, rather than depend on it. Each then releases on its own, and taking a new markz takes a release.
 
-To release, run `pnpm craftz release X.Y.Z --notes "…"`, with what to change when upgrading as the notes. It opens a pull request that bumps `version`, with auto-merge on. Merging it is the release. The workflow runs `verify`, stages the tarball on npm, tags the commit and publishes a GitHub Release. The owner then approves the staged version with 2FA, so a merge alone can't reach users.
+Before a release, run `pnpm prose style` and fix what it finds, where the rewrite reads better, in a pull request of its own. The release then ships text that reads as well as the code works. To release, run `pnpm craftz release X.Y.Z --notes "…"`, with what to change when upgrading as the notes. It opens a pull request that bumps `version`, with auto-merge on. Merging it is the release. The workflow runs `verify`, stages the tarball on npm, tags the commit and publishes a GitHub Release. The owner then approves the staged version with 2FA, so a merge alone can't reach users.
 
 ### Release notes
 

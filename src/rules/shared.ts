@@ -95,10 +95,12 @@ export function owned(file: string, axes: Axes, std: string): string {
  *
  * A repository's library can ship a release its tooling can't use, and `pnpm update` takes it
  * all the same. So the repository names it under `updateConfig.ignoreDependencies` in
- * `pnpm-workspace.yaml`, which pnpm reads for `update` and `outdated` alike, with the reason in
- * the comment above it. That block is the one part of the file that is the repository's own, and
- * it comes last, so the comparison with the reference leaves it out and a fix that writes the
- * file whole puts it back as it was.
+ * `pnpm-workspace.yaml`, with the reason in the comment above it. pnpm reads that list for
+ * `update` and `outdated` alike.
+ *
+ * That block is the one part of the file that is the repository's own, and it comes last. So the
+ * comparison with the reference leaves it out, and a fix that writes the file whole puts it back
+ * as it was.
  *
  * The block has one shape, a list of names each under its reason, so it's read line by line and
  * not with a YAML parser, which would be most of the package. A line that isn't in that shape is

@@ -105,7 +105,8 @@ craftz releases the way every package does, as [the rules](rules.md#releases) se
 2. Run `pnpm align --candidate`. It packs this checkout and moves every repository to it, locally. What each one leaves by hand is what the release's notes say to do. [The lessons](lessons.md#what-every-repository-changes-for-goes-in-one-release) say why this comes first.
 3. Start a repository with `pnpm new trial --package --site static --description "A trial."`, and read what it writes against what the release is for. It writes `trial/` inside this checkout, so remove it after. Its `verify` fails on what the release changes, since it installs the released craftz. A rule that's missed is found by the first thing to use it.
 4. Ask what the release changes for every repository, and grep the reference for links outside craftz. Anything that changes everywhere goes in before the release, so it doesn't need a second round.
-5. Update [plan.md](plan.md) so its summary names the version and no step is ticked. `craftz release` stops otherwise.
-6. Run `pnpm craftz release X.Y.Z --notes "…"`, with what the candidate run left by hand as the notes. It opens the pull request that bumps `version`.
-7. Merge it. That is the release. Then approve the staged version on npmjs.com with 2FA.
-8. Run `pnpm align`. It takes the release to every repository, and brings the checkouts beside this one to `main`.
+5. Run `pnpm prose style` and fix what it finds, as [the rules](rules.md#releases) say every package does before a release. Do the same in markz, prose and pagez before each of their releases.
+6. Update [plan.md](plan.md) so its summary names the version and no step is ticked. `craftz release` stops otherwise.
+7. Run `pnpm craftz release X.Y.Z --notes "…"`, with what the candidate run left by hand as the notes. It opens the pull request that bumps `version`.
+8. Merge it. That is the release. Then approve the staged version on npmjs.com with 2FA.
+9. Run `pnpm align`. It takes the release to every repository, and brings the checkouts beside this one to `main`.
