@@ -179,8 +179,8 @@ importers:
         specifier: 0.10.0
         version: 0.10.0
       '@amitkaps/prose':
-        specifier: 0.14.0
-        version: 0.14.0
+        specifier: 0.14.1
+        version: 0.14.1
       '@mdn/browser-compat-data':
         specifier: ^8.1.10
         version: 8.1.10
@@ -207,8 +207,8 @@ packages:
     engines: {node: '>=26.13.1'}
     hasBin: true
 
-  '@amitkaps/prose@0.14.0':
-    resolution: {integrity: sha512-5mK1ex3kAbAVvFywaWDnRQhsYWGUgUXF4obw6dFdTr5pHjrt1uzIKn0m+bSwjyK9njUS/eZIn1ZjnvCVFSkhxg==}
+  '@amitkaps/prose@0.14.1':
+    resolution: {integrity: sha512-C7nDtaeD2+8NlBnH56LNv5szwAJZYLjpwzLq2bB3MG3Uyfhzy9bLI9GlErGm0O1LqJ2JPMPUDLVJP818eyHb4w==}
     engines: {node: '>=26.13.1'}
     hasBin: true
 
@@ -220,8 +220,8 @@ packages:
     resolution: {integrity: sha512-qehxGkRj55h/ff8EMaJ+cYhyaKlHIxqYDn682wQD7RNp9UujOQsHog2uS0r2vzr4pW+sXf90NeeayjcNaX3fFg==}
     engines: {node: '>=6.9.0'}
 
-  '@babel/runtime@7.29.14':
-    resolution: {integrity: sha512-Y5tqevQaUAZhhj82BpYMNC1ssvLQTVAfwKdm8iy8qwmhvC2/CpcAu8OC+QEtjM7pMk7knx83u1Qj8gzkicyelw==}
+  '@babel/runtime@7.29.15':
+    resolution: {integrity: sha512-304gsbbGVmQc+cNGHzwHBlqepYdWLKj3VXCQBGt/EGcV7PUPfKI7kAUNW1FZEOCwlQiLvQjg1JEaAlRQ616h+Q==}
     engines: {node: '>=6.9.0'}
 
   '@blazediff/core@1.10.0':
@@ -1186,7 +1186,7 @@ snapshots:
 
   '@amitkaps/markz@0.10.0': {}
 
-  '@amitkaps/prose@0.14.0': {}
+  '@amitkaps/prose@0.14.1': {}
 
   '@babel/code-frame@7.29.7':
     dependencies:
@@ -1196,7 +1196,7 @@ snapshots:
 
   '@babel/helper-validator-identifier@7.29.7': {}
 
-  '@babel/runtime@7.29.14': {}
+  '@babel/runtime@7.29.15': {}
 
   '@blazediff/core@1.10.0': {}
 
@@ -1344,7 +1344,7 @@ snapshots:
   '@testing-library/dom@10.4.2':
     dependencies:
       '@babel/code-frame': 7.29.7
-      '@babel/runtime': 7.29.14
+      '@babel/runtime': 7.29.15
       '@types/aria-query': 5.0.4
       aria-query: 5.3.0
       dom-accessibility-api: 0.5.16

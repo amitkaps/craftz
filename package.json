@@ -45,7 +45,7 @@
   },
   "devDependencies": {
     "@amitkaps/markz": "0.10.0",
-    "@amitkaps/prose": "0.14.0",
+    "@amitkaps/prose": "0.14.1",
     "@mdn/browser-compat-data": "^8.1.10",
     "@playwright/test": "1.63.0",
     "@types/node": "26.6.6",
