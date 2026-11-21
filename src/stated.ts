@@ -33,6 +33,7 @@ import {
   readCommands,
   readRules,
   type Rules,
+  write,
 } from "@amitkaps/markz/rules";
 
 /** A rule as the doc states it, under its part. */
@@ -186,6 +187,14 @@ export const commands = (markdown = usage()): Commands =>
 
 /** The commands, as `craftz help` lists them. */
 export const help = (markdown = usage()): string => printHelp(commands(markdown))!;
+
+/** Help or rules on stdout, in colour in a terminal and as Markdown anywhere else, as markz
+ *  writes them. craftz's commands are the usages it colours. */
+export const show = (markdown: string): void =>
+  write(
+    markdown,
+    commands().commands.map((c) => c.label),
+  );
 
 /** The section of the usage doc that states a command, with its links resolved, or `undefined`
  *  when no command has that name. */
