@@ -241,6 +241,10 @@ function branchBehindMain(): { dir: string; elsewhere: string; origin: string } 
   git(root, "init", "--quiet", "--bare", "--initial-branch=main", origin);
   const clone = (name: string): string => {
     git(root, "clone", "--quiet", origin, name);
+    // In the repository's own config, since `catchUp` runs `git merge` with the process's
+    // environment, and a CI runner has no identity of its own.
+    git(join(root, name), "config", "user.name", "t");
+    git(join(root, name), "config", "user.email", "t@example.com");
     return join(root, name);
   };
   const dir = clone("work");
