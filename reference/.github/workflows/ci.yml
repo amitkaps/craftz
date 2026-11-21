@@ -54,12 +54,15 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      # Vite+'s task cache, so a `test` or `build` whose files are unchanged replays. The key is
-      # new each run and restores the latest, since a cache can't be overwritten.
+      # Vite+'s task cache, so a `test` or `build` whose files are unchanged replays, and Vitest's
+      # own, keyed by content, so a test run that misses doesn't transform every module again.
+      # The key is new each run and restores the latest, since a cache can't be overwritten.
       - name: Task cache
         uses: actions/cache@v6
         with:
-          path: node_modules/.vite/task-cache
+          path: |
+            node_modules/.vite/task-cache
+            node_modules/.vite/vitest
           key: vp-task-${{ runner.os }}-${{ runner.arch }}-${{ github.run_id }}
           restore-keys: vp-task-${{ runner.os }}-${{ runner.arch }}-
 
