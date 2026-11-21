@@ -20,10 +20,10 @@ import { type Config, written } from "./ruled.ts";
 /** @prose
  * # Leaving craftz()
  *
- * `toolchain-craftz`'s fix takes `craftz()` out of the config's plugins, and its import, since
+ * `tools-craftz-dep`'s fix takes `craftz()` out of the config's plugins, and its import, since
  * the package no longer exports the plugin. A config whose only plugin it was loses `plugins`
  * too. A config that said `craftz({ browser: true })` gets `pack.platform: "neutral"` first, so
- * `toolchain-browsers` still reads it as a package for browsers.
+ * `tools-browsers` still reads it as a package for browsers.
  */
 
 /** Whether a config calls `craftz()` in its plugins. */

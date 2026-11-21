@@ -45,7 +45,7 @@ pnpm craftz shot http://localhost:3000 page.png
 pnpm craftz shot http://localhost:3000 phone.png --width 390
 ```
 
-An agent looks at a page it built with this, then reads the PNG. It uses the repository's `@playwright/test`, at [the reference's version](rules.md#versions-playwright), whose Chromium the cloud image ships. So it downloads nothing, and an agent has no reason to install a browser tool of its own. The page has to be running already. The file is full height, and 1280 pixels wide unless `--width` says otherwise.
+An agent looks at a page it built with this, then reads the PNG. It uses the repository's `@playwright/test`, at [the reference's version](rules.md#tools-playwright), whose Chromium the cloud image ships. So it downloads nothing, and an agent has no reason to install a browser tool of its own. The page has to be running already. The file is full height, and 1280 pixels wide unless `--width` says otherwise.
 
 ## Checking one repository
 
@@ -59,13 +59,13 @@ pnpm craftz check --all    # every difference a held rule has, not only its firs
 pnpm craftz fix            # write every fix, then check again
 ```
 
-`craftz check` runs every rule on the folder's files, with the installed version's rules, and prints each drift as a warning, in markz's line, like `craftz: warning: versions-markz: …`. It exits 1 when anything has drifted. It reads no settings and asks GitHub nothing, so it needs no login. A rule the repository [holds](rules.md#holds) prints its warning with `; held:` and its reason, and doesn't fail. A held rule with several differences prints the first and the count of the rest, and `--all` prints each. It asks npm nothing, so it reads only the folder's files.
+`craftz check` runs every rule on the folder's files, with the installed version's rules, and prints each drift as a warning, in markz's line, like `craftz: warning: tools-markz: …`. It exits 1 when anything has drifted. It reads no settings and asks GitHub nothing, so it needs no login. A rule the repository [holds](rules.md#holds-exceptions) prints its warning with `; held:` and its reason, and doesn't fail. A held rule with several differences prints the first and the count of the rest, and `--all` prints each. It asks npm nothing, so it reads only the folder's files.
 
 `craftz fix` writes every fix that can be automated. It lists each file it changed, then checks again and prints what's left to do by hand. A second run changes nothing. A fix can move versions, so run `pnpm install` next, then `pnpm run fix` for the format.
 
 ## The Vite config
 
-`vite.config.ts` imports nothing from craftz. It writes out what the rules set: the `fmt` and `lint` blocks, a package's publint, types and platform, and the browsers a build targets. `craftz check` compares each value with the rules, and `craftz fix` writes in any that differs. `pnpm craftz rules toolchain-wrap`, `toolchain-lint`, `toolchain-browsers`, `releases-packing` and `releases-types` say what they hold.
+`vite.config.ts` imports nothing from craftz. It writes out what the rules set: the `fmt` and `lint` blocks, a package's publint, types and platform, and the browsers a build targets. `craftz check` compares each value with the rules, and `craftz fix` writes in any that differs. `pnpm craftz rules tools-fmt`, `tools-lint`, `tools-browsers`, `releases-packing` and `releases-types` say what they hold.
 
 ## A site's Worker
 
@@ -179,7 +179,7 @@ pnpm dlx @amitkaps/craftz new example --package --description "What it is, in a 
 pnpm dlx @amitkaps/craftz new example --site static --internal --description "…" --push
 ```
 
-`--package` publishes it to npm, and `--site static` deploys a static site on Cloudflare. Either, both or neither, which is scripts run on a laptop. An app starts from base. `--private` makes the GitHub repository private, and `--internal` puts a site behind Cloudflare Access. [The axes](rules.md#axes) say what each means. new writes `./example` in the folder it's run from, installs, runs `verify` and makes the first commit. `--push` also creates the repository on GitHub and writes its settings. It ends with a list of what's left by hand, like connecting the Worker. It needs nothing installed but Node and pnpm.
+`--package` publishes it to npm, and `--site static` deploys a static site on Cloudflare. Either, both or neither, which is scripts run on a laptop. An app starts from base. `--private` makes the GitHub repository private, and `--internal` puts a site behind Cloudflare Access. [The axes](design.md#axes) say what each means. new writes `./example` in the folder it's run from, installs, runs `verify` and makes the first commit. `--push` also creates the repository on GitHub and writes its settings. It ends with a list of what's left by hand, like connecting the Worker. It needs nothing installed but Node and pnpm.
 
 ## Logins
 

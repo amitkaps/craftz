@@ -56,7 +56,7 @@ test("what's left by hand and what failed are listed and counted, and moved noth
       status: "left by hand",
       moved: [prose],
       files: [".github/workflows/ci.yml from craftz"],
-      byHand: ["versions-markz: 0.7.0, not 0.8.0", "Found 2 errors"],
+      byHand: ["tools-markz: 0.7.0, not 0.8.0", "Found 2 errors"],
     },
     { ...row("sitez"), cells: { clone: "3s", upgrade: "✗" }, status: "failed", failed: "boom" },
   ];
@@ -67,7 +67,7 @@ test("what's left by hand and what failed are listed and counted, and moved noth
       "From craftz: none",
       "",
       "By hand",
-      "  pagez   versions-markz: 0.7.0, not 0.8.0",
+      "  pagez   tools-markz: 0.7.0, not 0.8.0",
       "  pagez   Found 2 errors",
       "",
       "Failed",
@@ -117,13 +117,13 @@ test("what's left by hand names each lint error's rule and line, once", () => {
   expect(
     leftByHand(
       [
-        "    craftz: warning: versions-markz: 0.7.0, not 0.8.0",
-        "    craftz: warning: versions-beta: cf; held: a beta",
+        "    craftz: warning: tools-markz: 0.7.0, not 0.8.0",
+        "    craftz: warning: tools-beta: cf; held: a beta",
         "Found 1 error and 0 warnings in 9 files (1.2s, 8 threads)",
         "Found 1 error and 0 warnings in 9 files (3.0s, 8 threads)",
       ].join("\n"),
     ),
-  ).toEqual(["versions-markz: 0.7.0, not 0.8.0", "Found 1 error and 0 warnings in 9 files"]);
+  ).toEqual(["tools-markz: 0.7.0, not 0.8.0", "Found 1 error and 0 warnings in 9 files"]);
 });
 
 test("a move reads as the pull request lists it", () => {

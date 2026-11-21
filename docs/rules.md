@@ -6,25 +6,83 @@ The repositories are the owner's public ones with the GitHub topic `craftz`, whi
 
 A rule `craftz check` checks is a list item that opens with its id as a span, like ``[`scripts-verify`]{#scripts-verify}``. An id is lowercase kebab case, its part and then its name, since an id can't hold a dot. Its first sentence is the rule, and the rest says why. `craftz check` prints the id on each line a repository drifted on, and `craftz rules <id>` prints the rule. The check, and the fix where one can be automated, are in [src/rules/](../src/rules/), under the same id.
 
-## Axes
+## Practice
 
-What a repository must have follows from four axes. Each is read from where it already lives, so none is declared twice, and each varies on its own.
+How a repository's code is written, from what its lessons taught. Each principle here was learned in more than one repository before it was written down. There are eleven, for three moments of a change: before the code, while writing it, and after it runs.
 
-| Axis       | Values               | Read from                                             |
-| ---------- | -------------------- | ----------------------------------------------------- |
-| publish    | package, or none     | `package.json` isn't `private`                        |
-| deploy     | static, app, or none | the Worker config, and whether it has code of its own |
-| audience   | public or internal   | Cloudflare Access, for each site                      |
-| repository | public or private    | GitHub                                                |
+A repository's `lessons.md` groups each lesson under the principle it shows, and links it here, so the next lesson of the same kind shows the principle needs a check. A principle with a check has an id under it, and the rest are for an agent to read before writing code.
 
-- **Publish.** A package is published to npm, so its audience there is public. A private npm package would be a fifth value, and none is needed yet.
-- **Deploy.** A site deploys to a Cloudflare Worker. One whose config names code to run, wrangler's `main`, is an [app](#an-app). One without is static, whatever builds its files, like [a prose site](#a-static-site) or a Vite page.
-- **Audience.** A site is internal when Cloudflare Access covers its domain, as [Internal sites](#internal-sites) says. Audience applies only to a site.
-- **Repository.** Whether the code is public is separate from whether the site is. A private repository can have a public site, and a public repository an internal one.
+### Before
 
-A package can have a site, like markz and its docs. A repository with neither is scripts run on a laptop. Where two axes meet badly, the pair is allowed, and what's lost is said where it applies. npm takes provenance only from a public repository, so a package in a private one publishes without it.
+What's right, where it stops, and where the cost is now, each settled before the code that changes it.
 
-## Toolchain: Vite+
+#### Write the spec first
+
+Code written before what it should do was judged by what it happened to do. So what's right is written first, as a grammar, a rule, a command in usage or a test that fails. The code then meets it, and a test holds the two together. The spec can be wrong too. A disagreement is settled by naming the rule that decides it, and fixing whichever side is wrong, never by loosening the check.
+
+#### Draw the boundaries first
+
+What a thing wasn't going to do was decided late, by whatever got built first. So before the code, write down where it stops. That's what's out of scope, and the limit on each cost a reader or a run pays, like a package's size or `verify`'s time. A ruled-out idea is written down with its reason, so it isn't built again. A limit is measured in every pull request, and over it, the code gets smaller, or the lessons say why it stays over.
+
+#### Measure before changing
+
+A guess at what's slow, big or needed was wrong more often than not. So time each part before changing one, and change the part the measure points to. Timing needs a warm engine, the best of several runs and inputs big enough to measure, since one run on a busy machine can differ by a third.
+
+### During
+
+How the code is written, so it stays one thing and does only what's needed.
+
+#### Don't repeat yourself
+
+A rule, a value, a piece of work or a step done in two places drifts in one, or gets skipped in one. So each is written once, in text, in code and in what's run. craftz is this principle across repositories.
+
+- **In docs,** the rest link to it. A rule or a command that code acts on is a list item with an id, read with markz's reader.
+- **In code,** the second place that does the same work calls the first, like making a temporary folder or running a rule. Share it when the second copy appears, not before.
+- **In what's run,** a script an agent writes again, or a step a doc asks for, becomes a command in the repository. It goes into the command that's already run at that moment, like `pr` running `gone` and `verify`, since a step nobody is made to notice gets skipped. A command prints what agents would otherwise work out from its output, and never waits on input an agent can't give.
+
+Where it can, a test holds the one place to its users, as craftz's rules, prose's codes and pagez's errors are held by id.
+
+#### One name, one meaning
+
+A name, a flag or a type that meant two things broke on the case where they differed, and two names for one thing read as two things. So each concept has one name, in code and in docs alike, and each name means one concept. Name a thing for what it does, not where it began, so an error, a warning code or a flag reads right without its docs. When a name starts to mean a second thing, split it, rather than teaching its readers the cases.
+
+#### Make the owner a type
+
+A value that two functions could make drifted, and a rule that named its owner caught the copy only after it was written. So where a value has one maker, give it a type that only that maker returns. A `Time` that only `toTime` returns turns a stray `new Date(x)` into a compile error. A literal union or a discriminated union does the same for a fixed set of kinds, at no cost when the code runs.
+
+- **Pass the whole thing before branding it.** A function that took a field's name lost the field's label, so a chart's title and reasons dropped it. Taking the field itself fixed that in a private application, with no brand.
+- **A brand fits a value that isn't text.** Names that arrive as spec text can't be branded, so each gets one constant and a rule.
+- **A brand holds while the maker has the only cast.** `as Time` passes it, so another `as Time` in the code is a bug, and `no-unsafe-type-assertion` finds the rest. No lint rule yet allows an assertion only inside the function that returns the brand.
+- **Parse once where data comes in.** What storage, a URL or an upload hands over goes through a schema that returns the branded type, and the code after it trusts the type. Whether the schema is ArkType or Zod is a repository's choice.
+- **Ban an import in the lint.** A repository sets `no-restricted-imports` in its own `lint.rules`, with a message, rather than a test that reads source.
+
+#### Parse, don't match text
+
+A regular expression over a config, a doc or code read keys from comments and missed what was laid out another way. So a file is read with the parser for its language, like oxc for code and config, and markz for Markdown, and a value is found by where it sits. Read only what's written as a literal, and treat the rest as unknown.
+
+#### Build only what gets used
+
+The first views, plugins and channels were most of the work, and few were opened. So build the smallest thing that gets read, and watch whether it is. Weigh a tool by what a repository runs of it, not by what it's for. Improve what every agent already reads, `AGENTS.md`, before adding a channel.
+
+### After
+
+How a change shows it worked, before it lands.
+
+#### Try it on the real thing
+
+A check, a fix or a design that passed on examples failed on a real repository, a real page or the package as it ships. So run a change where it will run before it lands. That means a fix on each repository's files, a command from the packed tarball, a build on the largest site at hand, and a claim about another tool through that tool. Read what it's judged on from the source, at that moment, like `main` on GitHub or a tool's installed types, never a clone or a summary. Choose a new test input for what it reaches that the others don't, not for being one more of the same kind.
+
+#### Have a way to verify
+
+A change that only a person could check was made slowly, and broke what nobody looked at. A change a machine can check is cheap to make, and to make again. So each thing that matters has a check that runs on every change. That's a test against the spec, a limit, or a second implementation run on the same input, like micromark for markz or shiki for prose. A rewrite is checked against what it replaces, with each difference that's meant listed and every other one a bug. Where nothing can check it yet, build the check before the change.
+
+#### Silence is the failure
+
+A warning nobody has to read is never read, and a catch that takes every error hides the one that mattered. So a check fails where it can't be sure, and a tool warns only where a rewrite would help. A run says everything it found and what it didn't check. A check that can't fail isn't a check, so fix it or remove it. Catch only the error you expect, beside the call that throws it. A test that fails and then passes on a re-run is a bug, so its cause is fixed. A re-run or a retry that turns it green catches the error that mattered.
+
+## Tools
+
+### Vite+
 
 One `vite.config.ts`, run through `vp`, covers dev, build, format, lint and test. A package builds with `vp pack`, which is part of Vite+, so there's no separate bundler. `defineConfig` comes from `vite-plus`.
 
@@ -32,11 +90,11 @@ Vite+ ships its own build of Vite, and `vite-plus` depends on it as an npm alias
 
 Formatting runs at oxfmt's defaults, but for one setting.
 
-- [`toolchain-wrap`]{#toolchain-wrap}: `fmt` sets `proseWrap: "never"`, so each Markdown paragraph is one line that the editor soft-wraps. Nobody hand-wraps, and a changed paragraph shows in a diff as one line with its changed words highlighted. `"always"` would reflow the rest of a paragraph when one word is added. `@prose` comments stay hand-wrapped at 100 characters, since no oxfmt setting wraps comment text.
+- [`tools-fmt`]{#tools-fmt}: `fmt` sets `proseWrap: "never"`, so each Markdown paragraph is one line that the editor soft-wraps. Nobody hand-wraps, and a changed paragraph shows in a diff as one line with its changed words highlighted. `"always"` would reflow the rest of a paragraph when one word is added. `@prose` comments stay hand-wrapped at 100 characters, since no oxfmt setting wraps comment text.
 
-- [`toolchain-lint`]{#toolchain-lint}: lint is type-aware and type-checks too, so `check` covers types without a separate `tsc`. A repository adds its own rules, categories and ignore patterns, and the plugins they need. The rule asks only that `typescript`, `unicorn` and `import` are among `plugins`, and its fix adds a missing one after the repository's own. An empty block fails it, so an empty `catch` says why it takes every error, in a comment inside it, as [Silence is the failure](#silence-is-the-failure) asks.
-- [`toolchain-playwright`]{#toolchain-playwright}: a repository with a `playwright.config.ts` writes the values in [ruled.ts](../src/ruled.ts), read from the parsed config. A test isn't retried, so a flaky one fails the run it flakes in and its cause gets fixed, where a retry would pass it and hide it. A trace is kept for each failure, since one kept on the first retry would never be written. A stray `test.only` fails the run on a laptop too, so it's caught before CI. The fix writes each value that differs.
-- [`toolchain-types`]{#toolchain-types}: every `tsconfig.json` writes out the same compiler options, extends nothing, and sets its own `include`, the folders its code is in. The options are ESNext with the DOM's types and Node's, Bundler resolution, no emit, and the strict options. Those are `strict`, `noUncheckedIndexedAccess`, `noImplicitOverride`, `noImplicitReturns`, `noFallthroughCasesInSwitch`, `verbatimModuleSyntax`, `isolatedModules` and `forceConsistentCasingInFileNames`. JavaScript is checked as TypeScript is, with `allowJs` and `checkJs`. `erasableSyntaxOnly` keeps to the TypeScript Node runs as it is, so a `.ts` script needs no build. [The reference's tsconfig.json](../reference/tsconfig.json) is the example.
+- [`tools-lint`]{#tools-lint}: lint is type-aware and type-checks too, so `check` covers types without a separate `tsc`. A repository adds its own rules, categories and ignore patterns, and the plugins they need. The rule asks only that `typescript`, `unicorn` and `import` are among `plugins`, and its fix adds a missing one after the repository's own. An empty block fails it, so an empty `catch` says why it takes every error, in a comment inside it, as [Silence is the failure](#silence-is-the-failure) asks.
+- [`tools-playwright-config`]{#tools-playwright-config}: a repository with a `playwright.config.ts` writes the values in [ruled.ts](../src/ruled.ts), read from the parsed config. A test isn't retried, so a flaky one fails the run it flakes in and its cause gets fixed, where a retry would pass it and hide it. A trace is kept for each failure, since one kept on the first retry would never be written. A stray `test.only` fails the run on a laptop too, so it's caught before CI. The fix writes each value that differs.
+- [`tools-tsconfig`]{#tools-tsconfig}: every `tsconfig.json` writes out the same compiler options, extends nothing, and sets its own `include`, the folders its code is in. The options are ESNext with the DOM's types and Node's, Bundler resolution, no emit, and the strict options. Those are `strict`, `noUncheckedIndexedAccess`, `noImplicitOverride`, `noImplicitReturns`, `noFallthroughCasesInSwitch`, `verbatimModuleSyntax`, `isolatedModules` and `forceConsistentCasingInFileNames`. JavaScript is checked as TypeScript is, with `allowJs` and `checkJs`. `erasableSyntaxOnly` keeps to the TypeScript Node runs as it is, so a `.ts` script needs no build. [The reference's tsconfig.json](../reference/tsconfig.json) is the example.
 
 The lint block in `vite.config.ts`:
 
@@ -51,11 +109,11 @@ lint: {
 
 The `fmt` and `lint` blocks are written out in each config, beside the repository's own keys, like `ignorePatterns`. `check` reads each value where it sits and names the ones that differ, and the fix writes them in. A block the config works out, like `lint: shared`, is set by hand. The values were a plugin's, `craftz()`, until they moved into the configs, so a repository's format and lint show in its own files, and don't change with craftz's version unseen.
 
-- [`toolchain-craftz`]{#toolchain-craftz}: every repository on Vite+ depends on `@amitkaps/craftz`, for its commands, and its config imports nothing from it. craftz no longer exports the `craftz()` plugin, so the fix adds the dependency and takes the call and its import out. A config that said `craftz({ browser: true })` packs for `"neutral"` instead.
+- [`tools-craftz-dep`]{#tools-craftz-dep}: every repository on Vite+ depends on `@amitkaps/craftz`, for its commands, and its config imports nothing from it. The fix adds the dependency, and removes any `craftz()` call and its import.
 
 ### The editor
 
-- [`toolchain-editor`]{#toolchain-editor}: every repository has the reference's [.vscode/settings.json](../reference/.vscode/settings.json), the one Vite+ writes, and its [.vscode/extensions.json](../reference/.vscode/extensions.json), the same content, read as JSON. A repository that depends on Svelte adds [svelte/](../reference/svelte/README.md)'s, which format `.svelte` files and recommend Svelte's extension. The fix writes both whole.
+- [`tools-editor`]{#tools-editor}: every repository has the reference's [.vscode/settings.json](../reference/.vscode/settings.json), the one Vite+ writes, and its [.vscode/extensions.json](../reference/.vscode/extensions.json), the same content, read as JSON. A repository that depends on Svelte adds [svelte/](../reference/svelte/README.md)'s, which format `.svelte` files and recommend Svelte's extension. The fix writes both whole.
 
 The settings make oxc the formatter, on save, with its fixes. The extensions recommended are oxc's and Vitest's, by name, rather than Vite+'s extension pack, which only wraps the two and could add more without a change to these rules. The oxc extension then runs the repository's own `vp fmt` and `vp lint`, so the editor formats with the oxfmt Vite+ pins and the `fmt` block in `vite.config.ts`, the same as `check`.
 
@@ -69,13 +127,13 @@ Code shipped to browsers works in the browsers people use, with a floor for each
 - **Gecko**, which is Firefox: the oldest ESR Mozilla supports. It's the oldest Firefox that still gets fixes.
 - **WebKit**, which is Safari and every browser on iOS, in-app browsers too: the newest release of the major two before the current one. An iPhone that a new iOS drops stays on its last major and keeps getting point releases, so that's the oldest Safari in use. Chrome on iOS and an app's WebView run this engine too, so it covers more people than Safari's own share.
 
-- [`toolchain-browsers`]{#toolchain-browsers}: a build that bundles code for browsers targets these browsers. A site Vite bundles, static or an app, sets them in `build.target`. A package packs for Node, as `platform: "node"`, and sets no `pack.target`. One that runs in browsers too packs for `"neutral"`, and its `pack.target` is the browsers and the Node its `engines` names. Its `pack.deps.neverBundle` holds `/^node:/`, since Rolldown doesn't know Node's own modules on `"neutral"`, and warns on each one it's given. The fix writes either in, and keeps a package that targets a browser on `"neutral"`.
+- [`tools-browsers`]{#tools-browsers}: a build that bundles code for browsers targets these browsers. A site Vite bundles, static or an app, sets them in `build.target`. A package packs for Node, as `platform: "node"`, and sets no `pack.target`. One that runs in browsers too packs for `"neutral"`, and its `pack.target` is the browsers and the Node its `engines` names. Its `pack.deps.neverBundle` holds `/^node:/`, since Rolldown doesn't know Node's own modules on `"neutral"`, and warns on each one it's given. The fix writes either in, and keeps a package that targets a browser on `"neutral"`.
 
 The list is worked out from MDN's browser-compat-data, by [src/browsers.ts](../src/browsers.ts), as of the date of the data. The package is one of craftz's own dependencies, so a craftz release moves it, and the floors move with it, with `craftz check` listing what then needs the new list.
 
 A target only rewrites syntax, like CSS nesting or a regular expression's flags. It adds no polyfills, so it doesn't stop code that calls an API too new for a floor. Something newer than a floor, like `::highlight()` on Firefox's ESR, is fine where it fails cleanly and the page still works. The floor is for what has to work. A prose site's page scripts and styles aren't built by Vite, so the target doesn't reach them.
 
-## pnpm and Node
+### pnpm and Node
 
 `package.json` is the one place for both versions.
 
@@ -88,56 +146,56 @@ A target only rewrites syntax, like CSS nesting or a regular expression's flags.
 "packageManager": "pnpm@12.19.0"
 ```
 
-- [`versions-pnpm`]{#versions-pnpm}: pnpm is pinned exactly, with `onFail: download`. Whatever pnpm is installed globally, pnpm fetches and runs the pinned one, so a new pnpm release never breaks a checkout. CI reads `packageManager`, so keep the two equal.
-- [`versions-node`]{#versions-node}: `devEngines` asks for the reference's Node with `onFail: error`, and `engines` asks for the same. The wrong Node stops loudly. A package supports the Node it's built and tested on, and nothing older, so CI runs on one Node. Node 26 is the LTS release from October 2026. The floor is 26.13.1, its November security release. cf's beta needs at least 26.12.0, where craftz works out the compatibility date. When the next LTS arrives, every repository moves to it at once, and for a package that's a breaking release.
+- [`tools-pnpm`]{#tools-pnpm}: pnpm is pinned exactly, with `onFail: download`. Whatever pnpm is installed globally, pnpm fetches and runs the pinned one, so a new pnpm release never breaks a checkout. CI reads `packageManager`, so keep the two equal.
+- [`tools-node`]{#tools-node}: `devEngines` asks for the reference's Node with `onFail: error`, and `engines` asks for the same. The wrong Node stops loudly. A package supports the Node it's built and tested on, and nothing older, so CI runs on one Node. Node 26 is the LTS release from October 2026. The floor is 26.13.1, its November security release. cf's beta needs at least 26.12.0, where craftz works out the compatibility date. When the next LTS arrives, every repository moves to it at once, and for a package that's a breaking release.
 
 Bump deliberately, everywhere at once. Being on the latest pnpm doesn't matter. Being on the same one does.
 
-## Other versions
+### Other versions
 
 The tools every repository shares are on one version, written the same way, so moving one never leaves two repositories to reconcile. The reference's [package.json](../reference/package.json) has each at an exact version, not a range, so the version a repository names is the one it installs, and nothing moves but through a release of craftz. npm isn't read. A new release is drift only once the reference moves to it, past pnpm's one-day wait. Our own markz and prose may lead the reference, so a package that builds on one can take its release before craftz does.
 
-- [`versions-types-node`]{#versions-types-node}: `@types/node` is the reference's, where a repository has it. It's the major of the Node that `engines` allows, so code can't use newer APIs.
-- [`versions-vite-plus`]{#versions-vite-plus}: every repository is on the reference's `vite-plus`, with no direct `vite`. A package that names `vite-plus` as a peer asks for `^` and the reference's version, since craftz and pagez parse with Vite+'s own parser, so a range that reaches below the version they're tested on claims what nothing checks. [Toolchain](#toolchain-vite) says why.
-- [`versions-typescript`]{#versions-typescript}: `typescript` is the reference's, where a repository has it.
-- [`versions-prose`]{#versions-prose}: `@amitkaps/prose` is an exact version, at least the reference's, where a repository has it.
-- [`versions-markz`]{#versions-markz}: `@amitkaps/markz` is an exact version, at least the reference's, where a repository has it.
-- [`versions-craftz`]{#versions-craftz}: `@amitkaps/craftz` is at craftz's own version, exactly, so the rules a repository names are the rules it's checked against, and a release of craftz is what moves every repository to them.
-- [`versions-cf`]{#versions-cf}: `cf` is the reference's, where a repository has it. None does, craftz included. craftz runs the reference's version to write the Workers' settings, and reads the compatibility date from the workerd it depends on. It deploys nothing, since `craftz deploy` uploads a static site with Cloudflare's API. cf is tracked because it replaces wrangler, which Cloudflare will deprecate, so a site that needs a server can drop wrangler once cf deploys it.
-- [`versions-beta`]{#versions-beta}: only `cf` is on a pre-release, pinned to an exact build, and so is a library the repository ignores in [pnpm's settings](#versions-ignored) with its reason, since an update must not move a pre-release. Only a package's name is in backticks here, because the list of betas is read from them.
-- [`versions-wrangler`]{#versions-wrangler}: `wrangler` is the reference's, while a repository is still on it.
-- [`versions-publint`]{#versions-publint}: `publint` is the reference's, where a package has it.
-- [`versions-playwright`]{#versions-playwright}: `@playwright/test` is the reference's, where a repository has it. It's the version whose Chromium revision the Claude Code cloud image ships, so a session screenshots with no download. `pnpm bump` leaves it, and it moves by hand when the image does ([development](development.md#playwright)).
+- [`tools-types-node`]{#tools-types-node}: `@types/node` is the reference's, where a repository has it. It's the major of the Node that `engines` allows, so code can't use newer APIs.
+- [`tools-vite-plus`]{#tools-vite-plus}: every repository is on the reference's `vite-plus`, with no direct `vite`. A package that names `vite-plus` as a peer asks for `^` and the reference's version, since craftz and pagez parse with Vite+'s own parser, so a range that reaches below the version they're tested on claims what nothing checks. [Toolchain](#vite) says why.
+- [`tools-typescript`]{#tools-typescript}: `typescript` is the reference's, where a repository has it.
+- [`tools-prose`]{#tools-prose}: `@amitkaps/prose` is an exact version, at least the reference's, where a repository has it.
+- [`tools-markz`]{#tools-markz}: `@amitkaps/markz` is an exact version, at least the reference's, where a repository has it.
+- [`tools-craftz`]{#tools-craftz}: `@amitkaps/craftz` is at craftz's own version, exactly, so the rules a repository names are the rules it's checked against, and a release of craftz is what moves every repository to them.
+- [`tools-cf`]{#tools-cf}: `cf` is the reference's, where a repository has it. None does, craftz included. craftz runs the reference's version to write the Workers' settings, and reads the compatibility date from the workerd it depends on. It deploys nothing, since `craftz deploy` uploads a static site with Cloudflare's API. cf is tracked because it replaces wrangler, which Cloudflare will deprecate, so a site that needs a server can drop wrangler once cf deploys it.
+- [`tools-beta`]{#tools-beta}: only `cf` is on a pre-release, pinned to an exact build, and so is a library the repository ignores in [pnpm's settings](#tools-ignored) with its reason, since an update must not move a pre-release. Only a package's name is in backticks here, because the list of betas is read from them.
+- [`tools-wrangler`]{#tools-wrangler}: `wrangler` is the reference's, while a repository is still on it.
+- [`tools-publint`]{#tools-publint}: `publint` is the reference's, where a package has it.
+- [`tools-playwright`]{#tools-playwright}: `@playwright/test` is the reference's, where a repository has it. It's the version whose Chromium revision the Claude Code cloud image ships, so a session screenshots with no download. `pnpm bump` leaves it, and it moves by hand when the image does ([development](development.md#playwright)).
 
-A beta's tags don't say which build goes with which, so it's moved by hand. `align` lists one in its pull request once npm's latest is a release, and then it leaves `versions-beta`. [Development](development.md#beta-packages) says how.
+A beta's tags don't say which build goes with which, so it's moved by hand. `align` lists one in its pull request once npm's latest is a release, and then it leaves `tools-beta`. [Development](development.md#beta-packages) says how.
 
 A repository's own libraries, like svelte or micromark, are its own to choose. `align` moves them within their major version, and lists a new major in its pull request for review.
 
 `pnpm-workspace.yaml` is a settings file, not a workspace. Every repository has the same two settings: the cooldown and `allowBuilds`. `allowBuilds` lets esbuild and workerd run their install scripts, where wrangler or cf is installed, and does nothing where neither is.
 
-- [`versions-workspace`]{#versions-workspace}: `pnpm-workspace.yaml` is [the reference's](../reference/pnpm-workspace.yaml), word for word. The fix writes it whole. A setting a repository wants for itself is a change to these rules.
+- [`tools-workspace`]{#tools-workspace}: `pnpm-workspace.yaml` is [the reference's](../reference/pnpm-workspace.yaml), word for word. The fix writes it whole. A setting a repository wants for itself is a change to these rules.
 
 A library can ship a release its tooling can't use, and `pnpm update` takes it all the same. The repository then tells pnpm to leave it, which `outdated` and `update` both respect, and `align` too. Its name goes under `updateConfig.ignoreDependencies` in `pnpm-workspace.yaml`, with the reason in the comment above it. The reason says when to look again, like a release that fixes what broke. That block is the one part of the file that is the repository's own, so the comparison above leaves it out, and the fix puts it back when it writes the file.
 
-- [`versions-ignored`]{#versions-ignored}: a dependency that `ignoreDependencies` names is a dependency of the repository, has a reason in the comment above it, and is at an exact version. A range lets a fresh install take the release that was left. A tool the reference names is held by its rule in [the holds](#holds), never here, since `craftz upgrade` moves it and not `pnpm update`.
+- [`tools-ignored`]{#tools-ignored}: a dependency that `ignoreDependencies` names is a dependency of the repository, has a reason in the comment above it, and is at an exact version. A range lets a fresh install take the release that was left. A tool the reference names is held by its rule in [the holds](#holds-exceptions), never here, since `craftz upgrade` moves it and not `pnpm update`.
 
 - **The cooldown.** pnpm's one-day wait on a new version is kept, with only `@amitkaps/*` excluded. A hijacked release can be pulled before it's installed, and our own skip the wait, since each reaches npm only after the owner approves it. The wait guards the libraries and nested packages, hundreds in each lockfile, that `align` moves without review. The shared tools are few, and `pnpm bump` moves them when they're wanted, so a day costs them little. A shorter wait, and leaving the shared tools out of it, are ruled out. Any number of hours is as arbitrary as pnpm's, and the shared tools do the most when they run.
 
-## Holds
+### Holds (Exceptions)
 
 When a tool a repository depends on keeps it from a rule, the repository holds the rule, in its own `package.json`, with the reason. The reason says when to look again, like svelte-check accepting TypeScript 7. `craftz check` prints a held rule's drift as a warning, with its reason, and still passes.
 
 ```json
 "craftz": {
   "hold": {
-    "versions-typescript": "svelte-check accepts TypeScript 5 and 6 only. Move when its peer range takes 7."
+    "tools-typescript": "svelte-check accepts TypeScript 5 and 6 only. Move when its peer range takes 7."
   }
 }
 ```
 
-Only a rule a tool can block can be held: a tool's version, other than craftz's own, `cloudflare-config` and `toolchain-types`. A hold on any other rule fails `craftz check`.
+Only a rule a tool can block can be held: a tool's version, other than craftz's own, `cloudflare-config` and `tools-tsconfig`. A hold on any other rule fails `craftz check`.
 
-A hold stops craftz's rule. A library no rule names, like a charting library whose latest release broke the types, is ignored in [pnpm's settings](#versions-ignored) instead, since only `pnpm update` moves it.
+A hold stops craftz's rule. A library no rule names, like a charting library whose latest release broke the types, is ignored in [pnpm's settings](#tools-ignored) instead, since only `pnpm update` moves it.
 
 A hold is for what a tool can't do, never for a preference. The point of one set of rules is that a choice like Vite+ is made once and paid for once, not argued again in each repository. A hold whose check stops drifting fails `craftz check` until it's removed, so none outlives its reason.
 
@@ -252,70 +310,13 @@ Every `main` takes changes the same way. Work happens on a branch, in a pull req
 
 `craftz settings` writes both for one repository, and asks before removing classic branch protection. `align` writes both to every repository or to the ones named, and removes classic protection without asking. `craftz settings --check` reads both. GitHub shows the branch rules to anyone, but the merge settings only to the owner, so it needs `gh`'s login. A check GitHub's rate limit stopped shows as not checked, not as drift.
 
-## Agents
+### CI
 
-- [`agents-sections`]{#agents-sections}: every `AGENTS.md` opens with the same two sections as [the reference's](../reference/AGENTS.md), word for word, and `CLAUDE.md` holds only `@AGENTS.md`, so Claude Code reads the same file.
-- [`agents-outline`]{#agents-outline}: `.gitignore` lists `outline.md`. `pnpm outline` writes it, and so do `pr`, `gone` and `new`, so a committed copy would conflict between two open pull requests that each change a summary. `verify` only checks, so it doesn't write it. The fix adds it.
-- [`agents-claude`]{#agents-claude}: every repository has the reference's [.claude/settings.json](../reference/.claude/settings.json) and its two hooks, [session-start.sh](../reference/.claude/hooks/session-start.sh) and [suggest-clear.sh](../reference/.claude/hooks/suggest-clear.sh), word for word. The fix writes them whole.
+GitHub Actions runs one job, named `ci`, on pull requests, and a repository with browser checks adds `browser`. Both run on `ubuntu-latest`, which has 4 cores in a public repository and 2 in a private one, so a job takes longer in a private one. The 1-core `ubuntu-slim` costs a third as much a minute, and a trial put craftz's `ci` at 128 seconds on it against 34 on 4 cores. It installs with `pnpm install --frozen-lockfile`, restores Vite+'s task cache in a `Task cache` step, so a `test` or `build` whose files haven't changed replays, and runs `pnpm run verify`. On a pull request it then runs `prose style --since HEAD^1`, even when `verify` fails, which shows advice beside the lines the pull request changed and never fails. An agent that opens a pull request without `pnpm pr` skips `pnpm pr`'s advice, and CI is the one step every pull request passes. Every step has a `name`, so a run's page shows what each took, like Install, Chromium and Verify. What a package adds, like publint or a size budget, runs in `verify`, so CI is the same in every repository. It doesn't check the label, or run again when one changes, so a pull request opened with its label runs `verify` once. In a package, a second workflow, `label`, checks the pull request has one [release-notes label](#release-notes), and runs again when a label changes, without installing anything. The `main` ruleset requires `ci`, and a package's `label` too. Cloudflare's own check on each commit isn't required, since it runs after the merge. CI doesn't run again on a push to `main`, and `browser` does. The ruleset needs a branch up to date and squash-merges it, so the merge is the tree that `ci` passed, and nobody pushes to `main` or bypasses the ruleset. A site's deploy and a package's release run `verify` before they ship, so a commit that reaches `main` is checked once more where it matters. A private repository ran `ci` 79 times on `main` in five days, 110 minutes with no failure, and craftz's 38 runs found none either. `craftz status` reads `verify`'s time from the latest pull request run for the same reason.
 
-Claude Code reads the same settings on a laptop and in a cloud session, so nothing about one environment goes in them. The session-start hook runs `pnpm install`, and installs Chromium when the repository depends on Playwright. It runs there because the revision of Chromium follows the repository's Playwright, which an environment's setup script, run before any repository, can't know. The cloud sets `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD`, which the hook overrides for the install. It ends with one line, like `session: node 26.13.1, pnpm 12.19.0, playwright shell ready`, which says what the session has. A Node below `engines` or a pnpm other than `packageManager` shows in brackets after it. So a cloud session reports its own environment, and nobody has to ask it. The cloud image ships Chromium's headless shell, so the hook's install finds it and downloads nothing, as long as the repository's Playwright is [the reference's](#versions-playwright). The environment's own setup script needs only Node and pnpm. That's [cloud-setup.sh](../reference/cloud-setup.sh), pasted once into the environment. It installs the Node and pnpm in [the reference](../reference/package.json), read when it runs, so a bump here reaches every new session with nothing to paste. If the reference can't be fetched, it uses the versions written in it, which a test holds to the reference's.
+`verify` takes 10 seconds or less on CI, in every repository. `pnpm pr` waits on it, and under 10 seconds the change is still in mind when it's done. It's one target, measured the same way everywhere. A repository with more to check makes its checks faster, rather than taking a larger target. A `verify` over the target still passes, since a runner's time varies from run to run, and the change that crosses the line is rarely the one that made it slow. `craftz status` notes one over the target, with the job's time beside it, since setup is a third of what a developer waits on, and a repository that stays over says why in its lessons. The `verify` step stops at 2 minutes, which is twelve times the target. It was 1 minute, until a private repository's `verify` took 69 seconds on a two-core runner, and it comes back to 1 when that fits. A target that nothing stops goes unmet, so a `verify` that slow fails, and the repository makes it faster. Moving slow tests out of `verify`, to a nightly run, is ruled out, since CI would then differ by repository, and a regression would show a day late. The job stops at 3 minutes, the step's 2 minutes and 1 more for setup, which is for a job that hangs, not a target.
 
-"craftz" points at these rules, and says how changes reach `main`. "Prose" says when to run `prose rules`, which prints the rules in [prose's usage](https://prose.amitkaps.com/docs/usage.md#for-agents) as the installed version has them. The rules live there, once, and aren't copied into each repository, since the copies had already started to differ. It names the first edit to a `.md` file or a `@prose` comment, and the first after a summary, since agents skipped the rules when told only "before writing prose". A code change counts as an edit only when it changes what the comment states, so a rename or a lint fix skips the rules. It also says to run `prose style`, which is advice, so it isn't a script or a check, and that `prose check` is the one that fails. A bullet under "Prose" says `outline.md` is there, every file with its summary, and doesn't import it. Across 21 sessions on craftz and a private repository, an agent found the same files with the outline loaded, left out or named in a bullet. It never opened the outline unprompted, so an import cost 6k to 20k tokens in every session for nothing. Each section is short, since every agent loads the file every session. What a command does is in its `help`. The rest of an `AGENTS.md` is the repository's own.
-
-A session looks at a page it changed with `pnpm craftz shot <url> <file.png>`, then reads the PNG. That's the one way, so an agent doesn't install a browser tool of its own. It does what this script does with the repository's Playwright:
-
-```js
-import { chromium } from "@playwright/test";
-const browser = await chromium.launch();
-const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
-await page.goto(process.argv[2]);
-await page.waitForLoadState("networkidle", { timeout: 10_000 }).catch(() => {});
-await page.waitForFunction(
-  `document.body.innerText.trim() || document.querySelector("img, svg, canvas, video")`,
-  undefined,
-  { timeout: 5_000 },
-);
-await page.screenshot({ path: process.argv[3], fullPage: true });
-await browser.close();
-```
-
-## Docs
-
-Explanations live in `@prose` comments, beside the code or setting they explain, and docs that span files live in `docs/`. Both are written in [markz](https://markz.amitkaps.com)'s Markdown, and `pnpm prose` reads them as one document. `package.json` has no comments, so its scripts are explained in these rules. A hand-written `.html` page ships its comments, so it has no prose.
-
-Every repository has the same docs, so anyone, or any agent, finds the same things in the same places.
-
-- [`docs-files`]{#docs-files}: `docs/` has `design.md`, `plan.md`, `development.md` and `lessons.md`, and a package's has `usage.md`. Each is in the `nav` of `docs/README.md`, and `README.md` links to `docs/`.
-
-| File | Holds |
-| --- | --- |
-| `README.md` | what it is, how it's used, and a link to `docs/` |
-| `docs/README.md` | the docs in reading order: `nav` in its metadata, and a line for each |
-| `docs/design.md` | what it is, why it's built this way, and what it isn't |
-| `docs/plan.md` | its own next steps in order, then what works now, later and open, not other repositories' |
-| `docs/development.md` | only what's its own: its extra scripts, its site, beyond these rules |
-| `docs/lessons.md` | what building it taught, each lesson what went wrong and what to do about it |
-| `docs/usage.md` | a package's install and use, and a section for agents |
-
-The README is the site's home page when prose builds it, so it reads as one. It says what it is, gives a short example, and lists the commands a user runs, like a package's command. The repository's own scripts, like `dev` and `verify`, are the shared ones, and are left to `development.md`, which links these rules for the shared toolchain, scripts and workflows rather than describing them.
-
-The plan opens with what's next, since that's what it's read for. Its "Where it is" holds one line per thing that works now, rewritten when a release changes it, not a line per release. A release's notes on GitHub already say what it changed, and the plan links to them rather than copying them.
-
-A lesson is for what the next change would get wrong without it, so a change that went as planned adds none. It says what went wrong and what to do, in a few sentences. What the code does now is in its `@prose`, and the story is in the pull request. Lessons are grouped under the principle in [Practice](#practice) each one shows, with headings of the repository's own for the rest, and a tool's facts under its name. A lesson its group already has gets the new case as a sentence, and its principle gets a check, a command or a line in `AGENTS.md`. A lesson is a doc, so one that reverses another rewrites it, and a fact about a tool goes once the tool changes.
-
-- [`docs-lessons`]{#docs-lessons}: a link from `docs/lessons.md` into these rules names an id or a heading they have, in the craftz a repository installs. A group of lessons links the principle in [Practice](#practice) it shows, so a principle renamed here fails where it's linked. prose checks only a relative link, and another repository links this page by its address.
-
-- [`docs-plan`]{#docs-plan}: each step in the plan's Next is a task, `- [ ]`, ticked as the pull request that finishes it merges. A ticked step then leaves, and what it built goes into "Where it is", or into the doc that states it, like an area's spec. Before a release the summary names the version too. `craftz release` stops until both are done, so the plan is current before each release, not after. The fix turns a numbered or plain step into a task.
-
-A step reads as [prose's current plan](https://prose.amitkaps.com/docs/usage.md#current-plan) says: what's left, in a few lines, with a link to the doc where its design lives. A site never releases, so the gate never reaches it. `prose style` notes a ticked step and a long one in any repository, and that's what tells a site.
-
-A site has no `usage.md`, since the site is what people use, unless it has commands to run. Any other doc is the repository's own, like markz's grammar, and goes in the `nav` too. `development.md` links to these rules for what's shared rather than repeating it. `docs-files`'s fix writes a first version of each one that's missing, and adds it to the `nav`, so `new` starts with all of them.
-
-The docs are published at `/docs/<file>.md`, so a link to one works on GitHub and on the site alike.
-
-- **A package's site is `prose build`,** the repository read as a document, with nothing added to it. Its docs are in the bar, and its code is a page away.
-- **A site shows its docs its own way,** read from `docs/`, so GitHub and the site have one set of files. base renders them with SvelteKit, as the starter it is.
-- **A page the build fills in is a doc with a section for it.** The doc holds the words and an empty `{@section}` for each table, so prose builds it with its bar and styles. A script fills the sections in the page prose wrote, and a ` ```=html ` block holds its styles.
+A repository with browser checks runs them as `pnpm run test:browser` in a second workflow, `browser`, which is [the reference's](../reference/.github/workflows/browser.yml) in every repository. Only its `on:` block is the repository's own, since when browser checks are worth running depends on what the repository changes. The default is each merge to `main`. A site that is often changed in ways a browser can't see skips the merges that touch only Markdown or unit tests, and a package runs it from its release workflow with `workflow_call`, so a browser break stops the release. It installs only Chromium's headless shell, with `playwright install --only-shell chromium`, which a headless run is all that needs. The step stops at 1 minute, since the download takes 5 seconds, so a hung one fails fast. It doesn't run `playwright install-deps chromium`. On `ubuntu-latest` the shell launches without it, and it installed only nine font packages, 22 MB in 10 seconds. Its `apt` step hung for about 6 minutes in four of a private repository's last twelve runs, and a run waited the whole job's stop for nothing. A test that reads text in Japanese, Thai or Chinese would need those fonts, so a repository with one installs them in its own steps. It isn't required, and `verify` doesn't run it, since a browser check can't fit in 10 seconds. Its target is two minutes, measured on the `test:browser` step, and one over it is noted and passes, as `verify`'s is. The step stops at 4 minutes, twice the target. It stays at 4 when a slow runner needs more. A suite over its target is made faster, as `verify` is, and the stop isn't raised, since a raised stop would let the suite stay slow. A private repository's passing runs took 212 to 219 seconds, and four of the six failures read hit this stop, which says its suite is the part to fix. The job stops at 6 minutes, the step's 4 and 2 more for setup and Chromium, for a job that hangs. A repository uses `@playwright/test` for it, at [the reference's version](#tools-playwright), so a session, a laptop and CI run the same browser. Its tests are still plain scripts, run with `node`. By default it runs once for each merge to `main`, and `workflow_dispatch` runs it by hand, on a branch too. On a pull request it gated nothing. A private repository's pull requests merged 71 to 300 seconds after they opened, as soon as `ci` passed, and its `browser` took 209 to 382 seconds, so its result came after the merge. Each push and each update of a branch ran it again. In that repository's last 200 runs, `browser` took 74 runs and 360 minutes, and `ci` took 126 runs and 192 minutes. Of the 31 `browser` runs that didn't pass, 12 hit the step's stop, 8 hung in `apt` until the job's stop, and 6 failed in the suite. Those 6 are the signal, and a merge makes each cost one run. A later merge doesn't cancel an earlier run, since a cancelled run says nothing about its commit. The cost is that a browser break lands before anyone sees it, and a site's deploy runs `verify` only, so the break can ship. That is accepted, since the pull request's run was never read before the merge either. What changes is that the result is seen. `craftz status` and `pnpm gone` say how the latest run on `main` ended, which is passed, failed, cancelled, or still running or not yet run. While a run is going, they also say if the one before it didn't pass. A failed or cancelled run is fixed before the next change, or the reason it isn't is written down. Requiring `browser` before a merge, or holding a deploy for it, is ruled out for now. A suite that fails a quarter of its runs would stop every merge. It comes back once a repository's suite is steady under its two-minute target with no flaky run. The trigger is the repository's, since 20 merges in a private repository changed none of its site, and 7 of its runs failed at the step's stop. A repository that skips merges accepts that a site rendering its Markdown can break unseen until the next run, and `workflow_dispatch` runs it for such a change. Skipping every Markdown-only merge in every repository stays ruled out for the same reason. A run on a pull request by label stays ruled out, since `workflow_dispatch` does that.
 
 ## Releases
 
@@ -365,115 +366,67 @@ pnpm pack && cd /tmp && npm login && npm publish ~/code/<repo>/amitkaps-<repo>-<
 
 The next merge that changes `package.json` finds that version on npm with no tag, so it skips staging and tags it, with a GitHub Release.
 
-## CI
+## Docs
 
-GitHub Actions runs one job, named `ci`, on pull requests, and a repository with browser checks adds `browser`. Both run on `ubuntu-latest`, which has 4 cores in a public repository and 2 in a private one, so a job takes longer in a private one. The 1-core `ubuntu-slim` costs a third as much a minute, and a trial put craftz's `ci` at 128 seconds on it against 34 on 4 cores. It installs with `pnpm install --frozen-lockfile`, restores Vite+'s task cache in a `Task cache` step, so a `test` or `build` whose files haven't changed replays, and runs `pnpm run verify`. On a pull request it then runs `prose style --since HEAD^1`, even when `verify` fails, which shows advice beside the lines the pull request changed and never fails. An agent that opens a pull request without `pnpm pr` skips `pnpm pr`'s advice, and CI is the one step every pull request passes. Every step has a `name`, so a run's page shows what each took, like Install, Chromium and Verify. What a package adds, like publint or a size budget, runs in `verify`, so CI is the same in every repository. It doesn't check the label, or run again when one changes, so a pull request opened with its label runs `verify` once. In a package, a second workflow, `label`, checks the pull request has one [release-notes label](#release-notes), and runs again when a label changes, without installing anything. The `main` ruleset requires `ci`, and a package's `label` too. Cloudflare's own check on each commit isn't required, since it runs after the merge. CI doesn't run again on a push to `main`, and `browser` does. The ruleset needs a branch up to date and squash-merges it, so the merge is the tree that `ci` passed, and nobody pushes to `main` or bypasses the ruleset. A site's deploy and a package's release run `verify` before they ship, so a commit that reaches `main` is checked once more where it matters. A private repository ran `ci` 79 times on `main` in five days, 110 minutes with no failure, and craftz's 38 runs found none either. `craftz status` reads `verify`'s time from the latest pull request run for the same reason.
+Explanations live in `@prose` comments, beside the code or setting they explain, and docs that span files live in `docs/`. Both are written in [markz](https://markz.amitkaps.com)'s Markdown, and `pnpm prose` reads them as one document. `package.json` has no comments, so its scripts are explained in these rules. A hand-written `.html` page ships its comments, so it has no prose.
 
-`verify` takes 10 seconds or less on CI, in every repository. `pnpm pr` waits on it, and under 10 seconds the change is still in mind when it's done. It's one target, measured the same way everywhere. A repository with more to check makes its checks faster, rather than taking a larger target. A `verify` over the target still passes, since a runner's time varies from run to run, and the change that crosses the line is rarely the one that made it slow. `craftz status` notes one over the target, with the job's time beside it, since setup is a third of what a developer waits on, and a repository that stays over says why in its lessons. The `verify` step stops at 2 minutes, which is twelve times the target. It was 1 minute, until a private repository's `verify` took 69 seconds on a two-core runner, and it comes back to 1 when that fits. A target that nothing stops goes unmet, so a `verify` that slow fails, and the repository makes it faster. Moving slow tests out of `verify`, to a nightly run, is ruled out, since CI would then differ by repository, and a regression would show a day late. The job stops at 3 minutes, the step's 2 minutes and 1 more for setup, which is for a job that hangs, not a target.
+Every repository has the same docs, so anyone, or any agent, finds the same things in the same places.
 
-A repository with browser checks runs them as `pnpm run test:browser` in a second workflow, `browser`, which is [the reference's](../reference/.github/workflows/browser.yml) in every repository. Only its `on:` block is the repository's own, since when browser checks are worth running depends on what the repository changes. The default is each merge to `main`. A site that is often changed in ways a browser can't see skips the merges that touch only Markdown or unit tests, and a package runs it from its release workflow with `workflow_call`, so a browser break stops the release. It installs only Chromium's headless shell, with `playwright install --only-shell chromium`, which a headless run is all that needs. The step stops at 1 minute, since the download takes 5 seconds, so a hung one fails fast. It doesn't run `playwright install-deps chromium`. On `ubuntu-latest` the shell launches without it, and it installed only nine font packages, 22 MB in 10 seconds. Its `apt` step hung for about 6 minutes in four of a private repository's last twelve runs, and a run waited the whole job's stop for nothing. A test that reads text in Japanese, Thai or Chinese would need those fonts, so a repository with one installs them in its own steps. It isn't required, and `verify` doesn't run it, since a browser check can't fit in 10 seconds. Its target is two minutes, measured on the `test:browser` step, and one over it is noted and passes, as `verify`'s is. The step stops at 4 minutes, twice the target. It stays at 4 when a slow runner needs more. A suite over its target is made faster, as `verify` is, and the stop isn't raised, since a raised stop would let the suite stay slow. A private repository's passing runs took 212 to 219 seconds, and four of the six failures read hit this stop, which says its suite is the part to fix. The job stops at 6 minutes, the step's 4 and 2 more for setup and Chromium, for a job that hangs. A repository uses `@playwright/test` for it, at [the reference's version](#versions-playwright), so a session, a laptop and CI run the same browser. Its tests are still plain scripts, run with `node`. By default it runs once for each merge to `main`, and `workflow_dispatch` runs it by hand, on a branch too. On a pull request it gated nothing. A private repository's pull requests merged 71 to 300 seconds after they opened, as soon as `ci` passed, and its `browser` took 209 to 382 seconds, so its result came after the merge. Each push and each update of a branch ran it again. In that repository's last 200 runs, `browser` took 74 runs and 360 minutes, and `ci` took 126 runs and 192 minutes. Of the 31 `browser` runs that didn't pass, 12 hit the step's stop, 8 hung in `apt` until the job's stop, and 6 failed in the suite. Those 6 are the signal, and a merge makes each cost one run. A later merge doesn't cancel an earlier run, since a cancelled run says nothing about its commit. The cost is that a browser break lands before anyone sees it, and a site's deploy runs `verify` only, so the break can ship. That is accepted, since the pull request's run was never read before the merge either. What changes is that the result is seen. `craftz status` and `pnpm gone` say how the latest run on `main` ended, which is passed, failed, cancelled, or still running or not yet run. While a run is going, they also say if the one before it didn't pass. A failed or cancelled run is fixed before the next change, or the reason it isn't is written down. Requiring `browser` before a merge, or holding a deploy for it, is ruled out for now. A suite that fails a quarter of its runs would stop every merge. It comes back once a repository's suite is steady under its two-minute target with no flaky run. The trigger is the repository's, since 20 merges in a private repository changed none of its site, and 7 of its runs failed at the step's stop. A repository that skips merges accepts that a site rendering its Markdown can break unseen until the next run, and `workflow_dispatch` runs it for such a change. Skipping every Markdown-only merge in every repository stays ruled out for the same reason. A run on a pull request by label stays ruled out, since `workflow_dispatch` does that.
+- [`docs-files`]{#docs-files}: `docs/` has `design.md`, `plan.md`, `development.md` and `lessons.md`, and a package's has `usage.md`. Each is in the `nav` of `docs/README.md`, and `README.md` links to `docs/`.
 
-## Practice
+| File | Holds |
+| --- | --- |
+| `README.md` | what it is, how it's used, and a link to `docs/` |
+| `docs/README.md` | the docs in reading order: `nav` in its metadata, and a line for each |
+| `docs/design.md` | what it is, why it's built this way, and what it isn't |
+| `docs/plan.md` | its own next steps in order, then what works now, later and open, not other repositories' |
+| `docs/development.md` | only what's its own: its extra scripts, its site, beyond these rules |
+| `docs/lessons.md` | what building it taught, each lesson what went wrong and what to do about it |
+| `docs/usage.md` | a package's install and use, and a section for agents |
 
-How a repository's code is written, from what its lessons taught. Each principle here was learned in more than one repository before it was written down. There are ten, for three moments of a change: before the code, while writing it, and after it runs.
+The README is the site's home page when prose builds it, so it reads as one. It says what it is, gives a short example, and lists the commands a user runs, like a package's command. The repository's own scripts, like `dev` and `verify`, are the shared ones, and are left to `development.md`, which links these rules for the shared toolchain, scripts and workflows rather than describing them.
 
-A repository's `lessons.md` groups each lesson under the principle it shows, and links it here, so the next lesson of the same kind shows the principle needs a check. A principle with a check has an id under it, and the rest are for an agent to read before writing code.
+The plan opens with what's next, since that's what it's read for. Its "Where it is" holds one line per thing that works now, rewritten when a release changes it, not a line per release. A release's notes on GitHub already say what it changed, and the plan links to them rather than copying them.
 
-### Before
+A lesson is for what the next change would get wrong without it, so a change that went as planned adds none. It says what went wrong and what to do, in a few sentences. What the code does now is in its `@prose`, and the story is in the pull request. Lessons are grouped under the principle in [Practice](#practice) each one shows, with headings of the repository's own for the rest, and a tool's facts under its name. A lesson its group already has gets the new case as a sentence, and its principle gets a check, a command or a line in `AGENTS.md`. A lesson is a doc, so one that reverses another rewrites it, and a fact about a tool goes once the tool changes.
 
-What's right, where it stops, and where the cost is now, each settled before the code that changes it.
+- [`docs-lessons`]{#docs-lessons}: a link from `docs/lessons.md` into these rules names an id or a heading they have, in the craftz a repository installs. A group of lessons links the principle in [Practice](#practice) it shows, so a principle renamed here fails where it's linked. prose checks only a relative link, and another repository links this page by its address.
 
-#### Write the spec first
+- [`docs-plan`]{#docs-plan}: each step in the plan's Next is a task, `- [ ]`, ticked as the pull request that finishes it merges. A ticked step then leaves, and what it built goes into "Where it is", or into the doc that states it, like an area's spec. Before a release the summary names the version too. `craftz release` stops until both are done, so the plan is current before each release, not after. The fix turns a numbered or plain step into a task.
 
-Code written before what it should do was judged by what it happened to do. So what's right is written first, as a grammar, a rule, a command in usage or a test that fails. The code then meets it, and a test holds the two together. The spec can be wrong too. A disagreement is settled by naming the rule that decides it, and fixing whichever side is wrong, never by loosening the check.
+A step reads as [prose's current plan](https://prose.amitkaps.com/docs/usage.md#current-plan) says: what's left, in a few lines, with a link to the doc where its design lives. A site never releases, so the gate never reaches it. `prose style` notes a ticked step and a long one in any repository, and that's what tells a site.
 
-#### Draw the boundaries first
+A site has no `usage.md`, since the site is what people use, unless it has commands to run. Any other doc is the repository's own, like markz's grammar, and goes in the `nav` too. `development.md` links to these rules for what's shared rather than repeating it. `docs-files`'s fix writes a first version of each one that's missing, and adds it to the `nav`, so `new` starts with all of them.
 
-What a thing wasn't going to do was decided late, by whatever got built first. So before the code, write down where it stops. That's what's out of scope, and the limit on each cost a reader or a run pays, like a package's size or `verify`'s time. A ruled-out idea is written down with its reason, so it isn't built again. A limit is measured in every pull request, and over it, the code gets smaller, or the lessons say why it stays over.
+The docs are published at `/docs/<file>.md`, so a link to one works on GitHub and on the site alike.
 
-#### Measure before changing
+- **A package's site is `prose build`,** the repository read as a document, with nothing added to it. Its docs are in the bar, and its code is a page away.
+- **A site shows its docs its own way,** read from `docs/`, so GitHub and the site have one set of files. base renders them with SvelteKit, as the starter it is.
+- **A page the build fills in is a doc with a section for it.** The doc holds the words and an empty `{@section}` for each table, so prose builds it with its bar and styles. A script fills the sections in the page prose wrote, and a ` ```=html ` block holds its styles.
 
-A guess at what's slow, big or needed was wrong more often than not. So time each part before changing one, and change the part the measure points to. Timing needs a warm engine, the best of several runs and inputs big enough to measure, since one run on a busy machine can differ by a third.
+### Agents
 
-### During
+- [`docs-agents`]{#docs-agents}: every `AGENTS.md` opens with the same two sections as [the reference's](../reference/AGENTS.md), word for word, and `CLAUDE.md` holds only `@AGENTS.md`, so Claude Code reads the same file.
+- [`docs-outline`]{#docs-outline}: `.gitignore` lists `outline.md`. `pnpm outline` writes it, and so do `pr`, `gone` and `new`, so a committed copy would conflict between two open pull requests that each change a summary. `verify` only checks, so it doesn't write it. The fix adds it.
+- [`docs-claude`]{#docs-claude}: every repository has the reference's [.claude/settings.json](../reference/.claude/settings.json) and its two hooks, [session-start.sh](../reference/.claude/hooks/session-start.sh) and [suggest-clear.sh](../reference/.claude/hooks/suggest-clear.sh), word for word. The fix writes them whole.
 
-How the code is written, so it stays one thing and does only what's needed.
+Claude Code reads the same settings on a laptop and in a cloud session, so nothing about one environment goes in them. The session-start hook runs `pnpm install`, and installs Chromium when the repository depends on Playwright. It runs there because the revision of Chromium follows the repository's Playwright, which an environment's setup script, run before any repository, can't know. The cloud sets `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD`, which the hook overrides for the install. It ends with one line, like `session: node 26.13.1, pnpm 12.19.0, playwright shell ready`, which says what the session has. A Node below `engines` or a pnpm other than `packageManager` shows in brackets after it. So a cloud session reports its own environment, and nobody has to ask it. The cloud image ships Chromium's headless shell, so the hook's install finds it and downloads nothing, as long as the repository's Playwright is [the reference's](#tools-playwright). The environment's own setup script needs only Node and pnpm. That's [cloud-setup.sh](../reference/cloud-setup.sh), pasted once into the environment. It installs the Node and pnpm in [the reference](../reference/package.json), read when it runs, so a bump here reaches every new session with nothing to paste. If the reference can't be fetched, it uses the versions written in it, which a test holds to the reference's.
 
-#### Don't repeat yourself
+"craftz" points at these rules, and says how changes reach `main`. "Prose" says when to run `prose rules`, which prints the rules in [prose's usage](https://prose.amitkaps.com/docs/usage.md#for-agents) as the installed version has them. The rules live there, once, and aren't copied into each repository, since the copies had already started to differ. It names the first edit to a `.md` file or a `@prose` comment, and the first after a summary, since agents skipped the rules when told only "before writing prose". A code change counts as an edit only when it changes what the comment states, so a rename or a lint fix skips the rules. It also says to run `prose style`, which is advice, so it isn't a script or a check, and that `prose check` is the one that fails. A bullet under "Prose" says `outline.md` is there, every file with its summary, and doesn't import it. Across 21 sessions on craftz and a private repository, an agent found the same files with the outline loaded, left out or named in a bullet. It never opened the outline unprompted, so an import cost 6k to 20k tokens in every session for nothing. Each section is short, since every agent loads the file every session. What a command does is in its `help`. The rest of an `AGENTS.md` is the repository's own.
 
-A rule, a value, a piece of work or a step done in two places drifts in one, or gets skipped in one. So each is written once, in text, in code and in what's run. craftz is this principle across repositories.
+A session looks at a page it changed with `pnpm craftz shot <url> <file.png>`, then reads the PNG. That's the one way, so an agent doesn't install a browser tool of its own. It does what this script does with the repository's Playwright:
 
-- **In docs,** the rest link to it. A rule or a command that code acts on is a list item with an id, read with markz's reader.
-- **In code,** the second place that does the same work calls the first, like making a temporary folder or running a rule. Share it when the second copy appears, not before.
-- **In what's run,** a script an agent writes again, or a step a doc asks for, becomes a command in the repository. It goes into the command that's already run at that moment, like `pr` running `gone` and `verify`, since a step nobody is made to notice gets skipped. A command prints what agents would otherwise work out from its output, and never waits on input an agent can't give.
-
-Where it can, a test holds the one place to its users, as craftz's rules, prose's codes and pagez's errors are held by id.
-
-#### One name, one meaning
-
-A name, a flag or a type that meant two things broke on the case where they differed, and two names for one thing read as two things. So each concept has one name, in code and in docs alike, and each name means one concept. Name a thing for what it does, not where it began, so an error, a warning code or a flag reads right without its docs. When a name starts to mean a second thing, split it, rather than teaching its readers the cases.
-
-#### Parse, don't match text
-
-A regular expression over a config, a doc or code read keys from comments and missed what was laid out another way. So a file is read with the parser for its language, like oxc for code and config, and markz for Markdown, and a value is found by where it sits. Read only what's written as a literal, and treat the rest as unknown.
-
-#### Build only what gets used
-
-The first views, plugins and channels were most of the work, and few were opened. So build the smallest thing that gets read, and watch whether it is. Weigh a tool by what a repository runs of it, not by what it's for. Improve what every agent already reads, `AGENTS.md`, before adding a channel.
-
-### After
-
-How a change shows it worked, before it lands.
-
-#### Try it on the real thing
-
-A check, a fix or a design that passed on examples failed on a real repository, a real page or the package as it ships. So run a change where it will run before it lands. That means a fix on each repository's files, a command from the packed tarball, a build on the largest site at hand, and a claim about another tool through that tool. Read what it's judged on from the source, at that moment, like `main` on GitHub or a tool's installed types, never a clone or a summary. Choose a new test input for what it reaches that the others don't, not for being one more of the same kind.
-
-#### Have a way to verify
-
-A change that only a person could check was made slowly, and broke what nobody looked at. A change a machine can check is cheap to make, and to make again. So each thing that matters has a check that runs on every change. That's a test against the spec, a limit, or a second implementation run on the same input, like micromark for markz or shiki for prose. A rewrite is checked against what it replaces, with each difference that's meant listed and every other one a bug. Where nothing can check it yet, build the check before the change.
-
-#### Silence is the failure
-
-A warning nobody has to read is never read, and a catch that takes every error hides the one that mattered. So a check fails where it can't be sure, and a tool warns only where a rewrite would help. A run says everything it found and what it didn't check. A check that can't fail isn't a check, so fix it or remove it. Catch only the error you expect, beside the call that throws it. A test that fails and then passes on a re-run is a bug, so its cause is fixed. A re-run or a retry that turns it green catches the error that mattered.
-
-## Repositories
-
-Every public repository that follows these rules has the GitHub topic `craftz`, so `align` moves it. Writing its GitHub settings adds the topic, and archiving it drops the repository from the list. A repository joins one of two ways, and both end the same: listed, protected, and passing `craftz check` and `craftz settings --check`.
-
-### Bringing one in
-
-1. Run `craftz settings` in it, which adds the topic along with the rest of GitHub's settings. Then `craftz upgrade`, which adds craftz and its fixes, and lists what's left by hand.
-2. Fix what's left, in the repository's own pull requests. Where a tool can't meet a rule yet, add a hold rather than a workaround.
-3. Connect a site's Worker to the repository, in Cloudflare's dashboard.
-4. Run `align <repo>`, for the branch rules, a package's labels and the Worker's build settings. A package still needs its trusted publisher on npm.
-
-### Keeping them in line
-
-Each repository checks its own files in CI, with `craftz check` against the craftz it installs, so a pull request can't drift from the rules it names. What needs a login stays on the laptop.
-
-- **`craftz settings --check`** reads one repository's settings on GitHub and its Worker, and `craftz status` what's live.
-- **align** brings each repository in line with the reference, from a fresh clone of each `main`. Every shared tool and the editor settings come from the reference, and each repository's own libraries move within their majors. A pull request opens where `verify` passes, with auto-merge on, and lists any new major left for review. GitHub's settings and the Worker's are written directly, since there's no file to review. `align --local` changes nothing, and lists every repository's settings that have drifted.
-
-A change to the rules, like a new check, is a pull request to craftz. It reaches the others in craftz's next release, which `align` moves them to.
-
-### Following it unlisted
-
-A private repository can follow these rules without being listed, since craftz is public and would name it. The list only reads public repositories, so a private one's topic doesn't put it there. Its own `craftz check` and `craftz settings` work as in any repository, and `align <repo>` still writes its settings. Where it can't follow a rule, its own docs say which and why.
-
-### Starting one
-
-`new` starts a repository that already follows these rules, in the folder next to the current one.
-
-```sh
-new <name> --package --description "What it is, in a sentence." --push
-new <name> --package --site static --description "What it is, in a sentence." --push
-new <name> --site static --internal --description "What it is, in a sentence." --push
-new <name> --private --description "What it is, in a sentence." --push
+```js
+import { chromium } from "@playwright/test";
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+await page.goto(process.argv[2]);
+await page.waitForLoadState("networkidle", { timeout: 10_000 }).catch(() => {});
+await page.waitForFunction(
+  `document.body.innerText.trim() || document.querySelector("img, svg, canvas, video")`,
+  undefined,
+  { timeout: 5_000 },
+);
+await page.screenshot({ path: process.argv[3], fullPage: true });
+await browser.close();
 ```
-
-The flags are [the axes](#axes). `--package` publishes it and `--site static` deploys a static site, and with neither, it's scripts run on a laptop. `--private` makes the repository private on GitHub, which keeps it off the list. `--internal` says in a site's config that it's behind Access, and the Access application is the step left to do by hand.
-
-It writes only what's the repository's own: its name and description, its source, its Vite config and strict types, and CI. Each is built from the reference's files rather than a template. Then it runs every rule's fix, the ones `align` runs. They write the rest: the versions and engines, the shared scripts, the editor settings, the cooldown, the shared `AGENTS.md` sections, a package's release files and packing, and a first version of each doc. So a new repository can't follow the rules any less than `align` makes an old one. Then it installs, formats with `fix`, writes the outline, runs `verify` and makes the first commit. `--push` creates the repository on GitHub, pushes that commit and writes its GitHub settings, as `align` does. That first push is the only one to `main` the rules allow, since the rules aren't on yet. Its settings add the topic, so `align` finds it. It prints what's left: the Worker or npm's setup. A SvelteKit app starts from base instead, and is brought in like any other.
-
-`new`'s test generates a package, a static site, a package with a site, scripts in a private repository and an internal site. It checks each against the survey and runs its `verify`, so the generator can't fall behind the rules.

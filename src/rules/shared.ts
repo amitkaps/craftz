@@ -102,7 +102,7 @@ export function owned(file: string, axes: Axes, std: string): string {
  *
  * The block has one shape, a list of names each under its reason, so it's read line by line and
  * not with a YAML parser, which would be most of the package. A line that isn't in that shape is
- * reported by `versions-ignored`, never guessed at.
+ * reported by `tools-ignored`, never guessed at.
  */
 export type Held = { name: string; reason: string };
 

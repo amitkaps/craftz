@@ -32,15 +32,56 @@ Two values are worked out from source, the browsers from browser-compat-data and
 
 ## Beta packages
 
-The packages still on a beta are the ones [`versions-beta`](rules.md#versions-beta) names, and `package.json` has their builds. align leaves them alone, since their tags don't say which build goes with which, and `pnpm bump` lists a newer build under `Left for review`, with a newer pnpm or Node, so one isn't missed. One is listed once npm's latest for it is a release at the beta's major or later.
+The packages still on a beta are the ones [`tools-beta`](rules.md#tools-beta) names, and `package.json` has their builds. align leaves them alone, since their tags don't say which build goes with which, and `pnpm bump` lists a newer build under `Left for review`, with a newer pnpm or Node, so one isn't missed. One is listed once npm's latest for it is a release at the beta's major or later.
 
-A newer beta is moved by hand too. Pin it in the reference's `package.json`, after reading its `engines`. The next run from source reads the workerd it brings from npm into [src/workerd.json](../src/workerd.json), whose date is the Workers' compatibility date, so commit that with it. To move one to its release, pin the release and take it out of `versions-beta`. A beta never deploys a static site, so check what cf does do. Run `pnpm run verify`, then `pnpm craftz status` and `pnpm craftz settings --check` on a site or two. The tests can't call cf's commands, since they need a login, and a release can rename one. A move also changes the compatibility date, so update craftz's own `cloudflare.config.ts` and the docs that show it. Only base deploys with wrangler, so it's the one place a deploy is worth trying.
+A newer beta is moved by hand too. Pin it in the reference's `package.json`, after reading its `engines`. The next run from source reads the workerd it brings from npm into [src/workerd.json](../src/workerd.json), whose date is the Workers' compatibility date, so commit that with it. To move one to its release, pin the release and take it out of `tools-beta`. A beta never deploys a static site, so check what cf does do. Run `pnpm run verify`, then `pnpm craftz status` and `pnpm craftz settings --check` on a site or two. The tests can't call cf's commands, since they need a login, and a release can rename one. A move also changes the compatibility date, so update craftz's own `cloudflare.config.ts` and the docs that show it. Only base deploys with wrangler, so it's the one place a deploy is worth trying.
 
 ## Playwright
 
-[`versions-playwright`](rules.md#versions-playwright) holds `@playwright/test` to the version whose Chromium revision the Claude Code cloud image ships, so a session screenshots with no download. `pnpm bump` leaves it where it is.
+[`tools-playwright`](rules.md#tools-playwright) holds `@playwright/test` to the version whose Chromium revision the Claude Code cloud image ships, so a session screenshots with no download. `pnpm bump` leaves it where it is.
 
 To move it, start a cloud session and run `ls /opt/pw-browsers`. It lists the image's `chromium_headless_shell-<revision>`. The Playwright that wants that revision is the one to pin. `pnpm exec playwright install --dry-run chromium` in a clone names the revision a version wants. When the image's revision is behind the newest Playwright, the pin stays behind it. Pin the reference's `package.json`, and the next `pnpm align` moves each repository.
+
+## Repositories
+
+Every public repository that follows these rules has the GitHub topic `craftz`, so `align` moves it. Writing its GitHub settings adds the topic, and archiving it drops the repository from the list. A repository joins one of two ways, and both end the same: listed, protected, and passing `craftz check` and `craftz settings --check`.
+
+### Bringing one in
+
+1. Run `craftz settings` in it, which adds the topic along with the rest of GitHub's settings. Then `craftz upgrade`, which adds craftz and its fixes, and lists what's left by hand.
+2. Fix what's left, in the repository's own pull requests. Where a tool can't meet a rule yet, add a hold rather than a workaround.
+3. Connect a site's Worker to the repository, in Cloudflare's dashboard.
+4. Run `align <repo>`, for the branch rules, a package's labels and the Worker's build settings. A package still needs its trusted publisher on npm.
+
+### Keeping them in line
+
+Each repository checks its own files in CI, with `craftz check` against the craftz it installs, so a pull request can't drift from the rules it names. What needs a login stays on the laptop.
+
+- **`craftz settings --check`** reads one repository's settings on GitHub and its Worker, and `craftz status` what's live.
+- **align** brings each repository in line with the reference, from a fresh clone of each `main`. Every shared tool and the editor settings come from the reference, and each repository's own libraries move within their majors. A pull request opens where `verify` passes, with auto-merge on, and lists any new major left for review. GitHub's settings and the Worker's are written directly, since there's no file to review. `align --local` changes nothing, and lists every repository's settings that have drifted.
+
+A change to the rules, like a new check, is a pull request to craftz. It reaches the others in craftz's next release, which `align` moves them to.
+
+### Following it unlisted
+
+A private repository can follow these rules without being listed, since craftz is public and would name it. The list only reads public repositories, so a private one's topic doesn't put it there. Its own `craftz check` and `craftz settings` work as in any repository, and `align <repo>` still writes its settings. Where it can't follow a rule, its own docs say which and why.
+
+### Starting one
+
+`new` starts a repository that already follows these rules, in the folder next to the current one.
+
+```sh
+new <name> --package --description "What it is, in a sentence." --push
+new <name> --package --site static --description "What it is, in a sentence." --push
+new <name> --site static --internal --description "What it is, in a sentence." --push
+new <name> --private --description "What it is, in a sentence." --push
+```
+
+The flags are [the axes](design.md#axes). `--package` publishes it and `--site static` deploys a static site, and with neither, it's scripts run on a laptop. `--private` makes the repository private on GitHub, which keeps it off the list. `--internal` says in a site's config that it's behind Access, and the Access application is the step left to do by hand.
+
+It writes only what's the repository's own: its name and description, its source, its Vite config and strict types, and CI. Each is built from the reference's files rather than a template. Then it runs every rule's fix, the ones `align` runs. They write the rest: the versions and engines, the shared scripts, the editor settings, the cooldown, the shared `AGENTS.md` sections, a package's release files and packing, and a first version of each doc. So a new repository can't follow the rules any less than `align` makes an old one. Then it installs, formats with `fix`, writes the outline, runs `verify` and makes the first commit. `--push` creates the repository on GitHub, pushes that commit and writes its GitHub settings, as `align` does. That first push is the only one to `main` the rules allow, since the rules aren't on yet. Its settings add the topic, so `align` finds it. It prints what's left: the Worker or npm's setup. A SvelteKit app starts from base instead, and is brought in like any other.
+
+`new`'s test generates a package, a static site, a package with a site, scripts in a private repository and an internal site. It checks each against the survey and runs its `verify`, so the generator can't fall behind the rules.
 
 ## Release
 

@@ -10,7 +10,7 @@
  * `workers.dev` and preview URLs, the folder it serves, and what it deploys. The addresses are
  * on unless the config says otherwise.
  *
- * What it deploys is the deploy axis in [the rules](../docs/rules.md#axes). A Worker with code
+ * What it deploys is the deploy axis in [the rules](../docs/design.md#axes). A Worker with code
  * of its own, cf's `entrypoint` or wrangler's `main`, is an app, and one without is a static
  * site, whatever builds its files.
  *

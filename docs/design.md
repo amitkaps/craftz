@@ -45,15 +45,31 @@ Each command acts on one repository, the one it's installed in, except `new`, wh
 
 ## Axes
 
-A repository isn't one type. It's four independent axes, as [the rules](rules.md#axes) define them: what it publishes, what it deploys, who the site is for, and who can see the code. Each is read from where it already lives, never declared, and `craftz()` and `craftz deploy` act on them.
+What a repository must have follows from four axes. Each is read from where it already lives, so none is declared twice, and each varies on its own.
 
-| Axis | Read from | Gets |
-| --- | --- | --- |
-| publish: package | not `private` | `vp pack`, the release workflow, a release-notes label |
-| deploy: static | a Worker config with no code of its own | Cloudflare's plugin with `assetsOnly`, `cf deploy --prebuilt` |
-| deploy: app | a Worker config with an `entrypoint` or `main` | the adapter, `wrangler types`, and wrangler's deploy while it's held |
-| audience: internal | an Access application on the site's domain | its other addresses off, and Access's policy checked |
-| repository: private | GitHub | no `LICENSE`, and never named in craftz |
+| Axis       | Values               | Read from                                             |
+| ---------- | -------------------- | ----------------------------------------------------- |
+| publish    | package, or none     | `package.json` isn't `private`                        |
+| deploy     | static, app, or none | the Worker config, and whether it has code of its own |
+| audience   | public or internal   | Cloudflare Access, for each site                      |
+| repository | public or private    | GitHub                                                |
+
+- **Publish.** A package is published to npm, so its audience there is public. A private npm package would be a fifth value, and none is needed yet.
+- **Deploy.** A site deploys to a Cloudflare Worker. One whose config names code to run, wrangler's `main`, is an [app](rules.md#an-app). One without is static, whatever builds its files, like [a prose site](rules.md#a-static-site) or a Vite page.
+- **Audience.** A site is internal when Cloudflare Access covers its domain, as [Internal sites](rules.md#internal-sites) says. Audience applies only to a site.
+- **Repository.** Whether the code is public is separate from whether the site is. A private repository can have a public site, and a public repository an internal one.
+
+A package can have a site, like markz and its docs. A repository with neither is scripts run on a laptop.
+
+What each value gets:
+
+| Axis                | Gets                                                                 |
+| ------------------- | -------------------------------------------------------------------- |
+| publish: package    | `vp pack`, the release workflow, a release-notes label               |
+| deploy: static      | Cloudflare's plugin with `assetsOnly`, `cf deploy --prebuilt`        |
+| deploy: app         | the adapter, `wrangler types`, and wrangler's deploy while it's held |
+| audience: internal  | its other addresses off, and Access's policy checked                 |
+| repository: private | no `LICENSE`, and never named in craftz                              |
 
 A static site's files can come from anywhere, like `.prose` as `publicDir` or Vite's own pages, and nothing about the deploy changes. The axes don't overlap, so there's nothing to choose between. The deploy axis is the one that could, and the Worker config settles it, since code to run makes it an app. So no repository ever writes its type down.
 
@@ -117,7 +133,7 @@ A repository is checked against the version it installs, never craftz's latest. 
 
 ## Errors, warnings and notes
 
-A finding is one of three, each printed in markz's line, as prose and markz print theirs: `craftz: warning: versions-markz: …`.
+A finding is one of three, each printed in markz's line, as prose and markz print theirs: `craftz: warning: tools-markz: …`.
 
 - **A warning** is drift from a rule. It fails `craftz check`, so it fails `verify` and the pull request, unless the repository holds the rule. A held rule's warning ends with `; held: <reason>`, and `check` still passes.
 - **A note** says something worth knowing with nothing drifted, like a newer craftz, a `verify` over its target or a beta that's graduated. It never fails.
@@ -130,7 +146,7 @@ A hold is a field in the repository's `package.json`, from a rule's id to its re
 ```json
 "craftz": {
   "hold": {
-    "versions-typescript": "svelte-check accepts TypeScript 5 and 6 only. Move when its peer range takes 7."
+    "tools-typescript": "svelte-check accepts TypeScript 5 and 6 only. Move when its peer range takes 7."
   }
 }
 ```

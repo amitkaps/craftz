@@ -15,7 +15,7 @@
  * were 186 kB. So a shared chunk is named `shared`, and only a chunk loaded by `import()` keeps
  * its module's name.
  *
- * The format, lint and pack are the ones [the rules](docs/rules.md#toolchain-wrap) ask every
+ * The format, lint and pack are the ones [the rules](docs/rules.md#tools-fmt) ask every
  * config to write out. craftz's site is its docs, the folder `prose build` writes, which
  * [cloudflare.config.ts](cloudflare.config.ts) names, so Vite doesn't build it.
  *
