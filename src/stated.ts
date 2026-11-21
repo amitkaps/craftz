@@ -108,11 +108,14 @@ export function linkedRules(markdown: string): string[] {
   return found;
 }
 
-/** The whole doc, as `craftz rules` prints it, with each link resolved against the site. */
+/** The whole doc, as `craftz rules` prints it, with each link resolved against the site and each
+ *  rule's id span written as its id, as `craftz rules <id>` prints it. */
 export function printed(markdown = doc(), site = SITE): string {
   const tree = parse(markdown);
-  let out = "";
-  let at = 0;
+  const titles = new Set(headings(tree).map((h) => h.node));
+  const edits: { start: number; end: number; text: string }[] = ids(tree)
+    .filter(({ node }) => !titles.has(node))
+    .map(({ id, node }) => ({ start: tree.start(node), end: tree.end(node), text: `\`${id}\`` }));
   walk(tree, {
     enter(node) {
       const type = tree.type(node);
@@ -120,12 +123,18 @@ export function printed(markdown = doc(), site = SITE): string {
       const { destination } = tree.data(node, type);
       const source = markdown.slice(tree.start(node), tree.end(node));
       const resolved = new URL(destination, site).href;
-      out += markdown.slice(at, tree.start(node));
-      out += source.replace(`](${destination}`, `](${resolved}`);
-      at = tree.end(node);
+      const text = source.replace(`](${destination}`, `](${resolved}`);
+      edits.push({ start: tree.start(node), end: tree.end(node), text });
       return false;
     },
   });
+  let out = "";
+  let at = 0;
+  for (const edit of edits.toSorted((a, b) => a.start - b.start)) {
+    if (edit.start < at) continue;
+    out += markdown.slice(at, edit.start) + edit.text;
+    at = edit.end;
+  }
   return out + markdown.slice(at);
 }
 
@@ -135,20 +144,29 @@ const shortName = (label: string): string => label.split(/[\s:]/)[0]!.toLowerCas
 /** The parts' short names, which `craftz rules <part>` takes. */
 export const partNames = (markdown?: string): string[] => parts(markdown).map(shortName);
 
-/** One part of the rules, as `craftz rules <part>` prints it, with `Practice` after it since it
- *  holds for any work. `undefined` when no part has that name. */
+/** One part of the rules, as `craftz rules <part>` prints it, or one section under a part, named
+ *  by its heading's id, like `holds`. The page's opening comes first, since it says what's a
+ *  repository's own, and `Practice` after, since it holds for any work. `undefined` when no part
+ *  or section has that name. */
 export function printedPart(name: string, markdown = doc(), site = SITE): string | undefined {
   const tree = parse(markdown);
-  const outline = headings(tree).filter((h) => h.depth === 2);
-  const slice = (label: string): string => {
-    const at = outline.findIndex((h) => h.label === label);
-    const end = outline[at + 1] ? tree.start(outline[at + 1]!.node) : markdown.length;
-    return markdown.slice(tree.start(outline[at]!.node), end);
+  const all = headings(tree).filter((h) => h.depth > 1);
+  const parts = all.filter((h) => h.depth === 2);
+  const slice = (heading: (typeof all)[number]): string => {
+    const next = all.find(
+      (h) => tree.start(h.node) > tree.start(heading.node) && h.depth <= heading.depth,
+    );
+    return markdown.slice(tree.start(heading.node), next ? tree.start(next.node) : markdown.length);
   };
-  const label = outline.map((h) => h.label).find((it) => shortName(it) === name.toLowerCase());
-  if (!label) return undefined;
-  const wanted = label === "Practice" ? [label] : [label, "Practice"];
-  return printed(wanted.map(slice).join("\n"), site);
+  const wanted = name.toLowerCase();
+  const found =
+    parts.find((h) => shortName(h.label) === wanted) ??
+    all.find((h) => h.depth === 3 && h.id === wanted);
+  if (!found) return undefined;
+  const opening = parts[0] ? markdown.slice(0, tree.start(parts[0].node)) : "";
+  const practice = parts.find((h) => h.label === "Practice");
+  const sections = practice && practice !== found ? [found, practice] : [found];
+  return printed(opening + sections.map(slice).join("\n"), site);
 }
 
 /** The usage doc's section under a third-level heading, as a script's help, for a script of a
