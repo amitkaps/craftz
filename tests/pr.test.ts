@@ -13,7 +13,7 @@ import { pathToFileURL } from "node:url";
 import { expect, test } from "vite-plus/test";
 import { goneIn, keptBecause, writeOutline } from "../src/gone.ts";
 import { joined } from "../src/args.ts";
-import { branchOf, labelsIn, startOn, timingOf, titled, took } from "../src/pr.ts";
+import { branchOf, catchUp, labelsIn, startOn, timingOf, titled, took } from "../src/pr.ts";
 import { here } from "../src/reference.ts";
 import { LABELS } from "../src/settings.ts";
 import { parse, walk } from "@amitkaps/markz";
@@ -216,4 +216,89 @@ test("a step that fails stops with one line, not a stack trace", () => {
   expect(run.status).toBe(1);
   expect(run.stderr.trim().split("\n")).toHaveLength(1);
   expect(run.stderr).toContain("failed, and its output above says why");
+});
+
+/** @prose
+ * `pr` merges `main` into the branch before `verify`. These run it on real repositories, a bare
+ * `origin` and a clone of it, with `main` moved on by a second clone, as another pull request would.
+ */
+const git = (dir: string, ...args: string[]): string =>
+  execFileSync("git", args, {
+    cwd: dir,
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      GIT_AUTHOR_NAME: "t",
+      GIT_AUTHOR_EMAIL: "t@example.com",
+      GIT_COMMITTER_NAME: "t",
+      GIT_COMMITTER_EMAIL: "t@example.com",
+    },
+  }).trim();
+
+function branchBehindMain(): { dir: string; elsewhere: string; origin: string } {
+  const root = tmp("craftz-catchup-");
+  const origin = join(root, "origin.git");
+  git(root, "init", "--quiet", "--bare", "--initial-branch=main", origin);
+  const clone = (name: string): string => {
+    git(root, "clone", "--quiet", origin, name);
+    // In the repository's own config, since `catchUp` runs `git merge` with the process's
+    // environment, and a CI runner has no identity of its own.
+    git(join(root, name), "config", "user.name", "t");
+    git(join(root, name), "config", "user.email", "t@example.com");
+    return join(root, name);
+  };
+  const dir = clone("work");
+  writeFileSync(join(dir, "a.txt"), "one\n");
+  writeFileSync(join(dir, "b.txt"), "one\n");
+  git(dir, "add", "--all");
+  git(dir, "commit", "--quiet", "--message", "start");
+  git(dir, "push", "--quiet", "origin", "HEAD:main");
+  git(dir, "switch", "--quiet", "--create", "change");
+  return { dir, elsewhere: clone("elsewhere"), origin };
+}
+
+const landOnMain = (elsewhere: string, file: string, text: string): void => {
+  writeFileSync(join(elsewhere, file), text);
+  git(elsewhere, "add", "--all");
+  git(elsewhere, "commit", "--quiet", "--message", `change ${file}`);
+  git(elsewhere, "push", "--quiet", "origin", "HEAD:main");
+};
+
+test("main has moved with no conflict: the branch is merged, not rebased", () => {
+  const { dir, elsewhere } = branchBehindMain();
+  writeFileSync(join(dir, "a.txt"), "mine\n");
+  git(dir, "commit", "--quiet", "--all", "--message", "mine");
+  const mine = git(dir, "rev-parse", "HEAD");
+  landOnMain(elsewhere, "b.txt", "theirs\n");
+  expect(catchUp(dir)).toEqual({ merged: true });
+  expect(readFileSync(join(dir, "b.txt"), "utf8")).toBe("theirs\n");
+  expect(readFileSync(join(dir, "a.txt"), "utf8")).toBe("mine\n");
+  expect(git(dir, "rev-parse", "HEAD^1")).toBe(mine);
+  expect(git(dir, "rev-list", "--parents", "-n", "1", "HEAD").split(" ")).toHaveLength(3);
+  expect(git(dir, "merge-base", "--is-ancestor", "origin/main", "HEAD")).toBe("");
+});
+
+test("main has moved with a conflict: it stops with the files named, merge left in the tree", () => {
+  const { dir, elsewhere, origin } = branchBehindMain();
+  writeFileSync(join(dir, "a.txt"), "mine\n");
+  git(dir, "commit", "--quiet", "--all", "--message", "mine");
+  const pushed = git(dir, "ls-remote", origin);
+  landOnMain(elsewhere, "a.txt", "theirs\n");
+  const after = git(dir, "ls-remote", origin);
+  expect(catchUp(dir)).toEqual({ conflicts: ["a.txt"] });
+  // The merge is left for whoever resolves it, and nothing is pushed.
+  expect(git(dir, "rev-parse", "--verify", "MERGE_HEAD")).toMatch(/^[0-9a-f]{40}$/);
+  expect(readFileSync(join(dir, "a.txt"), "utf8")).toContain("<<<<<<<");
+  expect(git(dir, "ls-remote", origin)).toBe(after);
+  expect(after).not.toBe(pushed);
+});
+
+test("main hasn't moved: nothing changes", () => {
+  const { dir } = branchBehindMain();
+  writeFileSync(join(dir, "a.txt"), "mine\n");
+  git(dir, "commit", "--quiet", "--all", "--message", "mine");
+  const head = git(dir, "rev-parse", "HEAD");
+  expect(catchUp(dir)).toEqual({ merged: false });
+  expect(git(dir, "rev-parse", "HEAD")).toBe(head);
+  expect(git(dir, "status", "--porcelain")).toBe("");
 });

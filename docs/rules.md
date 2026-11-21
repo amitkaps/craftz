@@ -274,6 +274,7 @@ Every `main` takes changes the same way. Work happens in a pull request, `ci` pa
 - [`github-ci`]{#github-ci}: `.github/workflows/ci.yml` is [the reference's](../reference/.github/workflows/ci.yml), word for word, and there's no Dependabot. A step a repository adds goes in `verify`, so CI is the same everywhere. The fix writes it whole.
 - [`github-browser`]{#github-browser}: a repository with a `test:browser` script has [the reference's](../reference/.github/workflows/browser.yml) `.github/workflows/browser.yml`, word for word except its `on:` block. The fix keeps the repository's `on:`.
 - **Merge settings** are from [.github/settings.json](../reference/.github/settings.json): squash only, branches deleted once merged, auto-merge on and the topic `craftz`. `craftz settings` writes them and the ruleset, and `--check` reads them.
+- **`pr` merges `main` first.** Before `verify`, `pr` fetches `origin/main` and, when `main` has commits the branch lacks, merges it into the branch, so `verify` runs on the tree CI will run on. It merges and never rebases, and it never force-pushes, since the branch may be on GitHub already. A conflict stops it before `verify` and before any push, with the conflict left in the tree and its files named. Resolve them, commit and run `pnpm pr` again. This holds when the title is already open and `pr` adds to that pull request. A conflict found on GitHub costs another push, another `ci` run and a second `verify`.
 
 **Yours.** A workflow of your own, like a fuzz search, and `browser.yml`'s `on:` block.
 
