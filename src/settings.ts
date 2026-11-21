@@ -62,7 +62,7 @@ export function mergeDrift(repo: string): string[] {
  * branches deleted after merging, and auto-merge on. The topic `craftz` is added, which is how
  * the sweeps find the repository ([The repositories](survey.ts)).
  *
- * The branch rules and a package's labels are the fixes of `github-rules` and `releases-labels`,
+ * The branch rules and the labels are the fixes of `github-rules` and `releases-labels`,
  * in [rules.ts](rules.ts), written by `writeRuleset` and `writeLabels` below.
  */
 export function writeGitHub(repo: string): void {
@@ -81,15 +81,16 @@ export function writeGitHub(repo: string): void {
  * # Writing the labels
  *
  * The labels a package's release notes are grouped by, from
- * [.github/labels.json](../reference/.github/labels.json). Each is created, or updated when it exists, and
- * other labels are left alone.
+ * [.github/labels.json](../reference/.github/labels.json). Each is created, or updated when it exists.
+ * Any other label is deleted, like the ones GitHub adds to a new repository, since no notes read
+ * it. Any other repository is given none, so all of its labels go.
  *
  * A label that was renamed, like `improved` to `changed`, is renamed on GitHub rather than written
  * again beside the old one, so the pull requests that carry it keep it under its new name.
  */
-const RENAMED: Record<string, string> = { improved: "changed" };
+const RENAMED_LABELS: Record<string, string> = { improved: "changed" };
 
-export function writeLabels(repo: string): void {
+export function writeLabels(repo: string, wanted: readonly Label[]): void {
   const repoFlag = ["-R", `${OWNER}/${repo}`];
   const found = new Set(
     (
@@ -98,10 +99,15 @@ export function writeLabels(repo: string): void {
       }[]
     ).map((label) => label.name),
   );
-  for (const [old, name] of Object.entries(RENAMED)) {
-    if (found.has(old) && !found.has(name)) gh("label", "edit", old, ...repoFlag, "--name", name);
+  const names = new Set(wanted.map((label) => label.name));
+  for (const [old, name] of Object.entries(RENAMED_LABELS)) {
+    if (!names.has(name) || !found.has(old) || found.has(name)) continue;
+    gh("label", "edit", old, ...repoFlag, "--name", name);
+    found.delete(old);
+    found.add(name);
   }
-  for (const { name, color, description } of LABELS) {
+  for (const name of found) if (!names.has(name)) gh("label", "delete", name, ...repoFlag, "--yes");
+  for (const { name, color, description } of wanted) {
     gh(
       "label",
       "create",

@@ -127,7 +127,8 @@ export const branchRules = (repo: string) =>
 /** @prose
  * # Labels
  *
- * A package's labels, for `releases-labels`. GitHub shows a public repository's labels to anyone.
+ * A repository's labels, for `releases-labels`. GitHub shows a public repository's labels to
+ * anyone, and a private one's to its owner.
  */
 export async function repoLabels(repo: string): Promise<string[] | Error> {
   const found = (await github(`${repo}/labels?per_page=100`)) as { name: string }[] | Error;
