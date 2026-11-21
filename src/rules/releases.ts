@@ -6,9 +6,9 @@
  */
 import { rmSync } from "node:fs";
 import { join } from "node:path";
-import { here, read, readPkg, versionsIn } from "../reference.ts";
+import { readPkg, versionsIn } from "../reference.ts";
 import { PACKED } from "../ruled.ts";
-import { writeLabels } from "../settings.ts";
+import { LABELS, writeLabels } from "../settings.ts";
 import type { Rule } from "../rules.ts";
 import { rule, unruled } from "./tools.ts";
 import { RELEASE_FILES, drifted, owns, unread, writePkg } from "./shared.ts";
@@ -19,9 +19,7 @@ import { RELEASE_FILES, drifted, owns, unread, writePkg } from "./shared.ts";
  */
 const OLD_NOTES = ".github/release.yml";
 const releaseFiles = owns("releases-files", RELEASE_FILES, (pkg) => !pkg.private);
-const labelNames = (
-  JSON.parse(read(join(here, ".github", "labels.json"))) as { name: string }[]
-).map((label) => label.name);
+const labelNames = LABELS.map((label) => label.name);
 
 export const RELEASES_RULES: Rule[] = [
   {

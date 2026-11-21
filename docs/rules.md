@@ -306,16 +306,16 @@ There's no changelog file. Each pull request carries one label, which files it u
 
 - [`releases-labels`]{#releases-labels}: a package has the labels from [.github/labels.json](../reference/.github/labels.json). craftz's `align` creates them.
 
-| Label      | Heading            | For                                            |
-| ---------- | ------------------ | ---------------------------------------------- |
-| `breaking` | Breaking           | a change that needs users to update their code |
-| `added`    | Added              | a new feature or warning                       |
-| `fixed`    | Fixed              | a bug fix users would notice                   |
-| `improved` | Faster and smaller | the same behaviour, faster or smaller          |
-| `docs`     | Documentation      | documentation readers use                      |
-| `internal` | left out           | tests, tooling, site and lessons               |
+| Label | Heading | For |
+| --- | --- | --- |
+| `breaking` | Breaking | a change that needs users to update their code, including anything removed |
+| `added` | Added | a new command, option, rule or warning |
+| `fixed` | Fixed | a bug fix users would notice |
+| `changed` | Changed | an existing feature working differently: faster, smaller, clearer, or on a newer tool |
+| `docs` | Documentation | documentation readers use |
+| `internal` | left out | tests, tooling, CI, the site, lessons and plan updates |
 
-Write a user-facing title for the package's users. A site or a tool has no release notes, so its pull requests need no label.
+Pick the label by what it's for, not its name. Something new to learn is `added`, and the same thing working better is `changed`. Write a user-facing title for the package's users. A site or a tool has no release notes, so its pull requests need no label.
 
 ### Setting up a new package
 

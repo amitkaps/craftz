@@ -13,7 +13,9 @@
  *
  * A package's pull request takes one label, `--label <label>`, from the ones its
  * `.github/notes.yml` groups the notes by. Without one it stops before anything is committed,
- * as CI would stop after. A site or a tool has no release notes, so it takes none.
+ * as CI would stop after. With one, it prints what the label is for, from craftz's
+ * [labels](../reference/.github/labels.json), so whoever chose it reads the meaning and not only
+ * the name. A site or a tool has no release notes, so it takes none.
  *
  * It first deletes the other local branches that merged, as `craftz gone` does ([gone.ts](gone.ts)).
  *
@@ -42,6 +44,7 @@ import {
   updateBranch,
 } from "./github.ts";
 import { capture } from "./reference.ts";
+import { LABELS } from "./settings.ts";
 
 function fail(message: string): never {
   console.error(message);
@@ -138,6 +141,9 @@ export async function pr(given: Parsed): Promise<void> {
       known.length ? `${label} isn't one of ${known.join(", ")}.` : "Only a package takes a label.",
     );
   }
+  // The meaning, where it's chosen, since a label read by its name alone gets picked wrong.
+  const meaning = LABELS.find((each) => each.name === label)?.description;
+  if (meaning) console.log(`pr: ${label} is for ${meaning}`);
 
   // The branches that merged go first, apart from this one, which the steps below decide on.
   gone({ others: true });
