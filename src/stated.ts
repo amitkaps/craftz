@@ -7,7 +7,7 @@
  * check and its fix, under the same id.
  *
  * A command is stated the same way, in [usage](../docs/usage.md), with how it's run as the span,
- * like ``- [`craftz deps [dir]`]{#deps}: text``. The id is the command's name. `craftz help`
+ * like ``- [`craftz deps [<dir>]`]{#deps}: text``. The id is the command's name. `craftz help`
  * lists each one's span and text, and `craftz help <command>` prints the section it opens, so a
  * command's help is its usage, from the installed version. markz prints both, as it does for
  * every tool that states its commands this way.
