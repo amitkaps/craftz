@@ -1008,3 +1008,18 @@ test("a packed candidate's tarball is not drift in tools-craftz, and anything el
     delete process.env.CRAFTZ_PACKED;
   }
 });
+
+test("a package has exactly the release-notes labels, and any other repository none", () => {
+  const rule = RULES.find((r) => r.id === "releases-labels")!;
+  const names = ["breaking", "added", "fixed", "changed", "docs", "internal"];
+  const drift = (pkg: Pkg, labels: string[]) =>
+    rule.check({ pkg, files: {}, deps: {}, labels })?.drift ?? [];
+  expect(drift({}, names)).toEqual([]);
+  expect(drift({}, [...names.filter((n) => n !== "changed"), "improved", "bug"])).toEqual([
+    "no changed label",
+    "label improved, which no notes read",
+    "label bug, which no notes read",
+  ]);
+  expect(drift({ private: true }, [])).toEqual([]);
+  expect(drift({ private: true }, ["bug"])).toEqual(["label bug, which no notes read"]);
+});
