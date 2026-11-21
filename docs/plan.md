@@ -1,12 +1,12 @@
 # Plan
 
-craftz 0.26.0 is on npm, and its docs are live at [craftz.amitkaps.com](https://craftz.amitkaps.com). What each release changed is in its [notes on GitHub](https://github.com/amitkaps/craftz/releases). This plan says what's next, in order, and what works now. [The design](design.md) is the whole of what craftz becomes.
+craftz 0.27.0 is on npm, and its docs are live at [craftz.amitkaps.com](https://craftz.amitkaps.com). What each release changed is in its [notes on GitHub](https://github.com/amitkaps/craftz/releases). This plan says what's next, in order, and what works now. [The design](design.md) is the whole of what craftz becomes.
 
 This is a package's plan, of what craftz itself does next. Each repository moves to a release in its own pull request, which its own plan tracks, so this plan never lists those moves.
 
 ## Next, in order
 
-- [ ] **Release the new rule ids.** A hold under an old id still holds, and `craftz fix` renames it, so the notes need only the links. A link to `rules.md#versions-playwright` becomes `#tools-playwright`, and `#a-prose-site` becomes `#a-static-site`, which `docs-links` now finds.
+- [ ] **Generate the trial in the candidate run.** Release step 3 starts a repository with `pnpm new`, which writes inside the checkout and installs the released craftz, so its `verify` fails on what the release changes. `align --candidate` would write it in its own `craftz-` folder, with the candidate's tarball, run its `verify` and name the folder to read.
 - [ ] **Review the lint trial.** craftz, prose, markz and a private application added the same extra rules to `lint.rules` on 2026-11-21. After a few weeks, count each rule's disable comments and what it caught. Then move the rules that earned it into [`tools-lint`](rules.md#tools-lint), and drop the rest. What the trial found is in [the lessons](lessons.md#vite-and-typescript).
 
 The next step after that comes from [Later](#later), or from what the repositories need.

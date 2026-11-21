@@ -82,7 +82,7 @@ A private repository can follow these rules without being listed, since craftz i
 
 ### Starting one
 
-`new` starts a repository that already follows these rules, in the folder next to the current one.
+`new` starts a repository that already follows these rules, in a folder of the current one.
 
 ```sh
 new <name> --package --description "What it is, in a sentence." --push
@@ -103,7 +103,7 @@ craftz releases the way every package does, as [the rules](rules.md#releases) se
 
 1. Run `pnpm gone`, then `pnpm bump`. It moves the reference to the newest versions and opens craftz's pull request. It ends with a `Next` section, which says what to do with each thing left. `pnpm bump --local` shows the same run with nothing pushed. A release is what's on `main`, so wait for the pull request to merge.
 2. Run `pnpm align --candidate`. It packs this checkout and moves every repository to it, locally. What each one leaves by hand is what the release's notes say to do. [The lessons](lessons.md#what-every-repository-changes-for-goes-in-one-release) say why this comes first.
-3. Start a repository with `pnpm new`, and read what it writes against what the release is for. A rule that's missed is found by the first thing to use it.
+3. Start a repository with `pnpm new trial --package --site static --description "A trial."`, and read what it writes against what the release is for. It writes `trial/` inside this checkout, so remove it after. Its `verify` fails on what the release changes, since it installs the released craftz. A rule that's missed is found by the first thing to use it.
 4. Ask what the release changes for every repository, and grep the reference for links outside craftz. Anything that changes everywhere goes in before the release, so it doesn't need a second round.
 5. Update [plan.md](plan.md) so its summary names the version and no step is ticked. `craftz release` stops otherwise.
 6. Run `pnpm craftz release X.Y.Z --notes "…"`, with what the candidate run left by hand as the notes. It opens the pull request that bumps `version`.
