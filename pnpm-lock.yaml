@@ -176,11 +176,11 @@ importers:
   .:
     devDependencies:
       '@amitkaps/markz':
-        specifier: 0.9.0
-        version: 0.9.0
+        specifier: 0.10.0
+        version: 0.10.0
       '@amitkaps/prose':
-        specifier: 0.13.0
-        version: 0.13.0
+        specifier: 0.14.0
+        version: 0.14.0
       '@mdn/browser-compat-data':
         specifier: ^8.1.10
         version: 8.1.10
@@ -202,13 +202,13 @@ importers:
 
 packages:
 
-  '@amitkaps/markz@0.9.0':
-    resolution: {integrity: sha512-TIVbJHZrfF3ltPomIzdDbVkQaGz981AZvmNv4LKA32o7XEyi3B+bqb2qtHfHzuewORLyEAmYDkIFlI/UHh0PZQ==}
-    engines: {node: '>=26.12.1'}
+  '@amitkaps/markz@0.10.0':
+    resolution: {integrity: sha512-O7VG0qq1waAtaJO7rG1/G/FPsjJpmS0FQAiZzseDFXYzWqOd8FBrFyAGZsziqNRC7sFkTqhWL9oafvh+4O9sBw==}
+    engines: {node: '>=26.13.1'}
     hasBin: true
 
-  '@amitkaps/prose@0.13.0':
-    resolution: {integrity: sha512-5tg2bHPtIrc5RiGgA2z9a40ndZrVYKvH4I1CPiPU7mUmN4wGHs2uIgmSLCLssjclo6o2N9OXDatIngP6/2fZxQ==}
+  '@amitkaps/prose@0.14.0':
+    resolution: {integrity: sha512-5mK1ex3kAbAVvFywaWDnRQhsYWGUgUXF4obw6dFdTr5pHjrt1uzIKn0m+bSwjyK9njUS/eZIn1ZjnvCVFSkhxg==}
     engines: {node: '>=26.13.1'}
     hasBin: true
 
@@ -1184,9 +1184,9 @@ packages:
 
 snapshots:
 
-  '@amitkaps/markz@0.9.0': {}
+  '@amitkaps/markz@0.10.0': {}
 
-  '@amitkaps/prose@0.13.0': {}
+  '@amitkaps/prose@0.14.0': {}
 
   '@babel/code-frame@7.29.7':
     dependencies:
