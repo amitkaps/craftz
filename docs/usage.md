@@ -15,7 +15,7 @@ It needs Node 26.13.1 or newer, the Node it's built and tested on. The first fix
 
 ## Reading the commands
 
-- [`craftz help [command]`]{#help}: lists the commands, or prints what one does.
+- [`craftz help [<command>]`]{#help}: lists the commands, or prints what one does.
 
 ```sh
 pnpm craftz help       # every command, with how it's run
@@ -26,7 +26,7 @@ pnpm craftz help deps  # what one does, from this page
 
 ## Reading the rules
 
-- [`craftz rules [id|part]`]{#rules}: prints every rule, or one by its id, or one part with `Practice`, from the installed version.
+- [`craftz rules [<id>|<part>]`]{#rules}: prints every rule, or one by its id, or one part with `Practice`, from the installed version.
 
 ```sh
 pnpm craftz rules                 # every rule
@@ -38,19 +38,19 @@ pnpm craftz rules scripts         # one part, and Practice after it
 
 ## Looking at a page
 
-- [`craftz shot <url> <file.png> [--width <pixels>]`]{#shot}: saves a page as a PNG, with the repository's Playwright. It waits for a page that renders in the browser, up to 10 seconds for the network to go quiet and 5 for something drawn. With nothing drawn, it saves the PNG and fails, saying so. It doesn't scroll, so content a page renders only on scrolling stays out of the picture.
+- [`craftz shot <url> <file.png> [--width <pixels>]`]{#shot}: saves a page as a PNG, with the repository's Playwright.
 
 ```sh
 pnpm craftz shot http://localhost:3000 page.png
 pnpm craftz shot http://localhost:3000 phone.png --width 390
 ```
 
-An agent looks at a page it built with this, then reads the PNG. It uses the repository's `@playwright/test`, at [the reference's version](rules.md#tools-playwright), whose Chromium the cloud image ships. So it downloads nothing, and an agent has no reason to install a browser tool of its own. The page has to be running already. The file is full height, and 1280 pixels wide unless `--width` says otherwise.
+An agent looks at a page it built with this, then reads the PNG. It uses the repository's `@playwright/test`, at [the reference's version](rules.md#tools-playwright), whose Chromium the cloud image ships. So it downloads nothing, and an agent has no reason to install a browser tool of its own. The page has to be running already. It waits for a page that renders in the browser, up to 10 seconds for the network to go quiet and 5 for something drawn. With nothing drawn, it saves the PNG and fails, saying so. It doesn't scroll, so content a page renders only on scrolling stays out of the picture. The file is full height, and 1280 pixels wide unless `--width` says otherwise.
 
 ## Checking one repository
 
-- [`craftz check [--all] [dir]`]{#check}: runs every rule on a folder, the current one by default.
-- [`craftz fix [dir]`]{#fix}: writes every fix that can be automated, then checks what's left.
+- [`craftz check [--all] [<dir>]`]{#check}: runs every rule on a folder, the current one by default.
+- [`craftz fix [<dir>]`]{#fix}: writes every fix that can be automated, then checks what's left.
 
 ```sh
 pnpm craftz check          # this folder
@@ -108,19 +108,27 @@ pnpm craftz deploy
 
 - [`craftz pr ("<title>" | --title "<title>") [--label <label>] [--body <text>] [--wait]`]{#pr}: opens a pull request that merges itself once CI passes.
 - [`craftz gone`]{#gone}: merges the branch's pull request if its checks passed, deletes the local branches that merged, ends on `main`, pulled, and writes `outline.md`.
-- [`craftz clear [--list] [--all]`]{#clear}: removes the temporary folders craftz made that a run has left, and says what clears, what stays and why.
 
 ```sh
 pnpm pr "<title>" --label added   # commit, verify, push, and merge once CI passes
 pnpm pr "<title>" --wait          # and wait for the merge, then switch to main
 pnpm gone                         # delete the merged branches, and pull main
-pnpm craftz clear --list          # what clear would remove, and why
-pnpm craftz clear --all           # and a kept folder of any age
 pnpm pr -- "-a title with a dash" # after --, everything is the title
 pnpm pr --help                    # what pr does, as every command's --help and -h do
 ```
 
-`craftz clear` removes a folder in the system's temporary one that starts with `craftz-`, when the run that made it has gone, or when it was kept and is an hour old, or at once with `--all`. It leaves a folder whose run is going, and any other name. It prints the folders that clear and the folders that stay, each with why, like a kept folder that clears in so many minutes, and `--list` prints the same without removing anything. `gone` runs it first, so it needs no one to remember it, and it prints a line only for a folder it removed. A repository's `pr` and `gone` scripts run `craftz pr` and `craftz gone`, and every change reaches `main` this way. A package's pull request takes one label for the release notes, and stops without one before anything is committed. A site or a tool takes none. The title is the argument or `--title`, and a title with no letters or digits stops before anything is committed. Every command prints its section for `--help` or `-h`. The bare word `help` is no request for help, as in git, so `pr` refuses it as a title. Without `--wait`, start the next change while CI runs, and run `pr` again with its title. If the last pull request hasn't merged yet, `pr` waits for it, then starts the new one from `main`. A title that's already open, like a release's `vX.Y.Z`, adds the change to that pull request, from any branch. End a session with `--wait`, so it ends on `main` with `outline.md` written, which the next session's `AGENTS.md` imports. Both `gone` and `--wait` write it only where prose is installed. `pr` first deletes the local branches that merged. A branch merged when its branch on GitHub is gone, when its last commit is a merged pull request's, or when it's on `main`.
+A repository's `pr` and `gone` scripts run `craftz pr` and `craftz gone`, and every change reaches `main` this way. A package's pull request takes one label for the release notes, and stops without one before anything is committed. A site or a tool takes none. The title is the argument or `--title`, and a title with no letters or digits stops before anything is committed. Every command prints its section for `--help` or `-h`. The bare word `help` is no request for help, as in git, so `pr` refuses it as a title. Without `--wait`, start the next change while CI runs, and run `pr` again with its title. If the last pull request hasn't merged yet, `pr` waits for it, then starts the new one from `main`. A title that's already open, like a release's `vX.Y.Z`, adds the change to that pull request, from any branch. End a session with `--wait`, so it ends on `main` with `outline.md` written, which the next session's `AGENTS.md` imports. Both `gone` and `--wait` write it only where prose is installed. `pr` first deletes the local branches that merged. A branch merged when its branch on GitHub is gone, when its last commit is a merged pull request's, or when it's on `main`.
+
+## Clearing temporary folders
+
+- [`craftz clear [--list] [--all]`]{#clear}: removes the temporary folders craftz made that a run has left, and says what clears, what stays and why.
+
+```sh
+pnpm craftz clear --list   # what clear would remove, and why
+pnpm craftz clear --all    # and a kept folder of any age
+```
+
+`craftz clear` removes a folder in the system's temporary one that starts with `craftz-`. It goes when the run that made it has gone, when it was kept and is an hour old, or at once with `--all`. It leaves a folder whose run is going, and any other name. It prints the folders that clear and the folders that stay, each with why, like a kept folder that clears in so many minutes, and `--list` prints the same without removing anything. `gone` runs it first, so it needs no one to remember it, and it prints a line only for a folder it removed.
 
 ## Releasing a package
 
@@ -134,7 +142,7 @@ pnpm craftz release 0.5.0 --notes "What this release is about."
 
 ## Writing the settings
 
-- [`craftz settings [dir] [--check] [--yes]`]{#settings}: writes the settings on GitHub and Cloudflare that drifted, then reads them back.
+- [`craftz settings [<dir>] [--check] [--yes]`]{#settings}: writes the settings on GitHub and Cloudflare that drifted, then reads them back.
 
 ```sh
 pnpm craftz settings --check  # read them, and write nothing
@@ -147,7 +155,7 @@ It needs `gh` logged in as the owner, and `cf` for a site's Worker. Classic bran
 
 ## What's live
 
-- [`craftz status [dir] [--log] [--notes] [--timing]`]{#status}: reads what's live: CI, pull requests, npm, the release, and a site's build and addresses.
+- [`craftz status [<dir>] [--log] [--notes] [--timing]`]{#status}: reads what's live: CI, pull requests, npm, the release, and a site's build and addresses.
 
 ```sh
 pnpm craftz status          # CI, pull requests, npm, the release, and the site's build, addresses and audience
@@ -162,7 +170,7 @@ Use it after a merge or a release, to see that CI, the deploy and npm went throu
 
 ## What's installed
 
-- [`craftz deps [dir]`]{#deps}: says what the install holds: packages, size, and which direct dependency brings them.
+- [`craftz deps [<dir>]`]{#deps}: says what the install holds: packages, size, and which direct dependency brings them.
 
 ```sh
 pnpm craftz deps  # packages, size, and which direct dependency brings them
