@@ -121,17 +121,15 @@ Nothing about oxc goes in VS Code's user settings. A path to oxfmt there, or a c
 
 ### Browsers
 
-Code shipped to browsers works in the browsers people use, with a floor for each engine rather than a date. Vite's default, Baseline Widely Available, waits 30 months for every browser and is frozen at each Vite major. But only one engine holds people back that long.
+Code shipped to browsers works in the browsers people use, with a floor for each engine rather than a date. Vite's default waits 30 months for every browser, and only one engine holds people back that long.
 
-- **Blink**, which is Chrome, Edge, Opera, Samsung Internet and Android's WebView: the oldest Chromium released in the last six months. A count of versions shrinks each time Chrome and Firefox speed up, and a window of time doesn't. Six months is about six majors, a margin for a Chrome that lags. Samsung Internet isn't a reason to go further back, since it runs an older Chromium and MDN's data for it arrives late.
-- **Gecko**, which is Firefox: the oldest ESR Mozilla supports. It's the oldest Firefox that still gets fixes.
-- **WebKit**, which is Safari and every browser on iOS, in-app browsers too: the newest release of the major two before the current one. An iPhone that a new iOS drops stays on its last major and keeps getting point releases, so that's the oldest Safari in use. Chrome on iOS and an app's WebView run this engine too, so it covers more people than Safari's own share.
+- **Blink** (Chrome, Edge, Opera, Samsung Internet, Android's WebView): the oldest Chromium released in the last six months. A window of time holds as releases speed up, and a count of versions doesn't.
+- **Gecko** (Firefox): the oldest ESR Mozilla supports, the oldest Firefox that still gets fixes.
+- **WebKit** (Safari, and every browser on iOS): the newest release of the major two before the current one. An iPhone that a new iOS drops stays on its last major.
 
-- [`tools-browsers`]{#tools-browsers}: a build that bundles code for browsers targets these browsers. A site Vite bundles, static or an app, sets them in `build.target`. A package packs for Node, as `platform: "node"`, and sets no `pack.target`. One that runs in browsers too packs for `"neutral"`, and its `pack.target` is the browsers and the Node its `engines` names. Its `pack.deps.neverBundle` holds `/^node:/`, since Rolldown doesn't know Node's own modules on `"neutral"`, and warns on each one it's given. The fix writes either in, and keeps a package that targets a browser on `"neutral"`.
+- [`tools-browsers`]{#tools-browsers}: a build that bundles code for browsers targets these floors. A site Vite bundles sets them in `build.target`. A package packs for Node, as `platform: "node"`, with no `pack.target`. One that also runs in browsers packs for `"neutral"`, with a `pack.target` of the browsers and the Node its `engines` names, and `/^node:/` in `pack.deps.neverBundle`, since Rolldown warns on each Node module there. The fix writes either in.
 
-The list is worked out from MDN's browser-compat-data, by [src/browsers.ts](../src/browsers.ts), as of the date of the data. The package is one of craftz's own dependencies, so a craftz release moves it, and the floors move with it, with `craftz check` listing what then needs the new list.
-
-A target only rewrites syntax, like CSS nesting or a regular expression's flags. It adds no polyfills, so it doesn't stop code that calls an API too new for a floor. Something newer than a floor, like `::highlight()` on Firefox's ESR, is fine where it fails cleanly and the page still works. The floor is for what has to work. A prose site's page scripts and styles aren't built by Vite, so the target doesn't reach them.
+[src/browsers.ts](../src/browsers.ts) works the floors out from MDN's browser-compat-data, which a craftz release moves. A target only rewrites syntax and adds no polyfills, so code that calls an API too new for a floor still breaks, unless it fails cleanly. A prose site's page scripts and styles aren't built by Vite, so the target doesn't reach them.
 
 ### pnpm and Node
 
@@ -171,15 +169,11 @@ A beta's tags don't say which build goes with which, so it's moved by hand. `ali
 
 A repository's own libraries, like svelte or micromark, are its own to choose. `align` moves them within their major version, and lists a new major in its pull request for review.
 
-`pnpm-workspace.yaml` is a settings file, not a workspace. Every repository has the same two settings: the cooldown and `allowBuilds`. `allowBuilds` lets esbuild and workerd run their install scripts, where wrangler or cf is installed, and does nothing where neither is.
-
 - [`tools-workspace`]{#tools-workspace}: `pnpm-workspace.yaml` is [the reference's](../reference/pnpm-workspace.yaml), word for word. The fix writes it whole. A setting a repository wants for itself is a change to these rules.
 
-A library can ship a release its tooling can't use, and `pnpm update` takes it all the same. The repository then tells pnpm to leave it, which `outdated` and `update` both respect, and `align` too. Its name goes under `updateConfig.ignoreDependencies` in `pnpm-workspace.yaml`, with the reason in the comment above it. The reason says when to look again, like a release that fixes what broke. That block is the one part of the file that is the repository's own, so the comparison above leaves it out, and the fix puts it back when it writes the file.
+- [`tools-ignored`]{#tools-ignored}: a library whose latest release its tooling can't use is left where it is, by name under `updateConfig.ignoreDependencies`, which `update`, `outdated` and `align` respect. It's a dependency of the repository, at an exact version, since a range lets a fresh install take the release that was left. The comment above it gives the reason and when to look again. This block is the repository's own, so `tools-workspace` leaves it out and the fix keeps it. A tool the reference names is held by its rule in [the holds](#holds-exceptions), never here, since `craftz upgrade` moves it and not `pnpm update`.
 
-- [`tools-ignored`]{#tools-ignored}: a dependency that `ignoreDependencies` names is a dependency of the repository, has a reason in the comment above it, and is at an exact version. A range lets a fresh install take the release that was left. A tool the reference names is held by its rule in [the holds](#holds-exceptions), never here, since `craftz upgrade` moves it and not `pnpm update`.
-
-- **The cooldown.** pnpm's one-day wait on a new version is kept, with only `@amitkaps/*` excluded. A hijacked release can be pulled before it's installed, and our own skip the wait, since each reaches npm only after the owner approves it. The wait guards the libraries and nested packages, hundreds in each lockfile, that `align` moves without review. The shared tools are few, and `pnpm bump` moves them when they're wanted, so a day costs them little. A shorter wait, and leaving the shared tools out of it, are ruled out. Any number of hours is as arbitrary as pnpm's, and the shared tools do the most when they run.
+- **The cooldown.** pnpm's one-day wait on a new version is kept, and only `@amitkaps/*` skips it. The reason is in [pnpm-workspace.yaml](../reference/pnpm-workspace.yaml). A shorter wait, or none for the shared tools, is ruled out, since any number of hours is as arbitrary as pnpm's.
 
 ### Holds (Exceptions)
 
@@ -195,9 +189,7 @@ When a tool a repository depends on keeps it from a rule, the repository holds t
 
 Only a rule a tool can block can be held: a tool's version, other than craftz's own, `cloudflare-config` and `tools-tsconfig`. A hold on any other rule fails `craftz check`.
 
-A hold stops craftz's rule. A library no rule names, like a charting library whose latest release broke the types, is ignored in [pnpm's settings](#tools-ignored) instead, since only `pnpm update` moves it.
-
-A hold is for what a tool can't do, never for a preference. The point of one set of rules is that a choice like Vite+ is made once and paid for once, not argued again in each repository. A hold whose check stops drifting fails `craftz check` until it's removed, so none outlives its reason.
+A hold is for what a tool can't do, never for a preference, since a choice like Vite+ is made once. A hold whose check stops drifting fails `craftz check` until it's removed. A library no rule names is [ignored](#tools-ignored) instead.
 
 ## Scripts
 
