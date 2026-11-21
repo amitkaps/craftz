@@ -36,27 +36,15 @@ How the code is written, so it stays one thing and does only what's needed.
 
 #### Don't repeat yourself
 
-A rule, a value, a piece of work or a step done in two places drifts in one, or gets skipped in one. So each is written once, in text, in code and in what's run. craftz is this principle across repositories.
-
-- **In docs,** the rest link to it. A rule or a command that code acts on is a list item with an id, read with markz's reader.
-- **In code,** the second place that does the same work calls the first, like making a temporary folder or running a rule. Share it when the second copy appears, not before.
-- **In what's run,** a script an agent writes again, or a step a doc asks for, becomes a command in the repository. It goes into the command that's already run at that moment, like `pr` running `gone` and `verify`, since a step nobody is made to notice gets skipped. A command prints what agents would otherwise work out from its output, and never waits on input an agent can't give.
-
-Where it can, a test holds the one place to its users, as craftz's rules, prose's codes and pagez's errors are held by id.
+A rule, a value, a piece of work or a step written in two places drifted in one, or got skipped in one. So write each once, in docs, in code and in what's run, and point the rest at it. In code, share it when the second copy appears, not before. A step a doc asks for, or a script an agent writes again, becomes a command, run inside the one already run at that moment, like `pr` running `verify`. Where it can, a test holds the one place to its users by id. craftz is this principle across repositories.
 
 #### One name, one meaning
 
 A name, a flag or a type that meant two things broke on the case where they differed, and two names for one thing read as two things. So each concept has one name, in code and in docs alike, and each name means one concept. Name a thing for what it does, not where it began, so an error, a warning code or a flag reads right without its docs. When a name starts to mean a second thing, split it, rather than teaching its readers the cases.
 
-#### Make the owner a type
+#### Make wrong code fail to compile
 
-A value that two functions could make drifted, and a rule that named its owner caught the copy only after it was written. So where a value has one maker, give it a type that only that maker returns. A `Time` that only `toTime` returns turns a stray `new Date(x)` into a compile error. A literal union or a discriminated union does the same for a fixed set of kinds, at no cost when the code runs.
-
-- **Pass the whole thing before branding it.** A function that took a field's name lost the field's label, so a chart's title and reasons dropped it. Taking the field itself fixed that in a private application, with no brand.
-- **A brand fits a value that isn't text.** Names that arrive as spec text can't be branded, so each gets one constant and a rule.
-- **A brand holds while the maker has the only cast.** `as Time` passes it, so another `as Time` in the code is a bug, and `no-unsafe-type-assertion` finds the rest. No lint rule yet allows an assertion only inside the function that returns the brand.
-- **Parse once where data comes in.** What storage, a URL or an upload hands over goes through a schema that returns the branded type, and the code after it trusts the type. Whether the schema is ArkType or Zod is a repository's choice.
-- **Ban an import in the lint.** A repository sets `no-restricted-imports` in its own `lint.rules`, with a message, rather than a test that reads source.
+A value that two functions could make drifted, and a rule naming its one maker caught the copy only after it was written. So where a value has one maker, give it a type only that maker returns, like a `Time` that only `toTime` makes, and give a fixed set of kinds a union. Parse data where it comes in, from storage, a URL or an upload, into that type, and trust the type after. The maker holds the only `as` cast, and `no-unsafe-type-assertion` finds the rest. Before branding a value, pass the whole thing rather than one of its fields.
 
 #### Parse, don't match text
 
@@ -104,7 +92,7 @@ lint: {
 },
 ```
 
-**Yours.** Your own lint rules, categories, plugins and ignore patterns, beside the shared ones. A block the config works out, like `lint: shared`, is set by hand.
+**Yours.** Your own lint rules, categories, plugins and ignore patterns, beside the shared ones. Ban an import with `no-restricted-imports` and a message, rather than a test that reads source. A block the config works out, like `lint: shared`, is set by hand.
 
 ### The editor
 

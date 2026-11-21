@@ -26,6 +26,7 @@ A change to how things are done starts here, in [the rules](rules.md) and in [th
 
 - **A part** opens with a sentence or two on what it covers and why it's shared. Then come its rules. It ends with **Yours.**, what a repository decides for itself, and **Ruled out.**, each idea with its reason and when to look again.
 - **A rule** is a list item that opens with its id. Its first sentence is the instruction, in the present tense and starting lowercase. It names the values it asks for, rather than pointing at a file that holds them. One or two sentences give the reason or the exception. "The fix …" ends it, when there is one.
+- **A principle** in Practice is one paragraph of about 100 words or fewer, with no bullets. It opens with what went wrong, in the past tense. Then comes "So" and the instruction, then how far it goes or where it stops. An example goes in only where the instruction is abstract.
 - **A rule with no check** is a list item that opens with a bold label instead of an id, and reads the same way.
 - **Elsewhere, not here.** How craftz checks or fixes a rule goes in that code's `@prose` or in this page. Why the design is this way, at length, goes in [the design](design.md). What a reference file sets is in that file's `@prose`, and what a command does is in its `--help`. How a rule came about is in its pull request.
 
