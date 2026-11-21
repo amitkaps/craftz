@@ -119,11 +119,11 @@ A target rewrites syntax and adds no polyfills. So check an API newer than a flo
 
 ```json
 "devEngines": {
-  "packageManager": { "name": "pnpm", "version": "12.19.0", "onFail": "download" },
+  "packageManager": { "name": "pnpm", "version": "12.21.0", "onFail": "download" },
   "runtime": { "name": "node", "version": ">=26.13.1", "onFail": "error" }
 },
 "engines": { "node": ">=26.13.1" },
-"packageManager": "pnpm@12.19.0"
+"packageManager": "pnpm@12.21.0"
 ```
 
 - [`tools-pnpm`]{#tools-pnpm}: pnpm is pinned exactly, in `devEngines` with `onFail: download` and in `packageManager`, which CI reads. Any pnpm installed globally then runs the pinned one.

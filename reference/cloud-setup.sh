@@ -7,7 +7,7 @@
 
 # The versions used when the reference can't be fetched. A test holds them to the reference's.
 NODE_VERSION="26.13.1"
-PNPM_VERSION="12.19.0"
+PNPM_VERSION="12.21.0"
 REFERENCE="${CRAFTZ_REFERENCE:-https://raw.githubusercontent.com/amitkaps/craftz/main/reference/package.json}"
 
 # The reference's Node floor and pnpm, read with the Node the environment starts on.
