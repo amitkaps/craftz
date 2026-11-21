@@ -2,11 +2,11 @@
 
 How every repository builds, checks, deploys and releases, and the practice its code follows. Each rule is an instruction with its reason. `craftz check` names each rule a repository has drifted from by its id, and `craftz rules <id>` prints that rule.
 
-- **Yours.** Your code, your own libraries, and your own scripts, lint rules, workflows and docs. Each part ends by saying what's yours in it.
+- **Yours.** Your code, your own libraries, and your own scripts, lint rules, workflows and docs. A part's **Yours.** line says what's yours in it.
 - **craftz's.** Whatever a rule names. A rule changes in craftz, never in one repository, so every repository moves together. `craftz fix` writes what can be automated.
-- **When a tool blocks a rule,** hold it in `package.json` with the reason, as [Holds](#holds-exceptions) says.
+- **When a tool blocks a rule,** hold it in `package.json` with the reason, as [Holds](#holds) says.
 
-Where a version appears here, the real value is in [the reference](../reference/README.md), and `craftz check` reads it from there.
+**The reference** is craftz's copy of each shared file, in `node_modules/@amitkaps/craftz/reference/` and [on the site](../reference/README.md). A rule that says "the reference's" means the value there, which `craftz check` reads.
 
 ## Practice
 
@@ -44,7 +44,7 @@ A name, a flag or a type that meant two things broke on the case where they diff
 
 #### Make wrong code fail to compile
 
-A value that two functions could make drifted, and a rule naming its one maker caught the copy only after it was written. So where a value has one maker, give it a type only that maker returns, like a `Time` that only `toTime` makes, and give a fixed set of kinds a union. Parse data where it comes in, from storage, a URL or an upload, into that type, and trust the type after. The maker holds the only `as` cast, and `no-unsafe-type-assertion` finds the rest. Before branding a value, pass the whole thing rather than one of its fields.
+A value that two functions could make drifted, and a rule naming its one maker caught the copy only after it was written. So where a value has one maker, give it a type only that maker returns, like a `Time` that only `toTime` makes, and give a fixed set of kinds a union. Parse data where it comes in, from storage, a URL or an upload, into that type, and trust the type after. The maker holds the only `as` cast, and `typescript/no-unsafe-type-assertion` in a repository's own `lint.rules` finds the rest. Before branding a value, pass the whole thing rather than one of its fields.
 
 #### Parse, don't match text
 
@@ -68,7 +68,7 @@ A change that only a person could check was made slowly, and broke what nobody l
 
 #### Silence is the failure
 
-A warning nobody has to read is never read, and a catch that takes every error hides the one that mattered. So a check fails where it can't be sure, and a tool warns only where a rewrite would help. A run says everything it found and what it didn't check. A check that can't fail isn't a check, so fix it or remove it. Catch only the error you expect, beside the call that throws it. A test that fails and then passes on a re-run is a bug, so its cause is fixed. A re-run or a retry that turns it green catches the error that mattered.
+A warning nobody has to read is never read, and a catch that takes every error hides the one that mattered. So a check fails where it can't be sure, and a tool warns only where a rewrite would help. A run says everything it found and what it didn't check. A check that can't fail isn't a check, so fix it or remove it. Catch only the error you expect, beside the call that throws it. A test that fails and then passes on a re-run is a bug, so its cause is fixed. A re-run or a retry that turns it green hides the error that mattered.
 
 ## Tools
 
@@ -79,18 +79,19 @@ Every repository runs one toolchain, Vite+ on pnpm and Node, at the same version
 One `vite.config.ts`, run through `vp`, covers dev, build, format, lint, test and a package's `vp pack`. `defineConfig` comes from `vite-plus`. The `fmt` and `lint` blocks are written out in each config, so a repository's format and lint show in its own files.
 
 - [`tools-fmt`]{#tools-fmt}: `fmt` is oxfmt's defaults with `proseWrap: "never"`, so a changed Markdown paragraph shows as one line in a diff. Wrap `@prose` comments by hand at 100 characters, since no oxfmt setting wraps them.
-- [`tools-lint`]{#tools-lint}: `lint` is type-aware and type-checks, with `typescript`, `unicorn` and `import` among its `plugins`, so `check` covers types with no `tsc`. An empty block fails, so an empty `catch` says why in a comment inside it. The fix adds a missing plugin.
+- [`tools-lint`]{#tools-lint}: `lint` is type-aware and type-checks, with `typescript`, `unicorn` and `import` among its `plugins`, so `check` covers types with no `tsc`. `no-empty` fails an empty block, so an empty `catch` says why in a comment inside it. The fix adds a missing plugin.
+
+  ```ts
+  lint: {
+    plugins: ["typescript", "unicorn", "import"],
+    categories: { correctness: "error" },
+    options: { typeAware: true, typeCheck: true },
+    rules: { "no-empty": "error" },
+  },
+  ```
+
 - [`tools-tsconfig`]{#tools-tsconfig}: every `tsconfig.json` writes out [the reference's](../reference/tsconfig.json) compiler options, extends nothing, and sets its own `include`. The options are strict, check JavaScript as TypeScript, and keep to `erasableSyntaxOnly`, so Node runs a `.ts` script with no build.
 - [`tools-playwright-config`]{#tools-playwright-config}: a `playwright.config.ts` sets `retries: 0`, `use: { trace: "retain-on-failure" }` and `forbidOnly: true`. A flaky test then fails and gets fixed, each failure keeps its trace, and a stray `test.only` fails on a laptop too. The fix writes each value.
-
-```ts
-lint: {
-  plugins: ["typescript", "unicorn", "import"],
-  categories: { correctness: "error" },
-  options: { typeAware: true, typeCheck: true },
-  rules: { "no-empty": "error" },
-},
-```
 
 **Yours.** Your own lint rules, categories, plugins and ignore patterns, beside the shared ones. Ban an import with `no-restricted-imports` and a message, rather than a test that reads source. A block the config works out, like `lint: shared`, is set by hand.
 
@@ -138,8 +139,8 @@ The shared tools are at the reference's exact versions, so a craftz release is w
 - [`tools-prose`]{#tools-prose}: `@amitkaps/prose` is an exact version, at least the reference's, where a repository has it.
 - [`tools-markz`]{#tools-markz}: `@amitkaps/markz` is an exact version, at least the reference's, where a repository has it.
 - [`tools-craftz`]{#tools-craftz}: `@amitkaps/craftz` is at craftz's own version, exactly, so a repository is checked against the rules it names.
-- [`tools-cf`]{#tools-cf}: `cf` is the reference's, where a repository has it. craftz runs it to write the Workers' settings, and it replaces wrangler once it deploys a site that needs a server.
-- [`tools-beta`]{#tools-beta}: only `cf` is on a pre-release, pinned to an exact build, and so is a library a repository [ignores](#tools-ignored), since an update must not move a pre-release.
+- [`tools-cf`]{#tools-cf}: `cf`, Cloudflare's new command line, is the reference's, where a repository has it. craftz runs it to write the Workers' settings, and it replaces wrangler once it deploys a site that needs a server.
+- [`tools-beta`]{#tools-beta}: keep a pre-release pinned to an exact build, since an update must not move it. Only `cf` may be on one, and a library a repository [ignores](#tools-ignored).
 - [`tools-wrangler`]{#tools-wrangler}: `wrangler` is the reference's, while a repository is still on it.
 - [`tools-publint`]{#tools-publint}: `publint` is the reference's, where a package has it.
 - [`tools-playwright`]{#tools-playwright}: `@playwright/test` is the reference's, where a repository has it. It's the version whose Chromium the Claude Code cloud image ships, so a session screenshots with no download.
@@ -149,13 +150,13 @@ The shared tools are at the reference's exact versions, so a craftz release is w
 ### pnpm's settings
 
 - [`tools-workspace`]{#tools-workspace}: `pnpm-workspace.yaml` is [the reference's](../reference/pnpm-workspace.yaml), word for word, apart from `ignoreDependencies`. It keeps pnpm's one-day cooldown, which `@amitkaps/*` skips, and lets esbuild and workerd build. Its comments say why. The fix writes it whole.
-- [`tools-ignored`]{#tools-ignored}: a library whose latest release your tooling can't use goes under `updateConfig.ignoreDependencies`, so `update`, `outdated` and `align` leave it. It's a dependency at an exact version, since a range lets a fresh install take the release that was left. The comment above it says why, and when to look again.
+- [`tools-ignored`]{#tools-ignored}: when a library's latest release breaks your build, pin it back to the last release that works, as an exact version. Then name it under `updateConfig.ignoreDependencies` in `pnpm-workspace.yaml`, so `update`, `outdated` and `align` leave it. The comment above it says why, and when to look again.
 
-**Yours.** The `ignoreDependencies` block. A shared tool is held, never ignored, since `craftz upgrade` moves it and not `pnpm update`.
+**Yours.** The `ignoreDependencies` block in `pnpm-workspace.yaml`. A shared tool is held, never ignored, since `craftz upgrade` moves it and not `pnpm update`.
 
 **Ruled out.** A shorter cooldown, or none for the shared tools, since any number of hours is as arbitrary as pnpm's.
 
-### Holds (Exceptions)
+### Holds
 
 When a tool keeps a repository from a rule, hold the rule in `package.json`, with the reason and when to look again. `craftz check` then prints its drift as a warning and passes.
 
@@ -167,7 +168,9 @@ When a tool keeps a repository from a rule, hold the rule in `package.json`, wit
 }
 ```
 
-Only rules a tool can block can be held. Those are `cloudflare-config`, `tools-tsconfig`, and each shared tool's version except craftz's own. A hold on any other rule fails `craftz check`.
+Only rules a tool can block can be held. A hold on any other rule fails `craftz check`.
+
+- **Holdable:** `tools-node`, `tools-pnpm`, `tools-types-node`, `tools-vite-plus`, `tools-typescript`, `tools-prose`, `tools-markz`, `tools-cf`, `tools-wrangler`, `tools-publint`, `tools-playwright`, `tools-tsconfig` and `cloudflare-config`.
 
 Hold for what a tool can't do, never for a preference. A hold whose rule stops drifting fails `check` until it's removed. A library no rule names is [ignored](#tools-ignored) instead.
 
@@ -196,7 +199,7 @@ Every repository uses these names, so a script means the same everywhere. Run th
 - [`scripts-check`]{#scripts-check}: on Vite+, `check` runs `vp check`, then `pnpm prose check` and `pnpm craftz check`, and only reads. A framework adds steps around `vp check`, like SvelteKit's `svelte-kit sync` before and `svelte-check` after. The fix adds a missing step at the end.
 - [`scripts-fix`]{#scripts-fix}: on Vite+, `fix` is exactly `vp check --fix`.
 - [`scripts-one-checker`]{#scripts-one-checker}: on Vite+, there are no `lint` or `fmt` scripts, and a framework adds no second formatter or linter. `check` and `fix` cover both.
-- [`scripts-verify`]{#scripts-verify}: on Vite+, `verify` is exactly `vp run --log grouped all`. `all` is a task in `vite.config.ts` that depends on `check`, and on `tested`, `built` and `site` where there are any, and they run side by side. Only `tested` and `built` are cached. The fix writes the tasks and their caches, and names each step it can't move.
+- [`scripts-verify`]{#scripts-verify}: on Vite+, `verify` is exactly `vp run --log grouped all`. `all` is a task in `vite.config.ts` that depends on `check`, and on `tested`, `built` and `site` where there are any, and they run side by side. Only `tested` and `built` are cached. To add a step, name its script in `all`'s `dependsOn`. A step that needs another first is a task named for its place, since a task can't share a script's name, with `dependsOn: ["built"]` or `["tested"]`. The fix writes the shared tasks and their caches.
 - [`scripts-prose`]{#scripts-prose}: `prose` is exactly `prose`, so `pnpm prose build` works, and `outline` is exactly `prose outline`.
 - [`scripts-preview`]{#scripts-preview}: a site's `preview` is the reference's, and a SvelteKit site's starts with [`scripts-sveltekit`](#scripts-sveltekit)'s variable. A package has none.
 - [`scripts-pr`]{#scripts-pr}: `pr` is `craftz pr`, with no `scripts/pr.ts`. `pnpm pr --help` says what it does.
@@ -208,7 +211,7 @@ Every repository uses these names, so a script means the same everywhere. Run th
 
 `verify` is what CI and Cloudflare run, so the two can't disagree, and `ship` never builds. A lifecycle script, like `prepare` or `prepack`, does only what another step needs first. A package's `prepack` is `pnpm run build`, so a tarball never ships a stale `dist/`.
 
-**Yours.** Any other script, like a package's `size` or `fuzz`. A step that needs another first, like a size budget after `build`, is a task of your own with its own `dependsOn`. So is a test that measures time, with `cache: false`.
+**Yours.** Any other script, like a package's `size` or `fuzz`, and any task you add to `all`. A test that measures time is a task with `cache: false`.
 
 ### A run removes what it writes
 
@@ -257,11 +260,11 @@ A site with an `index.html` serves `dist`, and a SvelteKit app with the static a
 
 ### An app
 
-A site that needs code on the server starts from base, SvelteKit with `adapter-cloudflare`. It holds `cloudflare-config` and deploys with `wrangler.toml`, since `craftz deploy` uploads only files. Its `check` runs `wrangler types`.
+A site that needs code on the server starts from base, the SvelteKit starter repository, with `adapter-cloudflare`. It holds `cloudflare-config` and deploys with `wrangler.toml`, since `craftz deploy` uploads only files. Its `check` runs `wrangler types`.
 
 ### Internal sites
 
-An internal site is one that Cloudflare Access covers, in a public repository or a private one. Put an Access application on its domain, with a policy that lets in only who it's for, and say so in the config's `@prose`. `craftz status` says whether a site is public or internal, and marks an application with no policy.
+An internal site is one that Cloudflare Access covers, in a public repository or a private one. Put an Access application on its domain, in Cloudflare's Zero Trust dashboard, with a policy that lets in only who it's for. The repository's only change is a sentence in the config's `@prose` saying so. `craftz status` says whether a site is public or internal, and marks an application with no policy.
 
 ## GitHub
 
@@ -340,7 +343,7 @@ Explanations live in `@prose` comments, beside what they explain, and docs that 
 
 - [`docs-plan`]{#docs-plan}: the plan reads as [prose's current plan](https://prose.amitkaps.com/docs/usage.md#current-plan) says, and each step in its Next is a task, `- [ ]`. `craftz release` stops while a step is ticked, or the summary doesn't name the version, so the plan is current before each release. The fix turns a plain step into a task.
 - [`docs-lessons`]{#docs-lessons}: a link from `docs/lessons.md` into these rules names an id or a heading they have. Each group of lessons links the principle in [Practice](#practice) it shows.
-- **A lesson** is for what the next change would get wrong without it, in a few sentences. Put it under the principle it shows. If its group already says it, add the case there, and give the principle a check, a command or a line in `AGENTS.md`.
+- **A lesson** is for what the next change would get wrong without it, in a few sentences. Put it under the principle it shows. If its group already says it, add the case there, and give the principle a check, a command or a line in `AGENTS.md`. Where that's craftz's to add, say so in the pull request.
 
 A package's site is `prose build`, the repository read as a document. Docs are published at `/docs/<file>.md`, so a link works on GitHub and the site alike. Text the repository didn't write, like a test corpus, is marked `linguist-vendored` in `.gitattributes`, and `prose check` skips it.
 

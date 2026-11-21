@@ -228,7 +228,7 @@ const handlers: Record<Command, Handler> = {
     }
     const rule = printOne([craftzRules()], id) ?? printedPart(id);
     if (!rule) {
-      const message = `no rule or part \`${id}\`, and \`craftz rules\` prints every one`;
+      const message = `no rule, part or section \`${id}\`, and \`craftz rules\` prints every one`;
       console.error(finding({ tool: "craftz", level: "error", message }));
       return 1;
     }

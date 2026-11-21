@@ -42,7 +42,7 @@ export type Fix =
  * # A rule
  *
  * A rule a tool can keep a repository from, like a tool's version or the deploy, is `holdable`.
- * A repository can hold only those, as the rules' [Holds](../docs/rules.md#holds-exceptions) say.
+ * A repository can hold only those, as the rules' [Holds](../docs/rules.md#holds) say.
  */
 export type Rule = {
   id: string;

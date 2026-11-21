@@ -28,7 +28,7 @@ The parts are `tools` (Vite+, pnpm, versions, holds), `scripts`, `cloudflare`, `
 - `pnpm craftz status` says what's live. `pnpm craftz help <command>` says what a command does, for the version installed. So does `--help` after a command or script, as in `pnpm pr --help`. After any other script, never write the word `help`, since it reads as that script's argument.
 - Run tools through `pnpm run …` and `pnpm exec`, not global installs. To see a page you built, run `pnpm craftz shot <url> <file.png>` and read the PNG, rather than installing a browser tool.
 - When a test fails once and passes on a re-run, it's flaky, and the cause is the bug. Find what the test waits on or shares, and fix that. Never re-run it, retry it or skip it to get a green run.
-- A lesson in `docs/lessons.md` is for what the next change would get wrong without it, so a change that went as planned adds none. Before adding one, read the group it belongs under. If a lesson there already says it, add this case to that lesson, and give its principle a check or a rule.
+- A lesson in `docs/lessons.md` is for what the next change would get wrong without it, so a change that went as planned adds none. Before adding one, read the group it belongs under. If a lesson there already says it, add this case to that lesson, and give its principle a check or a rule, or say in the pull request that craftz needs one.
 
 ## Prose
 

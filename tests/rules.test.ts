@@ -79,6 +79,27 @@ test("a part is read by its first word, with Practice after it", () => {
   expect(printedPart("nope", doc, site)).toBeUndefined();
 });
 
+test("a part prints the page's opening first, and a section is read by its heading's id", () => {
+  const doc =
+    "# Rules\n\nOpening.\n\n## Tools\n\nT\n\n### Holds\n\nH\n\n### Next\n\nN\n\n## Practice\n\nP\n";
+  const site = "https://example.com/rules.md";
+  expect(printedPart("tools", doc, site)).toMatch(/^# Rules\n\nOpening\.\n\n## Tools/);
+  expect(printedPart("holds", doc, site)).toBe(
+    "# Rules\n\nOpening.\n\n### Holds\n\nH\n\n\n## Practice\n\nP\n",
+  );
+});
+
+test("a printed rule's id span reads as its id", () => {
+  expect(printed("- [`x-y`]{#x-y}: a rule.\n")).toBe("- `x-y`: a rule.\n");
+});
+
+test("Holds lists exactly the rules a repository can hold", () => {
+  const text = printedPart("holds") ?? "";
+  const line = text.split("\n").find((it) => it.startsWith("- **Holdable:**")) ?? "";
+  const listed = [...line.matchAll(/`([a-z-]+)`/g)].map((m) => m[1]);
+  expect(new Set(listed)).toEqual(new Set(RULES.filter((r) => r.holdable).map((r) => r.id)));
+});
+
 test("every part of the shipped rules has its own name", () => {
   const names = partNames();
   expect(new Set(names).size).toBe(names.length);
