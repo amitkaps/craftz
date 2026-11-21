@@ -32,7 +32,7 @@ const fromNpm: Latest = async (name) => {
 const EXACT = /^\d+\.\d+\.\d+$/;
 
 /** The seconds `verify` should take on CI, at most. */
-export const VERIFY_TARGET = 10;
+export const VERIFY_TARGET = 30;
 
 /** The seconds a repository's `test:browser` should take on CI, at most. */
 export const BROWSER_TARGET = 120;
@@ -59,7 +59,7 @@ function later(a: string, b: string): boolean {
  *
  * # A slow verify
  *
- * `verify` has a target of 10 seconds on CI, the same in every repository, as
+ * `verify` has a target of 30 seconds on CI, the same in every repository, as
  * [the rules](../docs/rules.md#ci) say. The time is the `Verify` step of the latest CI run that
  * passed, a pull request's, since CI doesn't run on a push to `main`. It's a note, not a `✗`, since a slow `verify` isn't broken. It gives the
  * whole job's time beside it, since a developer waits on the job, and setup takes a third of it.

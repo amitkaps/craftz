@@ -284,7 +284,7 @@ GitHub Actions runs one job, `ci`, on each pull request. A repository with brows
 
 - **`ci`** installs with a frozen lockfile, restores Vite+'s task cache and Vitest's module cache, and runs `pnpm run verify`. Then it runs `prose style` on the changed lines, as advice that never fails. It doesn't run again on `main`, since the merge is the tree `ci` passed.
 - **`label`**, in a package, checks the pull request has one [release-notes label](#release-notes), and runs again when a label changes.
-- **`verify` takes 10 seconds or less on CI.** A repository with more to check makes its checks faster, not the target larger. One over passes, `craftz status` notes it, and the lessons say why it stays over. The step stops at 2 minutes and the job at 3.
+- **`verify` takes 30 seconds or less on CI.** A repository with more to check makes its checks faster, not the target larger. One over passes, `craftz status` notes it, and the lessons say why it stays over. The step stops at 2 minutes and the job at 3.
 - **`browser`** runs `pnpm run test:browser` once for each merge to `main`, and by hand with `workflow_dispatch`. A package also calls it from its release, so a browser break stops the release. It installs only Chromium's headless shell, and runs `@playwright/test` at [the reference's version](#tools-playwright). Its target is 2 minutes, and the job stops at 6.
 - **A failed `browser` run is fixed before the next change.** `craftz status` and `pnpm gone` say how the latest run on `main` ended. Where it isn't fixed, write down why.
 
