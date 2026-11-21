@@ -82,7 +82,6 @@ A change that only a person could check was made slowly, and broke what nobody l
 
 A warning nobody has to read is never read, and a catch that takes every error hides the one that mattered. So a check fails where it can't be sure, and a tool warns only where a rewrite would help. A run says everything it found and what it didn't check. A check that can't fail isn't a check, so fix it or remove it. Catch only the error you expect, beside the call that throws it. A test that fails and then passes on a re-run is a bug, so its cause is fixed. A re-run or a retry that turns it green catches the error that mattered.
 
-
 ## Tools
 
 Every repository runs one toolchain, Vite+ on pnpm and Node, at the same versions, so a fix made in one works in all.
