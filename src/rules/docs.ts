@@ -1,11 +1,12 @@
 /** @prose
  * # The docs rules
  *
- * The rules under [Docs](../../docs/rules.md#docs): the files every repository's `docs/` has,
- * that each is in the `nav`, and the shape of the lessons and the plan, and under it the
- * agents' rules: the sections of `AGENTS.md` every repository shares with craftz's, `outline.md`
- * kept out of git, and Claude Code's settings. `pnpm new` writes the first version of each doc
- * from the same text.
+ * The rules under [Docs](../../docs/rules.md#docs). They check the files every repository's
+ * `docs/` has, that each is in the `nav`, and the shape of the lessons and the plan.
+ *
+ * Under them are the agents' rules. They check the sections of `AGENTS.md` every repository
+ * shares with craftz's, `outline.md` kept out of git, and Claude Code's settings. `pnpm new`
+ * writes the first version of each doc from the same text.
  */
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
