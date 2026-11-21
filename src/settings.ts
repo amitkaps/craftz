@@ -39,11 +39,9 @@ export function githubLogin(): string | undefined {
 }
 
 const merging = json(".github/settings.json") as Record<string, unknown>;
-const labels = json(".github/labels.json") as {
-  name: string;
-  color: string;
-  description: string;
-}[];
+/** A release-notes label, as [.github/labels.json](../reference/.github/labels.json) states it. */
+export type Label = { name: string; color: string; description: string };
+export const LABELS = json(".github/labels.json") as Label[];
 
 /** The merge settings, compared with [.github/settings.json](../reference/.github/settings.json), and the topic. */
 export function mergeDrift(repo: string): string[] {
@@ -85,10 +83,25 @@ export function writeGitHub(repo: string): void {
  * The labels a package's release notes are grouped by, from
  * [.github/labels.json](../reference/.github/labels.json). Each is created, or updated when it exists, and
  * other labels are left alone.
+ *
+ * A label that was renamed, like `improved` to `changed`, is renamed on GitHub rather than written
+ * again beside the old one, so the pull requests that carry it keep it under its new name.
  */
+const RENAMED: Record<string, string> = { improved: "changed" };
+
 export function writeLabels(repo: string): void {
-  for (const { name, color, description } of labels) {
-    const repoFlag = ["-R", `${OWNER}/${repo}`];
+  const repoFlag = ["-R", `${OWNER}/${repo}`];
+  const found = new Set(
+    (
+      JSON.parse(gh("label", "list", ...repoFlag, "--json", "name", "--limit", "100")) as {
+        name: string;
+      }[]
+    ).map((label) => label.name),
+  );
+  for (const [old, name] of Object.entries(RENAMED)) {
+    if (found.has(old) && !found.has(name)) gh("label", "edit", old, ...repoFlag, "--name", name);
+  }
+  for (const { name, color, description } of LABELS) {
     gh(
       "label",
       "create",

@@ -15,11 +15,52 @@ import { goneIn, keptBecause, writeOutline } from "../src/gone.ts";
 import { joined } from "../src/args.ts";
 import { branchOf, labelsIn, startOn, timingOf, titled, took } from "../src/pr.ts";
 import { here } from "../src/reference.ts";
+import { LABELS } from "../src/settings.ts";
+import { parse, walk } from "@amitkaps/markz";
+import { parse as parseYaml } from "yaml";
 import { RULES } from "../src/rules.ts";
 
 test("a pull request's labels are the ones the notes group by", () => {
   const notes = readFileSync(join(here, "package", ".github", "notes.yml"), "utf8");
-  expect(labelsIn(notes)).toEqual(["internal", "breaking", "added", "fixed", "improved", "docs"]);
+  expect(labelsIn(notes)).toEqual(["internal", "breaking", "added", "fixed", "changed", "docs"]);
+});
+
+/** @prose
+ * The rules' table of labels says each one's heading and what it's for. The headings are
+ * `notes.yml`'s and the meanings `labels.json`'s, so the table is held to both, and none of the
+ * three can say something the others don't.
+ */
+test("the rules' table of labels is the notes' headings and the labels' meanings", () => {
+  const notes = parseYaml(readFileSync(join(here, "package", ".github", "notes.yml"), "utf8")) as {
+    changelog: { exclude: { labels: string[] }; categories: { title: string; labels: string[] }[] };
+  };
+  const heading = (name: string): string =>
+    notes.changelog.exclude.labels.includes(name)
+      ? "left out"
+      : (notes.changelog.categories.find((c) => c.labels.includes(name))?.title ?? "");
+  const markdown = readFileSync(join(here, "..", "docs", "rules.md"), "utf8");
+  const tree = parse(markdown);
+  const tables: string[][][] = [];
+  walk(tree, {
+    enter(node) {
+      if (tree.type(node) !== "table") return true;
+      const rows = [...tree.children(node)].map((row) =>
+        [...tree.children(row)].map((cell) =>
+          markdown
+            .slice(tree.start(cell), tree.end(cell))
+            .replace(/^\|/, "")
+            .replace(/\|$/, "")
+            .trim(),
+        ),
+      );
+      tables.push(rows);
+      return false;
+    },
+  });
+  const table = tables.find((rows) => rows[0]?.[0] === "Label");
+  expect(table?.slice(1)).toEqual(
+    LABELS.map(({ name, description }) => [`\`${name}\``, heading(name), description]),
+  );
 });
 
 test("a branch is named after the title, at most 48 characters", () => {
