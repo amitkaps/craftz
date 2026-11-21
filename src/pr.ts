@@ -6,8 +6,8 @@
  * a person and an agent take the same steps everywhere, from the version the repository installs.
  *
  * On `main`, it starts a branch named after the title. It commits what's changed, with the title
- * as the message, writes the outline, runs `verify`, pushes, opens the pull request and turns on
- * auto-merge. `verify` checks and doesn't write, so the outline is written here, for the agent
+ * as the message, merges in what has landed on `main` ([Catching up with main](#catching-up-with-main)),
+ * writes the outline, runs `verify`, pushes, opens the pull request and turns on auto-merge. `verify` checks and doesn't write, so the outline is written here, for the agent
  * working on the branch.
  * ([Where it starts](#where-it-starts) says what it does on another branch.)
  *
@@ -201,12 +201,21 @@ export async function pr(given: Parsed): Promise<void> {
     step("git", "switch", "--create", branch, ...base);
   }
 
+  // A conflict left by the last run is still in the tree, and `add --all` would commit its markers.
+  const left = unresolved();
+  if (left.length) fail(conflictAdvice(left));
   if (output("git", "status", "--porcelain")) {
     step("git", "add", "--all");
     step("git", "commit", "--quiet", "--message", title);
   }
   step("git", "fetch", "--quiet", "origin", "main");
   if (!newOnMain()) fail(`${branch} has nothing that isn't on main.`);
+
+  // Before verify, so it runs on the tree CI will, and a conflict stops before anything is pushed.
+  const caught = catchUp();
+  if ("conflicts" in caught) fail(conflictAdvice(caught.conflicts));
+  if (caught.merged)
+    console.log(`Merged origin/main into ${branch}, so verify runs on the result.`);
 
   writeOutline();
   const verifying = Date.now();
@@ -227,6 +236,50 @@ export async function pr(given: Parsed): Promise<void> {
   console.log(`${opened.url}, after verify took ${verified}`);
   if (given.flag("wait")) await merged(branch, opened.number, opened.url);
 }
+
+/** @prose
+ * # Catching up with main
+ *
+ * Before `verify`, `pr` merges what has landed on `main` into the branch, so a conflict, or a test
+ * the merge breaks, shows up here and not on GitHub after the pull request opens. There it costs
+ * another push, another `ci` run and a second `verify`. The rule is [`pr` merges `main`
+ * first](../docs/rules.md#github).
+ *
+ * It's a merge and never a rebase, and it never force-pushes, since the branch may be on GitHub
+ * already. A conflict stops `pr` before `verify` and before any push. The merge is left in the tree
+ * and not aborted, so whoever resolves it has the markers in front of them. Running `pr` again
+ * after the commit finds `main` already in the branch, so it merges nothing.
+ *
+ * It runs on the pull request a title adds to as well, since that branch is switched to first.
+ */
+export type CaughtUp = { merged: boolean } | { conflicts: string[] };
+
+/** Fetches `origin/main` and merges it into the branch checked out in `dir`, if the branch lacks any of it. */
+export function catchUp(dir = "."): CaughtUp {
+  const git = (...args: string[]): string => capture("git", args, dir).trim();
+  git("fetch", "--quiet", "origin", "main");
+  try {
+    git("merge-base", "--is-ancestor", "origin/main", "HEAD");
+    return { merged: false };
+  } catch {
+    // `origin/main` has commits the branch lacks.
+  }
+  try {
+    git("merge", "--no-edit", "--quiet", "origin/main");
+    return { merged: true };
+  } catch (error) {
+    const conflicts = unresolved(dir);
+    if (!conflicts.length) throw error;
+    return { conflicts };
+  }
+}
+
+/** The files in `dir` a merge has left conflicted. */
+export const unresolved = (dir = "."): string[] =>
+  capture("git", ["diff", "--name-only", "--diff-filter=U"], dir).split("\n").filter(Boolean);
+
+const conflictAdvice = (files: string[]): string =>
+  `Merging main conflicts in ${files.join(", ")}. Resolve them, commit, and run pnpm pr again.`;
 
 /** @prose
  * # Nothing new
