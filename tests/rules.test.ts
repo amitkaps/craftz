@@ -718,10 +718,11 @@ test("each step in the plan's Next is a task, and the fix turns a numbered step 
   expect(check()).toEqual([]);
 });
 
-test("a lesson's link into the rules names an id they have", () => {
-  const rule = RULES.find((r) => r.id === "docs-lessons");
-  const check = (text: string) =>
-    rule?.check({ files: { "docs/lessons.md": text } } as unknown as Repo)?.drift;
+test("a doc's link into the rules names an id they have", () => {
+  const rule = RULES.find((r) => r.id === "docs-links");
+  const check = (text: string, file = "docs/lessons.md") =>
+    rule?.check({ files: { [file]: text, "vite.config.ts": `// ${text}` } } as unknown as Repo)
+      ?.drift;
   const site = "https://craftz.amitkaps.com/docs/rules.md";
   expect(check(`See [it](${site}#measure-before-changing) and [that](${site}#docs-plan).`)).toEqual(
     [],
@@ -729,6 +730,9 @@ test("a lesson's link into the rules names an id they have", () => {
   expect(
     check(`[Gone](${site}#measure-first), [here](rules.md#nowhere), [page](${site}).`),
   ).toEqual(["docs/lessons.md links rules.md#measure-first, which these rules don't have"]);
+  expect(check(`[Old](${site}#versions-playwright).`, "docs/development.md")).toEqual([
+    "docs/development.md links rules.md#versions-playwright, which these rules don't have",
+  ]);
 });
 
 test("a site's Worker is written as cf's config is, which the survey reads with its folder", () => {
