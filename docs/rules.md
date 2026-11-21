@@ -342,7 +342,7 @@ Explanations live in `@prose` comments, beside what they explain, and docs that 
 | `docs/usage.md` | a package's install and use, and a section for agents |
 
 - [`docs-plan`]{#docs-plan}: the plan reads as [prose's current plan](https://prose.amitkaps.com/docs/usage.md#current-plan) says, and each step in its Next is a task, `- [ ]`. `craftz release` stops while a step is ticked, or the summary doesn't name the version, so the plan is current before each release. The fix turns a plain step into a task.
-- [`docs-lessons`]{#docs-lessons}: a link from `docs/lessons.md` into these rules names an id or a heading they have. Each group of lessons links the principle in [Practice](#practice) it shows.
+- [`docs-links`]{#docs-links}: a link from `README.md`, `AGENTS.md` or a doc into these rules, by their address, names an id or a heading they have. Each group of lessons links the principle in [Practice](#practice) it shows.
 - **A lesson** is for what the next change would get wrong without it, in a few sentences. Put it under the principle it shows. If its group already says it, add the case there, and give the principle a check, a command or a line in `AGENTS.md`. Where that's craftz's to add, say so in the pull request.
 
 A package's site is `prose build`, the repository read as a document. Docs are published at `/docs/<file>.md`, so a link works on GitHub and the site alike. Text the repository didn't write, like a test corpus, is marked `linguist-vendored` in `.gitattributes`, and `prose check` skips it.

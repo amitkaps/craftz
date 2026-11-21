@@ -18,7 +18,7 @@
  * This file reads only the docs, so `craftz rules` and `craftz help` load nothing else.
  *
  * Another repository's lessons link a principle here by the page's address, which prose doesn't
- * check. So the page's anchors are read too, and `docs-lessons` holds each such link to one.
+ * check. So the page's anchors are read too, and `docs-links` holds each such link to one.
  *
  * The rules doc is parsed when something first asks for a rule, and only once in a run. Parsing
  * it takes about 50 ms, and `gone`, `pr` and `status` never need it, so nothing parses it when a

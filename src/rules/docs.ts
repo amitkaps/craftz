@@ -215,13 +215,17 @@ export const DOCS_RULES: Rule[] = [
     },
   },
   {
-    id: "docs-lessons",
+    id: "docs-links",
     check: ({ files }) => {
       const known = anchors();
       return drifted(
-        linkedRules(files["docs/lessons.md"] ?? "")
-          .filter((id) => !known.has(id))
-          .map((id) => `docs/lessons.md links rules.md#${id}, which these rules don't have`),
+        Object.entries(files)
+          .filter(([file, text]) => file.endsWith(".md") && text)
+          .flatMap(([file, text]) =>
+            linkedRules(text)
+              .filter((id) => !known.has(id))
+              .map((id) => `${file} links rules.md#${id}, which these rules don't have`),
+          ),
       );
     },
   },
