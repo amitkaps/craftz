@@ -18,6 +18,19 @@ A change to how things are done starts here, in [the rules](rules.md) and in [th
 
 `pnpm craftz check ../markz` runs the rules from source on another checkout, to see what a change asks of it before it's released. What the change taught goes in [the lessons](lessons.md), in the same pull request.
 
+`tools-beta`'s list of betas is read from its line, as each name in backticks, so that line puts nothing else in backticks.
+
+### Writing a rule
+
+[The rules](rules.md) are read by an agent in another repository, in the middle of a task, one part at a time from `craftz rules <part>`. So they're instructions with a little context: what to do, then why, in a sentence.
+
+- **A part** opens with a sentence or two on what it covers and why it's shared. Then come its rules. It ends with **Yours.**, what a repository decides for itself, and **Ruled out.**, each idea with its reason and when to look again.
+- **A rule** is a list item that opens with its id. Its first sentence is the instruction, in the present tense and starting lowercase. It names the values it asks for, rather than pointing at a file that holds them. One or two sentences give the reason or the exception. "The fix …" ends it, when there is one.
+- **A rule with no check** is a list item that opens with a bold label instead of an id, and reads the same way.
+- **Elsewhere, not here.** How craftz checks or fixes a rule goes in that code's `@prose` or in this page. Why the design is this way, at length, goes in [the design](design.md). What a reference file sets is in that file's `@prose`, and what a command does is in its `--help`. How a rule came about is in its pull request.
+
+The test for a part is to halve it. Keep what an agent does and the one reason for it. Move the rest to one of the places above, or cut it.
+
 ## The reference
 
 [reference/](../reference/README.md) holds the files a rule compares with, laid out as a repository has them, like the workflows, the editor settings and the versions. A rule reads its value from there, so it's never written out twice. These files are checked by `prose check` like any other, so their links have to work where they stand.
