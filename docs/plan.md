@@ -6,7 +6,7 @@ This is a package's plan, of what craftz itself does next. Each repository moves
 
 ## Next, in order
 
-- [ ] **Release the new rule ids.** The next release's notes say what to change by hand. A hold on `versions-typescript` becomes `tools-typescript`, and `toolchain-types` becomes `tools-tsconfig`. A link to `rules.md#versions-playwright` becomes `#tools-playwright`, and `#a-prose-site` becomes `#a-static-site`, which `docs-links` now finds.
+- [ ] **Release the new rule ids.** A hold under an old id still holds, and `craftz fix` renames it, so the notes need only the links. A link to `rules.md#versions-playwright` becomes `#tools-playwright`, and `#a-prose-site` becomes `#a-static-site`, which `docs-links` now finds.
 - [ ] **Review the lint trial.** craftz, prose, markz and a private application added the same extra rules to `lint.rules` on 2026-11-21. After a few weeks, count each rule's disable comments and what it caught. Then move the rules that earned it into [`tools-lint`](rules.md#tools-lint), and drop the rest. What the trial found is in [the lessons](lessons.md#vite-and-typescript).
 
 The next step after that comes from [Later](#later), or from what the repositories need.
