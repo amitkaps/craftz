@@ -8,7 +8,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { readPkg } from "../reference.ts";
-import { withValues, withoutSite } from "../edit.ts";
+import { withValues } from "../edit.ts";
 import { workerIn } from "../worker.ts";
 import type { Rule } from "../rules.ts";
 import { unruled, WORKER } from "./tools.ts";
@@ -35,8 +35,7 @@ export const CLOUDFLARE_RULES: Rule[] = [
    *
    * `cloudflare.config.ts` is written as cf's own, with the Worker under `worker`, and imports
    * nothing. It's parsed as `vite.config.ts` is, and the date and addresses are read where they
-   * sit. The fix writes in each one that differs, after rewriting a config that still calls
-   * `site()`, as edit.ts does.
+   * sit. The fix writes in each one that differs.
    *
    * A site on wrangler, like base, is left out. It's held on wrangler, so it moves when it moves
    * to `cloudflare.config.ts`.
@@ -46,15 +45,12 @@ export const CLOUDFLARE_RULES: Rule[] = [
     check: ({ files, worker: site }) => {
       if (site?.file !== "cloudflare.config.ts") return undefined;
       const text = files[site.file] ?? "";
-      const drift = /^export default site\(/m.test(text) ? [`${site.file} calls site()`] : [];
-      return drifted([...drift, ...unruled(withoutSite(text), { worker: WORKER })]);
+      return drifted(unruled(text, { worker: WORKER }));
     },
     fix: {
       in: "files",
       apply: (dir) =>
-        editFile(join(dir, "cloudflare.config.ts"), (text) =>
-          withValues(withoutSite(text), { worker: WORKER }),
-        ),
+        editFile(join(dir, "cloudflare.config.ts"), (text) => withValues(text, { worker: WORKER })),
     },
   },
   /** @prose

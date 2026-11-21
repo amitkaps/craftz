@@ -6,7 +6,7 @@
  * reads as `undefined`, since nothing is run.
  */
 import { expect, test } from "vite-plus/test";
-import { exported, jsonc, pluginCall, valueAt } from "../src/config.ts";
+import { exported, jsonc, valueAt } from "../src/config.ts";
 import { allOf, allRuns, withVerify } from "../src/edit.ts";
 
 const VITE = `import { defineConfig } from "vite-plus";
@@ -36,12 +36,6 @@ test("a task that runs a script stands for it in `all`", () => {
     all: { command: "true", dependsOn: ["check", "built"] },
   } } }`;
   expect(allRuns(vite)).toEqual(["check", "build"]);
-});
-
-test("a plugin is a call in the config's own plugins", () => {
-  expect(pluginCall(VITE, "craftz")?.["arguments"]).toHaveLength(1);
-  expect(pluginCall(VITE, "cloudflare")).toBeUndefined();
-  expect(pluginCall(`export default { lint: { plugins: ["craftz"] } }`, "craftz")).toBeUndefined();
 });
 
 test("a config that doesn't parse, or exports no object, reads as nothing", () => {
