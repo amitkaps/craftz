@@ -13,7 +13,7 @@ Read these before writing code. `pnpm craftz rules practice` says why for each.
 - **Measure before changing.** Time each part, then change the one the measure points to.
 - **Don't repeat yourself.** Write each rule, value and step once. Share code when the second copy appears, and make a repeated step a command.
 - **One name, one meaning.** Each concept has one name, and a name that gains a second meaning is split.
-- **Make the owner a type.** Give a value with one maker a type only that maker returns, so making it anywhere else fails to compile. Pass the whole thing before branding it.
+- **Make wrong code fail to compile.** Give a value with one maker a type only that maker returns, and parse data into it where it comes in. Pass the whole thing before branding it.
 - **Parse, don't match text.** Read a file with its language's parser, never a regular expression over its text.
 - **Build only what gets used.** Make the smallest thing that gets read, and watch whether it is.
 - **Try it on the real thing.** Run a change where it will run, like the real files, the packed tarball or the other tool itself.
