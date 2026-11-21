@@ -6,9 +6,10 @@
  * a person and an agent take the same steps everywhere, from the version the repository installs.
  *
  * On `main`, it starts a branch named after the title. It commits what's changed, with the title
- * as the message, merges in what has landed on `main` ([Catching up with main](#catching-up-with-main)),
- * writes the outline, runs `verify`, pushes, opens the pull request and turns on auto-merge. `verify` checks and doesn't write, so the outline is written here, for the agent
- * working on the branch.
+ * as the message, and merges in what has landed on `main` ([Catching up with main](#catching-up-with-main)).
+ * It writes the outline, runs `verify`, pushes, opens the pull request and turns on auto-merge.
+ * `verify` checks and doesn't write, so the outline is written here, for the agent working on
+ * the branch.
  * ([Where it starts](#where-it-starts) says what it does on another branch.)
  *
  * A package's pull request takes one label, `--label <label>`, from the ones its
