@@ -46,7 +46,11 @@ test("the rules' table of labels is the notes' headings and the labels' meanings
       if (tree.type(node) !== "table") return true;
       const rows = [...tree.children(node)].map((row) =>
         [...tree.children(row)].map((cell) =>
-          markdown.slice(tree.start(cell), tree.end(cell)).replace(/^\|/, "").replace(/\|$/, "").trim(),
+          markdown
+            .slice(tree.start(cell), tree.end(cell))
+            .replace(/^\|/, "")
+            .replace(/\|$/, "")
+            .trim(),
         ),
       );
       tables.push(rows);
