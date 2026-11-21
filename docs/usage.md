@@ -216,7 +216,7 @@ align clones each repository's `main` into a temporary folder and installs it, r
 
 A step that fails on what's left to do by hand, `fix` or `verify`, doesn't stop the run. So one run lists craftz check's findings and the count of lint and type errors for every repository.
 
-`--candidate` packs this checkout and moves every repository to it, locally, before a release. What each one leaves by hand is what the release's notes say to do. Run it before `craftz release`.
+`--candidate` packs this checkout and moves every repository to it, locally, before a release. What each one leaves by hand is what the release's notes say to do. It also starts a trial repository with the packed craftz, as `craftz new` would, runs its `verify` and names its folder. Run it before `craftz release`.
 
 ### Moving the reference
 

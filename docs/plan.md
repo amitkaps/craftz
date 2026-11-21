@@ -6,7 +6,6 @@ This is a package's plan, of what craftz itself does next. Each repository moves
 
 ## Next, in order
 
-- [ ] **Generate the trial in the candidate run.** Release step 3 starts a repository with `pnpm new`, which writes inside the checkout and installs the released craftz, so its `verify` fails on what the release changes. `align --candidate` would write it in its own `craftz-` folder, with the candidate's tarball, run its `verify` and name the folder to read.
 - [ ] **Review the lint trial.** craftz, prose, markz and a private application added the same extra rules to `lint.rules` on 2026-11-21. After a few weeks, count each rule's disable comments and what it caught. Then move the rules that earned it into [`tools-lint`](rules.md#tools-lint), and drop the rest. What the trial found is in [the lessons](lessons.md#vite-and-typescript).
 
 The next step after that comes from [Later](#later), or from what the repositories need.

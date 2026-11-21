@@ -289,6 +289,8 @@ const lintJson = (dir: string): Promise<string> =>
  * It's local, since a pull request can't install a tarball on a laptop.
  *
  * Each repository then lists what it leaves by hand, which is what the release's notes say to do.
+ * A trial repository shows what the release writes into a new one, as [The trial](#the-trial)
+ * says.
  */
 function pack(): string {
   const root = join(import.meta.dirname, "..");
@@ -419,6 +421,41 @@ await phase(
   true,
 );
 
+/** @prose
+ * # The trial
+ *
+ * A candidate run also starts a repository, as `pnpm new trial --package --site static` does, with
+ * the tarball in place of npm's craftz ([new.ts](new.ts)). A package with a site has every file
+ * `new` writes, so the trial shows what the release writes into a new repository, which no
+ * existing one shows. Its `verify` runs after the others', one at a time as theirs do.
+ *
+ * It's written in the run's folder and kept there, with its log when it fails. The run names the
+ * folder, to read against what the release is for.
+ */
+const trial = candidate ? await tryTrial() : undefined;
+
+async function tryTrial(): Promise<{ ok: boolean; line: string }> {
+  const dir = join(work, "trial");
+  const log: string[] = [];
+  const began = Date.now();
+  process.stderr.write("trial".padEnd(12));
+  // Loaded only here, since it brings the formatter.
+  const { create } = await import("./new.ts");
+  const start = { package: true, site: true, private: false, internal: false };
+  try {
+    const inTrial = (command: string, ...args: string[]) => sh(dir, log, command, ...args);
+    await create(dir, "trial", start, "A trial.", inTrial, tarball);
+    process.stderr.write(`.  ${seconds(began)}\n`);
+    return { ok: true, line: `✓ trial verified, in ${dir}` };
+  } catch (error) {
+    const file = join(work, "trial.log");
+    writeFileSync(file, log.join("\n"));
+    process.stderr.write(`✗  ${seconds(began)}\n`);
+    const why = error instanceof Error ? error.message.split("\n")[0] : String(error);
+    return { ok: false, line: `✗ trial: ${why}, its log in ${file}` };
+  }
+}
+
 if (!local) await phase("opening", undefined, going(), open);
 
 async function open(state: State): Promise<void> {
@@ -490,7 +527,9 @@ await phase("settings", undefined, settled, async (state) => {
 for (const state of states) state.status ??= "verified";
 
 console.log(["", ...report(states)].join("\n"));
+if (trial) console.log(`\n${trial.line}`);
 let failed = states.some((state) => state.status !== "verified" && state.status !== "in line");
+failed ||= trial?.ok === false;
 
 /** @prose
  * # Waiting for the merges
