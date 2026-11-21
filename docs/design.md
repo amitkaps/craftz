@@ -176,6 +176,14 @@ align holds no rules of its own. It finds the repositories by the GitHub topic `
 
 prose depends on craftz, and craftz's site depends on prose. Both are devDependencies, like markz and prose. craftz's package depends on neither. It takes Vite+ as a peer, since `new` formats with it, and a repository has it already. Cloudflare's plugin is the repository's own, which its config imports. A fresh checkout builds from released versions, which a clean clone and install must prove. craftz's first version is published by hand, as every package's is.
 
+## Browser tests run after the merge
+
+`browser` runs on `main`, not on each pull request, as [CI](rules.md#ci) says. On a pull request its result came after the merge, so it gated nothing, and nobody read it. On `main`, `craftz status` and `pnpm gone` show the latest run, so a break is seen. A break can still land and deploy, since a site's deploy runs `verify` only. That's accepted while suites still flake, since requiring one that fails a quarter of its runs would stop every merge.
+
+## What AGENTS.md holds
+
+Every agent loads `AGENTS.md` in every session, so its shared sections are short. They point at the rules, say how a change reaches `main`, and give each principle in [Practice](rules.md#practice) in a line, since agents skipped what they had to fetch. "Prose" names the first edit to a `.md` file or a `@prose` comment as the moment to run `prose rules`, since "before writing prose" was skipped. It mentions `outline.md` and doesn't import it, since an import cost every session 6k to 20k tokens and agents never opened it unprompted.
+
 ## What it isn't
 
 - **Not an app framework.** Vite+ and each framework keep their own build, and craftz connects them.
