@@ -367,23 +367,6 @@ test("the values the fix writes are spelled as oxfmt formats them", async () => 
   expect((await format("vite.config.ts", vite, fmt)).code).toBe(vite);
 });
 
-test("every repository but craftz depends on craftz, and calls no craftz()", () => {
-  const rule = RULES.find((r) => r.id === "tools-craftz-dep");
-  const drift = (name: string, deps: Record<string, string>, keys: string) =>
-    rule?.check({
-      pkg: { name },
-      deps,
-      files: { "vite.config.ts": config(keys) },
-      vitePlus: "1",
-    })?.drift;
-  expect(drift("x", { [CRAFTZ]: "^0.1.0" }, "")).toEqual([]);
-  expect(drift(CRAFTZ, {}, "")).toEqual([]);
-  expect(drift("x", {}, "plugins: [craftz()],")).toEqual([
-    `doesn't depend on ${CRAFTZ}`,
-    "vite.config.ts calls craftz()",
-  ]);
-});
-
 test("a site ships through craftz deploy", () => {
   const rule = RULES.find((r) => r.id === "scripts-ship");
   const drift = (name: string, ship: string, site = true) =>
@@ -402,52 +385,6 @@ test("craftz's version is its own, exactly", () => {
     version: string;
   };
   expect(VERSIONS[CRAFTZ]).toBe(own.version);
-});
-
-test("the fix adds craftz, and takes craftz() and its import out", () => {
-  const fixed = (vite: string) => {
-    const dir = tmp("craftz-use-");
-    writeFileSync(
-      join(dir, "package.json"),
-      JSON.stringify({ name: "x", devDependencies: { "vite-plus": "1.3.0" } }),
-    );
-    writeFileSync(join(dir, "vite.config.ts"), vite);
-    const fix = RULES.find((r) => r.id === "tools-craftz-dep")?.fix;
-    if (fix?.in === "files") fix.apply(dir, here);
-    const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as {
-      devDependencies: Record<string, string>;
-    };
-    expect(Object.keys(pkg.devDependencies)).toEqual([CRAFTZ, "vite-plus"]);
-    expect(pkg.devDependencies[CRAFTZ]).toBe(VERSIONS[CRAFTZ]);
-    return readFileSync(join(dir, "vite.config.ts"), "utf8");
-  };
-  const head = `import { defineConfig } from "vite-plus";\nimport { craftz } from "@amitkaps/craftz";\n`;
-  const config = (body: string) => `export default defineConfig({\n${body}});\n`;
-  const test = 'test: { include: ["tests/**/*.test.ts"] },\n';
-  // The only plugin takes `plugins` with it, and the comment after it stays.
-  expect(fixed(`${head}\n${config(`  plugins: [craftz()],\n\n  // Tests.\n  ${test}`)}`)).toBe(
-    `import { defineConfig } from "vite-plus";\n\n${config(`  // Tests.\n  ${test}`)}`,
-  );
-  // One plugin of several goes, wherever it is, one to a line or not, and a comment after it
-  // stays.
-  expect(
-    fixed(
-      `${head}\n${config("  plugins: [\n    craftz(),\n    // Svelte.\n    sveltekit(),\n  ],\n")}`,
-    ),
-  ).toBe(
-    `import { defineConfig } from "vite-plus";\n\n${config("  plugins: [\n    // Svelte.\n    sveltekit(),\n  ],\n")}`,
-  );
-  expect(fixed(`${head}\n${config("  plugins: [sveltekit(), craftz()],\n")}`)).toBe(
-    `import { defineConfig } from "vite-plus";\n\n${config("  plugins: [sveltekit()],\n")}`,
-  );
-  // A package for browsers says so in its pack.
-  expect(
-    fixed(
-      `${head}\n${config('  plugins: [craftz({ browser: true })],\n  pack: { entry: ["src/index.ts"] },\n')}`,
-    ),
-  ).toBe(
-    `import { defineConfig } from "vite-plus";\n\n${config('  pack: { entry: ["src/index.ts"], platform: "neutral" },\n')}`,
-  );
 });
 
 test("the files craftz owns are its own word for word, and the fix writes them whole", () => {
@@ -806,26 +743,26 @@ test("a site's Worker is written as cf's config is, which the survey reads with 
   });
 });
 
-test("the fix takes site() out, and writes the Worker's date and addresses in", () => {
+test("the fix writes the Worker's date and addresses in", () => {
   const dir = tmp("craftz-site-");
   const file = join(dir, "cloudflare.config.ts");
   writeFileSync(
     file,
     `/** A comment. */
-import { site } from "${CRAFTZ}/cloudflare";
 
-export default site({
-  name: "x",
-  domains: ["x.amitkaps.com"],
-  assets: { directory: ".prose" },
-});
+export default {
+  worker: {
+    name: "x",
+    domains: ["x.amitkaps.com"],
+    assets: { directory: ".prose" },
+  },
+};
 `,
   );
   const rule = RULES.find((r) => r.id === "cloudflare-site");
   const files = () => ({ "cloudflare.config.ts": readFileSync(file, "utf8") });
   const repo = () => ({ files: files(), worker: worker(files()) }) as unknown as Repo;
   expect(rule?.check(repo())?.drift).toEqual([
-    "cloudflare.config.ts calls site()",
     `worker.compatibilityDate isn't "${COMPATIBILITY_DATE}"`,
     "worker.workersDev isn't false",
     "worker.previewUrls isn't false",

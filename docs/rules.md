@@ -94,7 +94,6 @@ One `vite.config.ts`, run through `vp`, covers dev, build, format, lint, test an
 - [`tools-lint`]{#tools-lint}: `lint` is type-aware and type-checks, with `typescript`, `unicorn` and `import` among its `plugins`, so `check` covers types with no `tsc`. An empty block fails, so an empty `catch` says why in a comment inside it. The fix adds a missing plugin.
 - [`tools-tsconfig`]{#tools-tsconfig}: every `tsconfig.json` writes out [the reference's](../reference/tsconfig.json) compiler options, extends nothing, and sets its own `include`. The options are strict, check JavaScript as TypeScript, and keep to `erasableSyntaxOnly`, so Node runs a `.ts` script with no build.
 - [`tools-playwright-config`]{#tools-playwright-config}: a `playwright.config.ts` sets `retries: 0`, `use: { trace: "retain-on-failure" }` and `forbidOnly: true`. A flaky test then fails and gets fixed, each failure keeps its trace, and a stray `test.only` fails on a laptop too. The fix writes each value.
-- [`tools-craftz-dep`]{#tools-craftz-dep}: every repository on Vite+ depends on `@amitkaps/craftz`, and its config imports nothing from it. The fix adds the dependency, and removes any `craftz()` call and its import.
 
 ```ts
 lint: {
@@ -141,7 +140,7 @@ A target rewrites syntax and adds no polyfills. So check an API newer than a flo
 - [`tools-pnpm`]{#tools-pnpm}: pnpm is pinned exactly, in `devEngines` with `onFail: download` and in `packageManager`, which CI reads. Any pnpm installed globally then runs the pinned one.
 - [`tools-node`]{#tools-node}: `devEngines` and `engines` ask for the reference's Node, with `onFail: error`, so the wrong Node stops loudly. A package supports only that Node, so moving to the next LTS is a breaking release.
 
-### Other versions
+### Versions
 
 The shared tools are at the reference's exact versions, so a craftz release is what moves them, and no two repositories differ.
 
@@ -232,7 +231,7 @@ A script removes what it wrote when it ends, like a temporary folder or a clone,
 A site deploys to a Cloudflare Worker with static assets, which builds and deploys each merge to `main`.
 
 - [`cloudflare-config`]{#cloudflare-config}: a site deploys with `cloudflare.config.ts`, written as cf's config is, `export default { worker: {…} }`, with no import. It holds the Worker's name, domains and the folder it serves, as `assets.directory`.
-- [`cloudflare-site`]{#cloudflare-site}: a static site's Worker sets the compatibility date of the reference's cf, and `workersDev` and `previewUrls` to false, so it answers only on its domain. The fix writes what differs, and turns a `site()` call into cf's config.
+- [`cloudflare-site`]{#cloudflare-site}: a static site's Worker sets the compatibility date of the reference's cf, and `workersDev` and `previewUrls` to false, so it answers only on its domain. The fix writes what differs.
 - **Deploys.** Workers Builds runs `verify` and then `ship`, with the API token the Worker's build settings name. There's no deploy step in GitHub Actions, and no secret in the repository.
 - **The Worker's settings** are the same on every Worker. craftz's `align` writes them, and `craftz settings --check` reads them. Only connecting the Worker to its repository is done in Cloudflare's dashboard.
 

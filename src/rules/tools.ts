@@ -14,7 +14,6 @@ import {
   CRAFTZ,
   type Pkg,
   here,
-  isCraftz,
   read,
   readPkg,
   versionsIn,
@@ -24,7 +23,7 @@ import {
 import { existsSync } from "node:fs";
 import { at, exported, jsonc, literal, valueAt } from "../config.ts";
 import { type Worker, workerIn } from "../worker.ts";
-import { unlike, withValues, withoutCraftz, usesCraftz } from "../edit.ts";
+import { unlike, withValues } from "../edit.ts";
 import { type Config, PLAYWRIGHT, RULED, written } from "../ruled.ts";
 import { BROWSERS, COMPATIBILITY_DATE } from "../pinned.ts";
 import type { Rule } from "../rules.ts";
@@ -149,20 +148,6 @@ export function siteDrift(vite: string, site?: Worker): string[] {
   return same ? [] : [`build.target is ${have.join(" ")}, not ${BROWSERS.join(" ")}`];
 }
 
-// craftz in the dev dependencies, and no `craftz()` in the Vite config, as edit.ts says.
-export function useCraftz(dir: string, std: string): void {
-  const pkg = readPkg(dir);
-  const want = isCraftz(pkg) ? undefined : versionsIn(std)[CRAFTZ];
-  if (want && !pkg.dependencies?.[CRAFTZ] && !pkg.devDependencies?.[CRAFTZ]) {
-    const deps = { ...pkg.devDependencies, [CRAFTZ]: want };
-    pkg.devDependencies = Object.fromEntries(
-      Object.entries(deps).sort(([a], [b]) => a.localeCompare(b)),
-    );
-    writePkg(dir, pkg);
-  }
-  editFile(join(dir, "vite.config.ts"), withoutCraftz);
-}
-
 export const TOOLCHAIN_RULES: Rule[] = [
   {
     id: "tools-tsconfig",
@@ -234,17 +219,6 @@ export const TOOLCHAIN_RULES: Rule[] = [
         editFile(join(dir, "playwright.config.ts"), (text) => withValues(text, PLAYWRIGHT));
       },
     },
-  },
-  {
-    id: "tools-craftz-dep",
-    check: ({ pkg, files, deps, vitePlus: own }) => {
-      if (!own) return undefined;
-      const drift: string[] = [];
-      if (!isCraftz(pkg) && !deps[CRAFTZ]) drift.push(`doesn't depend on ${CRAFTZ}`);
-      if (usesCraftz(files["vite.config.ts"] ?? "")) drift.push("vite.config.ts calls craftz()");
-      return drifted(drift);
-    },
-    fix: { in: "files", apply: (dir, std) => useCraftz(dir, std) },
   },
   {
     id: "tools-browsers",
