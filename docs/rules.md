@@ -345,12 +345,12 @@ Explanations live in `@prose` comments, beside what they explain, and docs that 
 | `README.md` | what it is, a short example, the commands a user runs, and a link to `docs/` |
 | `docs/README.md` | the docs in reading order: `nav` in its metadata, and a line for each |
 | `docs/design.md` | what it is, why it's built this way, and what it isn't |
-| `docs/plan.md` | what's next first, in order, then one line for each thing that works now |
+| `docs/plan.md` | what's next, then what works now |
 | `docs/development.md` | only what's its own, linking these rules for what's shared |
 | `docs/lessons.md` | what building it taught, each lesson what went wrong and what to do |
 | `docs/usage.md` | a package's install and use, and a section for agents |
 
-- [`docs-plan`]{#docs-plan}: each step in the plan's Next is a task, `- [ ]`, ticked as the pull request that finishes it merges. A ticked step leaves, and what it built goes into "Where it is" or the doc that states it. `craftz release` stops until both are done, and the summary names the version. The fix turns a plain step into a task.
+- [`docs-plan`]{#docs-plan}: the plan reads as [prose's current plan](https://prose.amitkaps.com/docs/usage.md#current-plan) says, and each step in its Next is a task, `- [ ]`. `craftz release` stops while a step is ticked, or the summary doesn't name the version, so the plan is current before each release. The fix turns a plain step into a task.
 - [`docs-lessons`]{#docs-lessons}: a link from `docs/lessons.md` into these rules names an id or a heading they have. Each group of lessons links the principle in [Practice](#practice) it shows.
 - **A lesson** is for what the next change would get wrong without it, in a few sentences. Put it under the principle it shows. If its group already says it, add the case there, and give the principle a check, a command or a line in `AGENTS.md`.
 
