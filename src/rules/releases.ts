@@ -10,7 +10,7 @@ import { here, read, readPkg, versionsIn } from "../reference.ts";
 import { PACKED } from "../ruled.ts";
 import { writeLabels } from "../settings.ts";
 import type { Rule } from "../rules.ts";
-import { rule, unruled } from "./toolchain.ts";
+import { rule, unruled } from "./tools.ts";
 import { RELEASE_FILES, drifted, owns, unread, writePkg } from "./shared.ts";
 
 /** @prose

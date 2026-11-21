@@ -11,7 +11,7 @@ import { readPkg } from "../reference.ts";
 import { withValues, withoutSite } from "../edit.ts";
 import { workerIn } from "../worker.ts";
 import type { Rule } from "../rules.ts";
-import { unruled, WORKER } from "./toolchain.ts";
+import { unruled, WORKER } from "./tools.ts";
 import { drifted, editFile, writePkg } from "./shared.ts";
 
 // What deployed a static site through Cloudflare's plugin.

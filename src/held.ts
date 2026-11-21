@@ -2,7 +2,7 @@
  * # Tools held by hand
  *
  * `pnpm bump` lists the shared tools it can't move itself that have a newer version. They're
- * pnpm, the Node floor and each beta that [`versions-beta`](../docs/rules.md#versions-beta) names.
+ * pnpm, the Node floor and each beta that [`tools-beta`](../docs/rules.md#tools-beta) names.
  * It lists them in craftz's pull request and doesn't take them, as it does a library's major.
  *
  * Each of these is pinned by hand, because moving one moves every repository at once, and a beta's
@@ -15,7 +15,7 @@
  * the line says what npm has. A tool that couldn't be compared is named, and never skipped quietly.
  */
 import { type Pkg, isPrerelease, graduated } from "./reference.ts";
-import { betas } from "./rules/versions.ts";
+import { betas } from "./rules/tools.ts";
 
 /** The tools `pnpm outdated` lists that `pnpm bump` never updates, since `heldTools` lists them. */
 export const HELD_BY_HAND = ["node", "pnpm"];

@@ -9,7 +9,7 @@
  * `format`, with the options [ruled.ts](ruled.ts) states, so nothing about the format is copied
  * here.
  *
- * What it starts is two of [the axes](../docs/rules.md#axes): `--package` publishes it to npm, and
+ * What it starts is two of [the axes](../docs/design.md#axes): `--package` publishes it to npm, and
  * `--site` deploys a static site to Cloudflare. Either, both or neither, which is scripts run on a
  * laptop. A site alone is Vite's, from an `index.html`, and a package's site is the repository read
  * as prose, since `vp pack` writes Vite's `dist`. An app starts from base instead. The other two

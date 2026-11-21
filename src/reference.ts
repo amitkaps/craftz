@@ -140,7 +140,7 @@ export function versionsIn(dir: string): Record<string, string | undefined> {
  *
  * Every other repository depends on craftz at the version whose rules it follows, so the
  * reference is always inside craftz, and that version is the package's own. A release moves it,
- * and with it what `versions-craftz` asks for, so nothing has to be bumped twice.
+ * and with it what `tools-craftz` asks for, so nothing has to be bumped twice.
  */
 function craftzAt(dir: string): Record<string, string> {
   const pkg = JSON.parse(read(join(dir, "package.json")) || "{}") as Pkg & { version?: string };

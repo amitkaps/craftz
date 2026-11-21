@@ -24,12 +24,12 @@ const byHand: [broken: RegExp, rule: string, why: string][] = [
   [/^(delete|empty) README\.md$/, "docs-files", "a README's words are the repository's own"],
   [
     /^(delete|empty) vite\.config\.ts$/,
-    "(toolchain|scripts|releases)-",
+    "(tools|scripts|releases)-",
     "the Vite+ config is code the repository writes itself",
   ],
   [
     /^package\.json drop devDependencies(\.vite-plus)?$/,
-    "versions-vite-plus",
+    "tools-vite-plus",
     "a repository not on Vite+ moves by hand",
   ],
   [/^(delete|empty) index\.html$/, "cloudflare-static", "a `vp build` script is left by hand"],

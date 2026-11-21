@@ -1,7 +1,7 @@
 /** @prose
  * # What the rules set
  *
- * The values every Vite+ config writes out, from `toolchain-wrap` and `toolchain-lint`, the ones
+ * The values every Vite+ config writes out, from `tools-fmt` and `tools-lint`, the ones
  * a Playwright config does, and the ones a package's `pack` does, from `releases-packing` and `releases-types`. They're stated once,
  * here. The checks compare a config's values with them, and the fixes write them in, spelled as
  * `written` spells them, which is how oxfmt lays out a short block.
@@ -25,7 +25,7 @@ export const RULED: Config = {
   },
 };
 
-/** What the rules set in a repository's `playwright.config.ts`, from `toolchain-playwright`. */
+/** What the rules set in a repository's `playwright.config.ts`, from `tools-playwright-config`. */
 export const PLAYWRIGHT: Config = {
   // A failed test isn't retried, so a flaky one fails the run the first time it flakes. A trace
   // on the first retry would never be written, so one is kept for each failure instead.
@@ -35,7 +35,7 @@ export const PLAYWRIGHT: Config = {
   forbidOnly: true,
 };
 
-/** What the rules set in a package's `pack`, by block. Where it runs is `toolchain-browsers`'. */
+/** What the rules set in a package's `pack`, by block. Where it runs is `tools-browsers`'. */
 export const PACKED: Config = {
   publint: { strict: true },
   dts: { generator: "oxc" },

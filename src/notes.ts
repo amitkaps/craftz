@@ -53,7 +53,7 @@ function later(a: string, b: string): boolean {
  *
  * # A graduated beta
  *
- * A beta that `versions-beta` names has graduated once npm's latest is a release at its major or
+ * A beta that `tools-beta` names has graduated once npm's latest is a release at its major or
  * later. The beta is the reference's, and only craftz's own repository hears of it, since its
  * reference moves the betas, and every other repository follows.
  *
@@ -106,9 +106,7 @@ export async function notes(
     pending.forEach(({ name, beta }, i) => {
       const out = newest[i];
       if (out && graduated(beta, out)) {
-        found.push(
-          `${name} ${out} is a release of the beta ${beta}, so it can leave versions-beta`,
-        );
+        found.push(`${name} ${out} is a release of the beta ${beta}, so it can leave tools-beta`);
       }
     });
   }

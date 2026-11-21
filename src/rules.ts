@@ -23,18 +23,16 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 import { type Pkg, readPkg } from "./reference.ts";
-import { AGENTS_RULES } from "./rules/agents.ts";
 import { CLOUDFLARE_RULES } from "./rules/cloudflare.ts";
-import { DOCS_RULES } from "./rules/docs.ts";
+import { AGENTS_RULES, DOCS_RULES } from "./rules/docs.ts";
 import { GITHUB_RULES } from "./rules/github.ts";
 import { RELEASES_RULES } from "./rules/releases.ts";
 import { SCRIPT_RULES } from "./rules/scripts.ts";
-import { TOOLCHAIN_RULES } from "./rules/toolchain.ts";
-import { VERSION_RULES } from "./rules/versions.ts";
+import { TOOLCHAIN_RULES, VERSION_RULES } from "./rules/tools.ts";
 import type { Finding, Repo } from "./survey.ts";
 
 export { type Shape, listed, shipping } from "./rules/docs.ts";
-export { betas } from "./rules/versions.ts";
+export { betas } from "./rules/tools.ts";
 
 export type Fix =
   | { in: "files"; apply: (dir: string, std: string) => void }
@@ -44,7 +42,7 @@ export type Fix =
  * # A rule
  *
  * A rule a tool can keep a repository from, like a tool's version or the deploy, is `holdable`.
- * A repository can hold only those, as the rules' [Holds](../docs/rules.md#holds) say.
+ * A repository can hold only those, as the rules' [Holds](../docs/rules.md#holds-exceptions) say.
  */
 export type Rule = {
   id: string;

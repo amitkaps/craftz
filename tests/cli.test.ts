@@ -146,12 +146,12 @@ test("a hold lets a holdable rule's warning pass, with its reason", () => {
   };
   try {
     pkg.devDependencies["@types/node"] = "25.9.3";
-    pkg.craftz = { hold: { "versions-types-node": "A tool needs 25. Move when it takes 26." } };
+    pkg.craftz = { hold: { "tools-types-node": "A tool needs 25. Move when it takes 26." } };
     writeFileSync(file, JSON.stringify(pkg, null, 2));
     const held = craftz("check", dir);
     expect([held.status, held.stdout]).toEqual([
       0,
-      expect.stringContaining("craftz: warning: versions-types-node: "),
+      expect.stringContaining("craftz: warning: tools-types-node: "),
     ]);
     expect(held.stdout).toContain("; held: A tool needs 25.");
 
@@ -164,7 +164,7 @@ test("a hold lets a holdable rule's warning pass, with its reason", () => {
     ]);
 
     pkg.devDependencies["@types/node"] = JSON.parse(original).devDependencies["@types/node"];
-    pkg.craftz = { hold: { "versions-types-node": "Nothing left to hold." } };
+    pkg.craftz = { hold: { "tools-types-node": "Nothing left to hold." } };
     writeFileSync(file, JSON.stringify(pkg, null, 2));
     const stale = craftz("check", dir);
     expect([stale.status, stale.stdout]).toEqual([1, expect.stringContaining("drop the hold")]);
@@ -180,11 +180,11 @@ test("a held rule with several differences is one line, and --all lists each", (
   const [pkgText, tsText] = [readFileSync(pkgFile, "utf8"), readFileSync(tsFile, "utf8")];
   try {
     const pkg = JSON.parse(pkgText) as { craftz?: { hold: Record<string, string> } };
-    pkg.craftz = { hold: { "toolchain-types": "A tool writes its own." } };
+    pkg.craftz = { hold: { "tools-tsconfig": "A tool writes its own." } };
     writeFileSync(pkgFile, JSON.stringify(pkg, null, 2));
     writeFileSync(tsFile, JSON.stringify({ compilerOptions: {}, include: ["src"] }));
     const lines = (stdout: string) =>
-      stdout.split("\n").filter((l) => l.includes("toolchain-types"));
+      stdout.split("\n").filter((l) => l.includes("tools-tsconfig"));
     const short = craftz("check", dir);
     expect(short.status).toBe(0);
     expect(lines(short.stdout)).toHaveLength(1);

@@ -2,7 +2,7 @@
  * # Screenshots
  *
  * `craftz shot <url> <file.png>` saves a page as a PNG, so an agent sees what it built. It uses
- * the repository's own `@playwright/test`, the version [the rules](../docs/rules.md#versions-playwright)
+ * the repository's own `@playwright/test`, the version [the rules](../docs/rules.md#tools-playwright)
  * hold to the Chromium the cloud image ships, so it downloads nothing. It's the one way to look
  * at a page, so an agent doesn't install a browser tool of its own.
  *

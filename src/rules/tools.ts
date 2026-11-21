@@ -1,13 +1,26 @@
 /** @prose
- * # The toolchain rules
+ * # The tools rules
  *
- * The rules under [Toolchain: Vite+](../../docs/rules.md#toolchain-vite): the `tsconfig.json`
- * options, the `fmt` and `lint` blocks, and the browsers a package or a site targets. The
- * helpers that read and write them are exported, since the releases' and Cloudflare's rules
- * read the same configs.
+ * The rules under [Tools](../../docs/rules.md#tools): the `tsconfig.json` options, the `fmt` and
+ * `lint` blocks, the browsers a package or a site targets, and the version of each dependency
+ * a repository has. The helpers that read and write the configs are exported, since the releases'
+ * and Cloudflare's rules read the same ones.
+ *
+ * A repository's own libraries are its own to choose. A tool every repository shares is the
+ * reference's version, and a pre-release is only one the rules name.
  */
 import { join } from "node:path";
-import { CRAFTZ, type Pkg, here, isCraftz, read, readPkg, versionsIn } from "../reference.ts";
+import {
+  CRAFTZ,
+  type Pkg,
+  here,
+  isCraftz,
+  read,
+  readPkg,
+  versionsIn,
+  VERSIONS,
+  standard,
+} from "../reference.ts";
 import { existsSync } from "node:fs";
 import { at, exported, jsonc, literal, valueAt } from "../config.ts";
 import { type Worker, workerIn } from "../worker.ts";
@@ -15,7 +28,19 @@ import { unlike, withValues, withoutCraftz, usesCraftz } from "../edit.ts";
 import { type Config, PLAYWRIGHT, RULED, written } from "../ruled.ts";
 import { BROWSERS, COMPATIBILITY_DATE } from "../pinned.ts";
 import type { Rule } from "../rules.ts";
-import { EDITOR, type Json, drifted, editFile, owns, writeJson, writePkg } from "./shared.ts";
+import {
+  EDITOR,
+  type Json,
+  drifted,
+  editFile,
+  owns,
+  writeJson,
+  writePkg,
+  WORKSPACE,
+  heldIn,
+  pin,
+} from "./shared.ts";
+import { stated } from "../stated.ts";
 
 /** @prose
  * # The toolchain
@@ -140,7 +165,7 @@ export function useCraftz(dir: string, std: string): void {
 
 export const TOOLCHAIN_RULES: Rule[] = [
   {
-    id: "toolchain-types",
+    id: "tools-tsconfig",
     holdable: true,
     check: ({ files }) => {
       const tsconfig = files["tsconfig.json"];
@@ -180,16 +205,16 @@ export const TOOLCHAIN_RULES: Rule[] = [
     },
   },
   {
-    id: "toolchain-lint",
+    id: "tools-lint",
     check: ({ files, vitePlus: own }) => {
-      // Without Vite+ there's no lint block to read, and versions-vite-plus already says so.
+      // Without Vite+ there's no lint block to read, and tools-vite-plus already says so.
       if (!own) return undefined;
       return drifted(unruled(files["vite.config.ts"] ?? "", { lint: RULED["lint"] }));
     },
     fix: { in: "files", apply: (dir) => rule(dir, { lint: RULED["lint"] }) },
   },
   {
-    id: "toolchain-wrap",
+    id: "tools-fmt",
     check: ({ files, vitePlus: own }) => {
       if (!own) return undefined;
       return drifted(unruled(files["vite.config.ts"] ?? "", { fmt: RULED["fmt"] }));
@@ -197,7 +222,7 @@ export const TOOLCHAIN_RULES: Rule[] = [
     fix: { in: "files", apply: (dir) => rule(dir, { fmt: RULED["fmt"] }) },
   },
   {
-    id: "toolchain-playwright",
+    id: "tools-playwright-config",
     check: ({ files }) => {
       const config = files["playwright.config.ts"];
       return config ? drifted(unruled(config, PLAYWRIGHT)) : undefined;
@@ -211,7 +236,7 @@ export const TOOLCHAIN_RULES: Rule[] = [
     },
   },
   {
-    id: "toolchain-craftz",
+    id: "tools-craftz-dep",
     check: ({ pkg, files, deps, vitePlus: own }) => {
       if (!own) return undefined;
       const drift: string[] = [];
@@ -222,7 +247,7 @@ export const TOOLCHAIN_RULES: Rule[] = [
     fix: { in: "files", apply: (dir, std) => useCraftz(dir, std) },
   },
   {
-    id: "toolchain-browsers",
+    id: "tools-browsers",
     check: ({ pkg, files, worker: site }) => {
       const vite = files["vite.config.ts"] ?? "";
       const drift = siteDrift(vite, site);
@@ -255,5 +280,221 @@ export const TOOLCHAIN_RULES: Rule[] = [
       },
     },
   },
-  owns("toolchain-editor", EDITOR),
+  owns("tools-editor", EDITOR),
+];
+
+/** @prose
+ * # A shared version
+ *
+ * A tool every repository writes as this one does, checked where a repository has it.
+ */
+export const version = (id: string, name: string, holdable = true): Rule => ({
+  id,
+  holdable,
+  check: ({ deps }) => {
+    const value = deps[name];
+    if (!value) return undefined;
+    const want = VERSIONS[name];
+    return { value, drift: value === want ? [] : [`${name} is ${value}, not ${want}`] };
+  },
+  fix: { in: "files", apply: (dir, std) => pin(dir, std, name) },
+});
+
+/** @prose
+ * # A packed candidate
+ *
+ * `pnpm align --candidate` installs craftz from a tarball, whose version is a path and not craftz's
+ * own, so it sets `CRAFTZ_PACKED` and the rule that names craftz's version reads nothing. A step
+ * of a candidate that fails then fails for something else, and says so.
+ */
+const packed = (rule: Rule): Rule => ({
+  ...rule,
+  check: (context) => (process.env.CRAFTZ_PACKED ? undefined : rule.check(context)),
+});
+
+/** @prose
+ * # Our own version
+ *
+ * A package of ours that another builds on, checked as at least the reference's, so the one
+ * that builds on it can move before craftz does. Its fix raises a version that's behind and
+ * leaves one that leads, since every fix runs whether its rule drifted or not.
+ */
+export const atLeast = (id: string, name: string): Rule => ({
+  id,
+  holdable: true,
+  check: ({ deps }) => {
+    const value = deps[name];
+    if (!value) return undefined;
+    const want = VERSIONS[name] ?? "";
+    if (!EXACT.test(value)) return { value, drift: [`${name} is ${value}, not an exact version`] };
+    return { value, drift: behind(value, want) ? [`${name} is ${value}, behind ${want}`] : [] };
+  },
+  fix: {
+    in: "files",
+    apply: (dir, std) => {
+      const pkg = readPkg(dir);
+      const value = pkg.devDependencies?.[name] ?? pkg.dependencies?.[name];
+      const want = versionsIn(std)[name];
+      if (value && want && (!EXACT.test(value) || behind(value, want))) pin(dir, std, name);
+    },
+  },
+});
+export const EXACT = /^\d+\.\d+\.\d+$/;
+export const behind = (value: string, want: string) =>
+  value.localeCompare(want, "en", { numeric: true }) < 0;
+
+/** @prose
+ * # The betas
+ *
+ * The packages `tools-beta` names, as code in its line of the rules, so the list is kept
+ * in one place. A version is a pre-release when its numbers are followed by a tag, as in
+ * `1.0.0-beta.17`, behind a range or not.
+ */
+export const betas = (): string[] =>
+  [
+    ...(stated()
+      .find((rule) => rule.id === "tools-beta")
+      ?.text.matchAll(/`([^`]+)`/g) ?? []),
+  ].flatMap((match) => match[1] ?? []);
+export const PRERELEASE = /^[\^~<>=]*\d+\.\d+\.\d+-/;
+
+export const node = standard.devEngines?.runtime;
+export const vitePlus = VERSIONS["vite-plus"];
+
+const pnpm = standard.packageManager?.replace(/^pnpm@/, "");
+
+export const VERSION_RULES: Rule[] = [
+  {
+    id: "tools-node",
+    holdable: true,
+    check: ({ pkg }) => {
+      const runtime = pkg.devEngines?.runtime;
+      const drift: string[] = [];
+      if (runtime?.version !== node?.version) {
+        drift.push(`devEngines asks for Node ${runtime?.version}, not ${node?.version}`);
+      }
+      if (runtime?.onFail !== node?.onFail) {
+        drift.push(`devEngines Node onFail is ${runtime?.onFail}, not ${node?.onFail}`);
+      }
+      if (pkg.engines?.node !== standard.engines?.node) {
+        drift.push(`engines asks for Node ${pkg.engines?.node}, not ${standard.engines?.node}`);
+      }
+      return { value: runtime?.version, drift };
+    },
+    fix: {
+      in: "files",
+      apply: (dir, std) => {
+        const want = readPkg(std);
+        const pkg = readPkg(dir);
+        pkg.devEngines = { ...pkg.devEngines, runtime: want.devEngines?.runtime };
+        pkg.engines = { ...pkg.engines, node: want.engines?.node };
+        writePkg(dir, pkg);
+      },
+    },
+  },
+  {
+    id: "tools-pnpm",
+    holdable: true,
+    check: ({ pkg }) => {
+      const drift: string[] = [];
+      if (pkg.packageManager !== `pnpm@${pnpm}`) {
+        drift.push(`packageManager is ${pkg.packageManager}, not pnpm@${pnpm}`);
+      }
+      const engine = pkg.devEngines?.packageManager;
+      if (engine?.version !== pnpm) {
+        drift.push(`devEngines pins pnpm ${engine?.version}, not ${pnpm}`);
+      }
+      if (engine?.onFail !== "download") {
+        drift.push(`devEngines pnpm onFail is ${engine?.onFail}, not download`);
+      }
+      return { value: pkg.packageManager?.replace(/^pnpm@/, ""), drift };
+    },
+    fix: {
+      in: "files",
+      apply: (dir, std) => {
+        const want = readPkg(std);
+        const pkg = readPkg(dir);
+        pkg.packageManager = want.packageManager;
+        pkg.devEngines = { ...pkg.devEngines, packageManager: want.devEngines?.packageManager };
+        writePkg(dir, pkg);
+      },
+    },
+  },
+  version("tools-types-node", "@types/node"),
+  {
+    id: "tools-vite-plus",
+    holdable: true,
+    check: ({ pkg, deps, vitePlus: own }) => {
+      if (!own) return { drift: ["not on Vite+"] };
+      const drift: string[] = [];
+      if (own !== vitePlus) drift.push(`vite-plus is ${own}, not ${vitePlus}`);
+      const peer = pkg.peerDependencies?.["vite-plus"];
+      if (peer && peer !== `^${vitePlus}`) {
+        drift.push(`the peer vite-plus is ${peer}, not ^${vitePlus}`);
+      }
+      if (deps.vite) drift.push(`depends on vite ${deps.vite} directly`);
+      return { value: own, drift };
+    },
+    // A repository not on Vite+ moves by hand.
+    fix: {
+      in: "files",
+      apply: (dir, std) => {
+        pin(dir, std, "vite-plus");
+        const pkg = readPkg(dir);
+        if (!pkg.peerDependencies?.["vite-plus"]) return;
+        pkg.peerDependencies["vite-plus"] = `^${versionsIn(std)["vite-plus"]}`;
+        writePkg(dir, pkg);
+      },
+    },
+  },
+  version("tools-typescript", "typescript"),
+  atLeast("tools-prose", "@amitkaps/prose"),
+  atLeast("tools-markz", "@amitkaps/markz"),
+  // No tool keeps a repository from craftz, so its version can't be held.
+  packed(version("tools-craftz", CRAFTZ, false)),
+  version("tools-cf", "cf"),
+  {
+    id: "tools-beta",
+    check: ({ deps, files }) => {
+      const pre = Object.entries(deps).filter(([, value]) => PRERELEASE.test(value));
+      if (!pre.length) return undefined;
+      // A library the repository ignores in pnpm's settings, with its reason, may be on a
+      // pre-release. `tools-ignored` holds it to an exact version.
+      const text = files[WORKSPACE];
+      const ignored = (text ? heldIn(text).held : []).filter((it) => it.reason);
+      return drifted(
+        pre.flatMap(([name, value]) => {
+          const allowed = betas().includes(name) || ignored.some((it) => it.name === name);
+          if (!allowed) return [`${name} is on a pre-release, ${value}`];
+          return /^\d/.test(value) ? [] : [`${name} is ${value}, not an exact build`];
+        }),
+      );
+    },
+  },
+  version("tools-wrangler", "wrangler"),
+  version("tools-publint", "publint"),
+  version("tools-playwright", "@playwright/test"),
+  owns("tools-workspace", [WORKSPACE]),
+  {
+    id: "tools-ignored",
+    check: ({ files, deps }) => {
+      const text = files[WORKSPACE];
+      if (!text) return undefined;
+      const { held, odd } = heldIn(text);
+      if (!held.length && !odd.length) return undefined;
+      return drifted([
+        ...odd.map(
+          (line) => `${WORKSPACE} has "${line}", which isn't in an ignoreDependencies list`,
+        ),
+        ...held.flatMap(({ name, reason }) => [
+          ...(deps[name] ? [] : [`${name} is ignored, but isn't a dependency`]),
+          ...(name in VERSIONS ? [`${name} is a tool craftz moves, so hold its rule instead`] : []),
+          ...(reason ? [] : [`${name} is ignored with no reason above it`]),
+          ...(/^[\^~]/.test(deps[name] ?? "")
+            ? [`${name} is ${deps[name]}, which lets a fresh install take a newer release`]
+            : []),
+        ]),
+      ]);
+    },
+  },
 ];

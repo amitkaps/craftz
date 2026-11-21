@@ -93,7 +93,7 @@ test("AGENTS.md names the parts the rules have, and no other", () => {
 });
 
 test("only the rules' betas are on a pre-release, each an exact build", () => {
-  const rule = RULES.find((r) => r.id === "versions-beta");
+  const rule = RULES.find((r) => r.id === "tools-beta");
   const drift = (deps: Record<string, string>) =>
     rule?.check({ deps, files: {} } as unknown as Repo)?.drift;
   const [beta = ""] = betas();
@@ -116,7 +116,7 @@ test("only the rules' betas are on a pre-release, each an exact build", () => {
 
 test("a peer vite-plus is the reference's version as a floor, and the fix moves it", () => {
   const want = `^${VERSIONS["vite-plus"]}`;
-  const rule = RULES.find((r) => r.id === "versions-vite-plus");
+  const rule = RULES.find((r) => r.id === "tools-vite-plus");
   const drift = (peer: string) =>
     rule?.check({
       pkg: { peerDependencies: { "vite-plus": peer } },
@@ -145,7 +145,7 @@ test("our own package is exact and at least the reference's, and its fix only ra
   const want = VERSIONS[name] ?? "";
   const ahead = `${Number(want.split(".")[0]) + 1}.0.0`;
   const behind = "0.0.0";
-  const rule = RULES.find((r) => r.id === "versions-markz");
+  const rule = RULES.find((r) => r.id === "tools-markz");
   const drift = (value: string) =>
     rule?.check({ deps: { [name]: value } } as unknown as Repo)?.drift;
   expect(drift(want)).toEqual([]);
@@ -168,7 +168,7 @@ test("our own package is exact and at least the reference's, and its fix only ra
 });
 
 test("a build for browsers targets this repository's browsers", () => {
-  const rule = RULES.find((r) => r.id === "toolchain-browsers");
+  const rule = RULES.find((r) => r.id === "tools-browsers");
   const list = BROWSERS.map((b) => `"${b}"`).join(", ");
   const drift = (keys: string, deploys = false, pkg: Pkg = { private: true }, directory?: string) =>
     rule?.check({
@@ -217,7 +217,7 @@ test("a package for browsers leaves Node's own modules out, and the fix adds to 
   writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "x" }));
   const fixed = (pack: string) => {
     writeFileSync(join(dir, "vite.config.ts"), config(`pack: { ${pack} },`));
-    const fix = RULES.find((r) => r.id === "toolchain-browsers")?.fix;
+    const fix = RULES.find((r) => r.id === "tools-browsers")?.fix;
     if (fix?.in === "files") fix.apply(dir, here);
     const vite = readFileSync(join(dir, "vite.config.ts"), "utf8");
     return valueAt(vite, ["pack", "deps"]) as { neverBundle: unknown[] } | undefined;
@@ -246,7 +246,7 @@ test("a package writes out its publint and types, and the fixes write them in", 
   const drift = (id: string) => RULES.find((r) => r.id === id)?.check(repo())?.drift;
   expect(drift("releases-types")).toEqual(['pack.dts.generator is "tsc", not "oxc"']);
   expect(drift("releases-packing")).toContain("pack.publint.strict isn't true");
-  for (const id of ["releases-packing", "releases-types", "toolchain-browsers"]) {
+  for (const id of ["releases-packing", "releases-types", "tools-browsers"]) {
     const fix = RULES.find((r) => r.id === id)?.fix;
     if (fix?.in === "files") fix.apply(dir, here);
   }
@@ -259,7 +259,7 @@ test("a package writes out its publint and types, and the fixes write them in", 
 
 test("a Playwright config doesn't retry a test, and the fix writes that in", () => {
   const playwright = (text: string) => {
-    const rule = RULES.find((r) => r.id === "toolchain-playwright");
+    const rule = RULES.find((r) => r.id === "tools-playwright-config");
     return rule?.check({ files: { "playwright.config.ts": text } } as unknown as Repo)?.drift;
   };
   const ruled = `export default defineConfig({\n  retries: 0,\n  forbidOnly: true,\n  use: { trace: "retain-on-failure" },\n});\n`;
@@ -281,7 +281,7 @@ export default defineConfig({
 
   const dir = tmp("craftz-playwright-");
   writeFileSync(join(dir, "playwright.config.ts"), retried);
-  const fix = RULES.find((r) => r.id === "toolchain-playwright")?.fix;
+  const fix = RULES.find((r) => r.id === "tools-playwright-config")?.fix;
   if (fix?.in === "files") fix.apply(dir, here);
   const fixed = readFileSync(join(dir, "playwright.config.ts"), "utf8");
   expect(playwright(fixed)).toEqual([]);
@@ -298,7 +298,7 @@ test("a config writes out the format and lint the rules set, and the fix writes 
     const dir = tmp("craftz-ruled-");
     writeFileSync(join(dir, "vite.config.ts"), vite);
     for (let i = 0; i < 2; i++) {
-      for (const id of ["toolchain-wrap", "toolchain-lint"]) {
+      for (const id of ["tools-fmt", "tools-lint"]) {
         const fix = RULES.find((r) => r.id === id)?.fix;
         if (fix?.in === "files") fix.apply(dir, here);
       }
@@ -312,13 +312,13 @@ test("a config writes out the format and lint the rules set, and the fix writes 
     rules: { "no-empty": "error" },
   },`;
   const ruled = config(`fmt: { proseWrap: "never" },\n\n  ${lint}`);
-  expect(drift("toolchain-wrap", ruled)).toEqual([]);
-  expect(drift("toolchain-lint", ruled)).toEqual([]);
+  expect(drift("tools-fmt", ruled)).toEqual([]);
+  expect(drift("tools-lint", ruled)).toEqual([]);
   // A config with only its plugins has neither.
-  expect(drift("toolchain-wrap", config("plugins: [sveltekit()],"))).toEqual([
+  expect(drift("tools-fmt", config("plugins: [sveltekit()],"))).toEqual([
     'fmt.proseWrap isn\'t "never"',
   ]);
-  expect(drift("toolchain-lint", config('lint: { plugins: ["typescript"] },'))).toEqual([
+  expect(drift("tools-lint", config('lint: { plugins: ["typescript"] },'))).toEqual([
     'lint.plugins is ["typescript"], not ["typescript", "unicorn", "import"]',
     'lint.categories.correctness isn\'t "error"',
     "lint.options.typeAware isn't true",
@@ -327,9 +327,9 @@ test("a config writes out the format and lint the rules set, and the fix writes 
   ]);
   // A repository adds the plugins its own lint rules need, and the rule asks only for its three.
   const more = ruled.replace('"import"]', '"import", "react"]');
-  expect(drift("toolchain-lint", more)).toEqual([]);
+  expect(drift("tools-lint", more)).toEqual([]);
   const short = ruled.replace('["typescript", "unicorn", "import"]', '["react", "typescript"]');
-  expect(drift("toolchain-lint", short)).toEqual([
+  expect(drift("tools-lint", short)).toEqual([
     'lint.plugins is ["react", "typescript"], not ["react", "typescript", "unicorn", "import"]',
   ]);
   expect(fixed(short)).toContain('plugins: ["react", "typescript", "unicorn", "import"]');
@@ -368,7 +368,7 @@ test("the values the fix writes are spelled as oxfmt formats them", async () => 
 });
 
 test("every repository but craftz depends on craftz, and calls no craftz()", () => {
-  const rule = RULES.find((r) => r.id === "toolchain-craftz");
+  const rule = RULES.find((r) => r.id === "tools-craftz-dep");
   const drift = (name: string, deps: Record<string, string>, keys: string) =>
     rule?.check({
       pkg: { name },
@@ -412,7 +412,7 @@ test("the fix adds craftz, and takes craftz() and its import out", () => {
       JSON.stringify({ name: "x", devDependencies: { "vite-plus": "1.3.0" } }),
     );
     writeFileSync(join(dir, "vite.config.ts"), vite);
-    const fix = RULES.find((r) => r.id === "toolchain-craftz")?.fix;
+    const fix = RULES.find((r) => r.id === "tools-craftz-dep")?.fix;
     if (fix?.in === "files") fix.apply(dir, here);
     const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as {
       devDependencies: Record<string, string>;
@@ -471,7 +471,7 @@ test("the files craftz owns are its own word for word, and the fix writes them w
       ]),
     );
   const repo = () => ({ pkg, files: files(), deps: pkg.devDependencies, vitePlus: "1.0.0" });
-  const ids = ["github-ci", "versions-workspace"];
+  const ids = ["github-ci", "tools-workspace"];
   const rules = RULES.filter((r) => ids.includes(r.id));
   expect(rules.map((rule) => rule.check(repo() as unknown as Repo)?.drift)).toEqual([
     ["pnpm-workspace.yaml differs from craftz's"],
@@ -486,7 +486,7 @@ test("the editor's settings are compared as JSON, and a repository on Svelte add
   const settings = ".vscode/settings.json";
   const extensions = ".vscode/extensions.json";
   const read = (file: string) => JSON.parse(readFileSync(join(here, file), "utf8")) as object;
-  const rule = RULES.find((r) => r.id === "toolchain-editor");
+  const rule = RULES.find((r) => r.id === "tools-editor");
   const repo = (files: object, svelte?: boolean) =>
     ({ pkg: {}, files, deps: svelte ? { svelte: "5.0.0" } : {} }) as unknown as Repo;
   // Laid out otherwise, as `vp fmt` can, it's still the reference's.
@@ -713,7 +713,7 @@ test(".gitignore lists outline.md, and the fix adds it once", () => {
   const dir = tmp("craftz-outline-");
   const file = join(dir, ".gitignore");
   writeFileSync(file, "node_modules\n");
-  const rule = RULES.find((r) => r.id === "agents-outline");
+  const rule = RULES.find((r) => r.id === "docs-outline");
   const check = () =>
     rule?.check({ files: { ".gitignore": readFileSync(file, "utf8") } } as unknown as Repo)?.drift;
   expect(check()).toEqual([".gitignore doesn't list outline.md"]);
@@ -727,7 +727,7 @@ test(".gitignore lists outline.md, and the fix adds it once", () => {
 test("an AGENTS.md that still has the Outline section is told to drop it, and the fix does", () => {
   const dir = tmp("craftz-retired-");
   const file = join(dir, "AGENTS.md");
-  const rule = RULES.find((r) => r.id === "agents-sections");
+  const rule = RULES.find((r) => r.id === "docs-agents");
   const ours = readFileSync(join(here, "AGENTS.md"), "utf8");
   writeFileSync(file, `${ours}\n## Outline\n\nEvery file.\n\n@outline.md\n`);
   const check = () =>
@@ -945,7 +945,7 @@ test("a package's ruleset requires label next to ci, and others only ci", () => 
 test("a tsconfig writes out the reference's options and its own include, and the fix writes it so", () => {
   const dir = tmp("craftz-tsconfig-");
   const file = join(dir, "tsconfig.json");
-  const rule = RULES.find((r) => r.id === "toolchain-types");
+  const rule = RULES.find((r) => r.id === "tools-tsconfig");
   const drift = () =>
     rule?.check({ files: { "tsconfig.json": readFileSync(file, "utf8") } } as unknown as Repo)
       ?.drift;
@@ -991,12 +991,12 @@ updateConfig:
   const rule = (id: string) => RULES.find((r) => r.id === id)!;
 
   // The block isn't drift from the reference, and the rule for it finds nothing.
-  expect(rule("versions-workspace").check(repoOf(held))?.drift).toEqual([]);
-  expect(rule("versions-ignored").check(repoOf(held))?.drift).toEqual([]);
+  expect(rule("tools-workspace").check(repoOf(held))?.drift).toEqual([]);
+  expect(rule("tools-ignored").check(repoOf(held))?.drift).toEqual([]);
 
   // Each way the block goes wrong.
   const drift = (text: string, deps?: Record<string, string>) =>
-    rule("versions-ignored").check(repoOf(text, deps))?.drift;
+    rule("tools-ignored").check(repoOf(text, deps))?.drift;
   expect(drift(held, { "vite-plus": "1.0.0" })).toEqual([
     "@observablehq/plot is ignored, but isn't a dependency",
   ]);
@@ -1009,7 +1009,7 @@ updateConfig:
   expect(
     drift(held.replace('@observablehq/plot"', 'typescript"'), { typescript: "6.0.0" }),
   ).toEqual(["typescript is a tool craftz moves, so hold its rule instead"]);
-  expect(rule("versions-ignored").check(repoOf(workspace))).toBeUndefined();
+  expect(rule("tools-ignored").check(repoOf(workspace))).toBeUndefined();
   // A line outside the shape is reported and never guessed at.
   expect(drift(held.replace('- "@observablehq', '* "@observablehq'))).toEqual([
     'pnpm-workspace.yaml has "* "@observablehq/plot"", which isn\'t in an ignoreDependencies list',
@@ -1019,17 +1019,17 @@ updateConfig:
   // The fix writes the reference's file and puts the block back.
   writeFileSync(join(dir, "package.json"), JSON.stringify(pkg));
   writeFileSync(join(dir, "pnpm-workspace.yaml"), held.replace("esbuild: true", "esbuild: false"));
-  const fix = rule("versions-workspace").fix;
+  const fix = rule("tools-workspace").fix;
   if (fix?.in === "files") fix.apply(dir, here);
   const after = readFileSync(join(dir, "pnpm-workspace.yaml"), "utf8");
   expect(after).toContain("esbuild: true");
   expect(after).toContain("# Plot 0.6.18 ships no types");
   expect(after).toContain("@observablehq/plot");
-  expect(rule("versions-workspace").check(repoOf(after))?.drift).toEqual([]);
+  expect(rule("tools-workspace").check(repoOf(after))?.drift).toEqual([]);
 });
 
-test("a packed candidate's tarball is not drift in versions-craftz, and anything else still is", () => {
-  const rule = RULES.find((r) => r.id === "versions-craftz")!;
+test("a packed candidate's tarball is not drift in tools-craftz, and anything else still is", () => {
+  const rule = RULES.find((r) => r.id === "tools-craftz")!;
   const repo = { deps: { [CRAFTZ]: "file:/tmp/craftz.tgz" } } as unknown as Repo;
   expect(rule.check(repo)?.drift).toHaveLength(1);
   process.env.CRAFTZ_PACKED = "1";
