@@ -44,6 +44,7 @@ import { writeSettings } from "./apply.ts";
 import { runBlock } from "./edit.ts";
 import { writeOutline } from "./gone.ts";
 import { RULED } from "./ruled.ts";
+import { type Run } from "./upgrade.ts";
 import { type FormatConfig, format } from "vite-plus/fmt";
 
 /** What `new` starts: the axes it reads, with the repository's visibility and the site's audience. */
@@ -336,6 +337,34 @@ export async function write(
   await Promise.all(formatted);
 }
 
+/** @prose
+ * # A trial
+ *
+ * After the files, a new repository installs, writes its outline, makes its first commit and runs
+ * `verify`. `create` is those steps, for `new` and for [align](align.ts)'s candidate run.
+ *
+ * The candidate run hands it a packed craftz, which it adds in place of npm's, so the trial
+ * verifies against the release it's trying rather than the one already out. It writes in the
+ * run's own folder, never inside the checkout, so nothing is left to remove.
+ */
+export async function create(
+  dir: string,
+  name: string,
+  start: Start,
+  description: string,
+  run: Run,
+  craftz?: string,
+): Promise<void> {
+  await write(dir, name, start, description);
+  await (craftz
+    ? run("pnpm", "add", "--save-dev", "--save-exact", craftz)
+    : run("pnpm", "install"));
+  writeOutline(dir);
+  await run("git", "add", "-A");
+  await run("git", "commit", "-q", "-m", `Start ${name} from craftz's rules`);
+  await run("pnpm", "run", "verify");
+}
+
 /** Starts a repository from `craftz new`'s arguments, in a folder of the current one. */
 export async function start(input: Parsed): Promise<void> {
   const description = input.text("description");
@@ -375,15 +404,10 @@ export async function start(input: Parsed): Promise<void> {
   }
 
   const dir = join(process.cwd(), name);
-  await write(dir, name, start, description);
   const run = (command: string, ...a: string[]): void => {
     execFileSync(command, a, { cwd: dir, stdio: "inherit" });
   };
-  run("pnpm", "install");
-  writeOutline(dir);
-  run("git", "add", "-A");
-  run("git", "commit", "-q", "-m", `Start ${name} from craftz's rules`);
-  run("pnpm", "run", "verify");
+  await create(dir, name, start, description, async (command, ...a) => run(command, ...a));
 
   if (push) {
     run(
