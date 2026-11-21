@@ -115,15 +115,15 @@ A target rewrites syntax and adds no polyfills. So check an API newer than a flo
 
 ### pnpm and Node
 
-`package.json` is the one place for both versions.
+`package.json` is the one place for both versions, and the reference's has the numbers.
 
 ```json
 "devEngines": {
-  "packageManager": { "name": "pnpm", "version": "12.21.0", "onFail": "download" },
-  "runtime": { "name": "node", "version": ">=26.13.1", "onFail": "error" }
+  "packageManager": { "name": "pnpm", "version": "<pnpm>", "onFail": "download" },
+  "runtime": { "name": "node", "version": ">=<node>", "onFail": "error" }
 },
-"engines": { "node": ">=26.13.1" },
-"packageManager": "pnpm@12.21.0"
+"engines": { "node": ">=<node>" },
+"packageManager": "pnpm@<pnpm>"
 ```
 
 - [`tools-pnpm`]{#tools-pnpm}: pnpm is pinned exactly, in `devEngines` with `onFail: download` and in `packageManager`, which CI reads. Any pnpm installed globally then runs the pinned one.
