@@ -8,7 +8,7 @@
  * copy of them to keep in step. [The rules](../docs/rules.md) say what each check means.
  */
 import { join } from "node:path";
-import { type Rule, RULES } from "./rules.ts";
+import { RENAMED, type Rule, RULES, holdsOf } from "./rules.ts";
 import { githubLogin } from "./settings.ts";
 import { parts, stated } from "./stated.ts";
 import { OWNER, TOPIC, type Pkg, origin, read } from "./reference.ts";
@@ -176,7 +176,8 @@ export type Finding = {
  * A hold on any other rule is an error, and so is one on a rule with no drift left, so a hold
  * can't outlive its reason.
  */
-function holding(holds: Record<string, string>, it: Repo): Finding[] {
+function holding(it: Repo): Finding[] {
+  const holds = holdsOf(it.pkg);
   const all = checks();
   const findings = all.flatMap((check) => {
     const finding = check.run(it);
@@ -198,6 +199,11 @@ function holding(holds: Record<string, string>, it: Repo): Finding[] {
   return [
     ...findings,
     ...unknown.map((id) => ({ drift: [`${id} is held, but no rule has that id`] })),
+    ...Object.keys(it.pkg.craftz?.hold ?? {})
+      .filter((id) => id in RENAMED)
+      .map((id) => ({
+        drift: [`${id} is held under its old id: \`craftz fix\` renames it to ${RENAMED[id]}`],
+      })),
   ];
 }
 
@@ -254,5 +260,5 @@ function repoOf(files: Files): Repo {
  */
 export async function checkFolder(dir: string): Promise<{ findings: Finding[]; worker?: Worker }> {
   const it = repoOf(fromDisk(dir));
-  return { findings: holding(it.pkg.craftz?.hold ?? {}, it), worker: it.worker };
+  return { findings: holding(it), worker: it.worker };
 }

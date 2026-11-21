@@ -12,7 +12,7 @@ import { join } from "node:path";
 import { BROWSERS } from "../src/browsers.ts";
 import { COMPATIBILITY_DATE } from "../src/runtime.ts";
 import { valueAt } from "../src/config.ts";
-import { betas, RULES } from "../src/rules.ts";
+import { RENAMED, betas, RULES } from "../src/rules.ts";
 import { RULED, written } from "../src/ruled.ts";
 import { type FormatConfig, format } from "vite-plus/fmt";
 import { partNames, parts, printed, printedPart, stated } from "../src/stated.ts";
@@ -98,6 +98,13 @@ test("Holds lists exactly the rules a repository can hold", () => {
   const line = text.split("\n").find((it) => it.startsWith("- **Holdable:**")) ?? "";
   const listed = [...line.matchAll(/`([a-z-]+)`/g)].map((m) => m[1]);
   expect(new Set(listed)).toEqual(new Set(RULES.filter((r) => r.holdable).map((r) => r.id)));
+});
+
+test("a renamed id maps an id no rule has to a rule a repository can hold", () => {
+  const ids = new Set(RULES.map((r) => r.id));
+  const holdable = new Set(RULES.filter((r) => r.holdable).map((r) => r.id));
+  expect(Object.keys(RENAMED).filter((old) => ids.has(old))).toEqual([]);
+  expect(Object.values(RENAMED).filter((id) => !holdable.has(id))).toEqual([]);
 });
 
 test("every part of the shipped rules has its own name", () => {

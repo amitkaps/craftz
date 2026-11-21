@@ -29,6 +29,7 @@ import { GITHUB_RULES } from "./rules/github.ts";
 import { RELEASES_RULES } from "./rules/releases.ts";
 import { SCRIPT_RULES } from "./rules/scripts.ts";
 import { TOOLCHAIN_RULES, VERSION_RULES } from "./rules/tools.ts";
+import { writePkg } from "./rules/shared.ts";
 import type { Finding, Repo } from "./survey.ts";
 
 export { type Shape, listed, shipping } from "./rules/docs.ts";
@@ -50,6 +51,38 @@ export type Rule = {
   fix?: Fix;
   holdable?: boolean;
 };
+
+/** @prose
+ * # Renamed ids
+ *
+ * A hold written under a rule's old id still holds that rule. Without this, a release that
+ * renamed an id would drop the hold silently, and the fix would move what the hold kept back.
+ * `check` names an old id as drift, and `fixFiles` writes the current one in.
+ */
+export const RENAMED: Record<string, string> = {
+  "toolchain-types": "tools-tsconfig",
+  ...Object.fromEntries(
+    [
+      "cf",
+      "markz",
+      "node",
+      "playwright",
+      "pnpm",
+      "prose",
+      "publint",
+      "types-node",
+      "typescript",
+      "vite-plus",
+      "wrangler",
+    ].map((name) => [`versions-${name}`, `tools-${name}`]),
+  ),
+};
+
+/** A package's holds, each under its rule's current id. */
+export const holdsOf = (pkg: Pkg): Record<string, string> =>
+  Object.fromEntries(
+    Object.entries(pkg.craftz?.hold ?? {}).map(([id, reason]) => [RENAMED[id] ?? id, reason]),
+  );
 
 export const RULES: Rule[] = [
   ...VERSION_RULES,
@@ -86,7 +119,12 @@ function snapshot(dir: string, top = dir, found = new Map<string, string>()): Ma
  */
 export function fixFiles(dir: string, std: string): string[] {
   const before = snapshot(dir);
-  const held = readPkg(dir).craftz?.hold ?? {};
+  const pkg = readPkg(dir);
+  const held = holdsOf(pkg);
+  if (pkg.craftz?.hold && Object.keys(pkg.craftz.hold).some((id) => id in RENAMED)) {
+    pkg.craftz.hold = held;
+    writePkg(dir, pkg);
+  }
   for (const rule of RULES)
     if (rule.fix?.in === "files" && !held[rule.id]) rule.fix.apply(dir, std);
   const after = snapshot(dir);

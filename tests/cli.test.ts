@@ -154,6 +154,35 @@ test("a hold lets a holdable rule's warning pass, with its reason", () => {
   // Three checks in a row, beside new's verify runs, can pass five seconds.
 }, 30_000);
 
+test("a hold under a rule's old id still holds, and fix renames it", () => {
+  const file = join(dir, "package.json");
+  const original = readFileSync(file, "utf8");
+  const pkg = JSON.parse(original) as {
+    devDependencies: Record<string, string>;
+    craftz?: { hold: Record<string, string> };
+  };
+  try {
+    pkg.devDependencies["@types/node"] = "25.9.3";
+    pkg.craftz = { hold: { "versions-types-node": "A tool needs 25." } };
+    writeFileSync(file, JSON.stringify(pkg, null, 2));
+    const old = craftz("check", dir);
+    expect([old.status, old.stdout]).toEqual([
+      1,
+      expect.stringContaining("versions-types-node is held under its old id"),
+    ]);
+    expect(old.stdout).toContain("; held: A tool needs 25.");
+
+    expect(craftz("fix", dir).status).toBe(0);
+    const fixed = JSON.parse(readFileSync(file, "utf8")) as typeof pkg;
+    expect([fixed.craftz?.hold, fixed.devDependencies["@types/node"]]).toEqual([
+      { "tools-types-node": "A tool needs 25." },
+      "25.9.3",
+    ]);
+  } finally {
+    writeFileSync(file, original);
+  }
+}, 30_000);
+
 test("a held rule with several differences is one line, and --all lists each", () => {
   const pkgFile = join(dir, "package.json");
   const tsFile = join(dir, "tsconfig.json");
