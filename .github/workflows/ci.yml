@@ -10,7 +10,7 @@
 # goes in `verify`.
 #
 # A job that runs past three minutes is stopped, where GitHub's own limit is six hours. That's for
-# a job that hangs. The `verify` step is stopped at two minutes, twelve times its target, so a
+# a job that hangs. The `verify` step is stopped at two minutes, four times its target, so a
 # `verify` that has slowed that far fails and gets fixed. One over the target but under the stop passes, and
 # `craftz status` notes it, as [the rules](https://craftz.amitkaps.com/docs/rules.md#ci) say.
 #

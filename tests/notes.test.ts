@@ -30,15 +30,15 @@ test("no answer from npm is no note", async () => {
 });
 
 test("a verify over its target is noted", async () => {
-  expect(await notes({}, npm({}), { seconds: 28, job: 45 })).toEqual([
-    "verify took 28s on CI in a job of 45s, over its 10s target",
+  expect(await notes({}, npm({}), { seconds: 48, job: 65 })).toEqual([
+    "verify took 48s on CI in a job of 65s, over its 30s target",
   ]);
   expect(
-    await notes({}, npm({}), { seconds: 28, job: 45, slowest: { step: "test", at: 26 } }),
+    await notes({}, npm({}), { seconds: 48, job: 65, slowest: { step: "test", at: 46 } }),
   ).toEqual([
-    "verify took 28s on CI in a job of 45s, over its 10s target, and its slowest step, test, ended 26s in",
+    "verify took 48s on CI in a job of 65s, over its 30s target, and its slowest step, test, ended 46s in",
   ]);
-  expect(await notes({}, npm({}), { seconds: 10, job: 30 })).toEqual([]);
+  expect(await notes({}, npm({}), { seconds: 30, job: 50 })).toEqual([]);
   expect(await notes({}, npm({}))).toEqual([]);
 });
 
