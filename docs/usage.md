@@ -24,6 +24,8 @@ pnpm craftz help deps  # what one does, from this page
 
 `craftz help` reads this page from the installed version, as `craftz rules` reads the rules. `craftz --help` lists the commands too, and `craftz <command> --help` or `-h` prints one's section. A command stops, in one line and before it reads or writes a file, at an option it doesn't take, at the word `help`, and at a folder that isn't there. So `pnpm craftz fix help` never writes a folder called `help`.
 
+In a terminal, `help` and `rules` show their Markdown in colour, without its marks, and wrap it to the window. Anywhere else, like a pipe, an agent's shell or with `NO_COLOR` set, they print the Markdown as it is.
+
 ## Reading the rules
 
 - [`craftz rules [<id>|<part>]`]{#rules}: prints every rule, or one by its id, or one part with `Practice`, from the installed version.

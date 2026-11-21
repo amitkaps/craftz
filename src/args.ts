@@ -19,7 +19,7 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { finding } from "@amitkaps/markz/rules";
-import { helpOn, scriptHelp } from "./stated.ts";
+import { helpOn, scriptHelp, show } from "./stated.ts";
 
 /**
  * What a command takes after its name. `dir` is one folder, `one` and `command` one word, `none`
@@ -151,7 +151,7 @@ export function parsed(name: Command | Script, argv: string[]): Parsed {
   // What follows a `--` is input, so it's never a request for help.
   const before = argv.includes("--") ? argv.slice(0, argv.indexOf("--")) : argv;
   if (before.some((arg) => arg === "--help" || arg === "-h")) {
-    process.stdout.write(spec.heading ? scriptHelp(spec.heading)! : helpOn(name)!);
+    show(spec.heading ? scriptHelp(spec.heading)! : helpOn(name)!);
     process.exit(0);
   }
 

@@ -33,7 +33,7 @@ import { fixFiles } from "./rules.ts";
 import { cloudflareLogin, githubLogin, hasClassic } from "./settings.ts";
 import { upgrade } from "./upgrade.ts";
 import { finding, printOne } from "@amitkaps/markz/rules";
-import { craftzRules, help, helpOn, printed, printedPart } from "./stated.ts";
+import { craftzRules, help, helpOn, printed, printedPart, show } from "./stated.ts";
 import { notes } from "./notes.ts";
 import { type Command, type Parsed, SPECS, parsed } from "./args.ts";
 import { type Finding, checkFolder, origin } from "./survey.ts";
@@ -223,7 +223,7 @@ type Handler = (given: Parsed) => number | void | Promise<number | void>;
 const handlers: Record<Command, Handler> = {
   rules: ({ words: [id] }) => {
     if (!id) {
-      process.stdout.write(printed());
+      show(printed());
       return 0;
     }
     const rule = printOne([craftzRules()], id) ?? printedPart(id);
@@ -232,7 +232,7 @@ const handlers: Record<Command, Handler> = {
       console.error(finding({ tool: "craftz", level: "error", message }));
       return 1;
     }
-    process.stdout.write(rule);
+    show(rule);
     return 0;
   },
   check: async ({ dir, flag }) => ((await check(dir, flag("all"))) ? 1 : 0),
@@ -276,14 +276,14 @@ const handlers: Record<Command, Handler> = {
       console.error(finding({ tool: "craftz", level: "error", message }));
       return 1;
     }
-    process.stdout.write(text);
+    show(text);
     return 0;
   },
 };
 
 const command = process.argv[2];
 if (command === "-h" || command === "--help") {
-  process.stdout.write(help());
+  show(help());
 } else if (command !== undefined && Object.hasOwn(SPECS, command)) {
   const done = await handlers[command as Command](
     parsed(command as Command, process.argv.slice(3)),

@@ -25,8 +25,11 @@ import { commands } from "../src/stated.ts";
 import { usePacked } from "./packed.ts";
 
 const dir = join(tmp("craftz-cli-"), "example");
+// The Markdown a pipe or an agent reads, even under a runner that forces colour.
+const { FORCE_COLOR: _, ...rest } = process.env;
+const env = { ...rest, NO_COLOR: "1" };
 const craftz = (...args: string[]) =>
-  spawnSync(join(dir, "node_modules/.bin/craftz"), args, { cwd: dir, encoding: "utf8" });
+  spawnSync(join(dir, "node_modules/.bin/craftz"), args, { cwd: dir, encoding: "utf8", env });
 
 beforeAll(async () => {
   await write(
