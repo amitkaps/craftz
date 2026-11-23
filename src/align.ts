@@ -278,7 +278,10 @@ async function findings(error: unknown, dir: string): Promise<string[]> {
 const lintJson = (dir: string): Promise<string> =>
   run("pnpm", ["exec", "vp", "lint", "--format", "json"], { cwd: dir, maxBuffer: 64 << 20 }).then(
     ({ stdout }) => stdout,
-    (error: { stdout?: string }) => error.stdout ?? "",
+    (error: unknown) =>
+      typeof error === "object" && error && "stdout" in error && typeof error.stdout === "string"
+        ? error.stdout
+        : "",
   );
 
 /** @prose

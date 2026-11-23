@@ -188,7 +188,10 @@ test("our own package is exact and at least the reference's, and its fix only ra
       JSON.stringify({ devDependencies: { [name]: value } }),
     );
     if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
-    return JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).devDependencies[name];
+    const written = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as {
+      devDependencies: Record<string, string>;
+    };
+    return written.devDependencies[name];
   };
   expect(fixed(ahead)).toBe(ahead);
   expect(fixed(behind)).toBe(want);
