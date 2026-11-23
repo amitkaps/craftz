@@ -269,9 +269,25 @@ const SECTIONS = ["craftz", "Prose"];
 // A section that was shared once, and that the fix removes from a repository that still has it.
 const RETIRED = ["Outline"];
 const OUTLINE = "outline.md";
+const WORKTREES = ".claude/worktrees";
 // Whether a .gitignore names a root file, as `name` or `/name`.
 const ignores = (text: string, name: string): boolean =>
   text.split("\n").some((line) => [name, `/${name}`].includes(line.trim()));
+// A rule that wants `.gitignore` to list `name`, which the fix adds under a comment.
+const ignoring = (id: string, name: string, comment: string): Rule => ({
+  id,
+  check: ({ files }) =>
+    drifted(ignores(files[".gitignore"] ?? "", name) ? [] : [`.gitignore doesn't list ${name}`]),
+  fix: {
+    in: "files",
+    apply: (dir) => {
+      const path = join(dir, ".gitignore");
+      const text = read(path);
+      if (ignores(text, name)) return;
+      writeFileSync(path, `${text.trimEnd()}\n\n# ${comment}\n${name}\n`.trimStart());
+    },
+  },
+});
 const sectionOf = (heading: string): RegExp =>
   new RegExp(`^## ${heading}\\n([\\s\\S]*?)(?=^## |(?![\\s\\S]))`, "m");
 const section = (text: string, heading: string): string | undefined =>
@@ -322,24 +338,7 @@ export const AGENTS_RULES: Rule[] = [
       },
     },
   },
-  {
-    id: "docs-outline",
-    check: ({ files }) =>
-      drifted(
-        ignores(files[".gitignore"] ?? "", OUTLINE) ? [] : [`.gitignore doesn't list ${OUTLINE}`],
-      ),
-    fix: {
-      in: "files",
-      apply: (dir) => {
-        const path = join(dir, ".gitignore");
-        const text = read(path);
-        if (ignores(text, OUTLINE)) return;
-        writeFileSync(
-          path,
-          `${text.trimEnd()}\n\n# Written by prose outline\n${OUTLINE}\n`.trimStart(),
-        );
-      },
-    },
-  },
+  ignoring("docs-outline", OUTLINE, "Written by prose outline"),
+  ignoring("docs-worktrees", WORKTREES, "Agents' worktrees"),
   owns("docs-claude", CLAUDE),
 ];

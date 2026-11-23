@@ -1023,3 +1023,36 @@ test("a package has exactly the release-notes labels, and any other repository n
   expect(drift({ private: true }, [])).toEqual([]);
   expect(drift({ private: true }, ["bug"])).toEqual(["label bug, which no notes read"]);
 });
+
+test("tools-test keeps agents' worktrees out of the tests, and the fix keeps the list's own", () => {
+  const exclude = ["**/node_modules/**", "**/.git/**", ".claude/worktrees/**"];
+  const drift = (vite: string) =>
+    RULES.find((r) => r.id === "tools-test")?.check({
+      files: { "vite.config.ts": vite },
+      vitePlus: "1",
+    } as unknown as Repo)?.drift;
+  const fixed = (vite: string) => {
+    const dir = tmp("craftz-test-rule-");
+    writeFileSync(join(dir, "vite.config.ts"), vite);
+    const fix = RULES.find((r) => r.id === "tools-test")?.fix;
+    if (fix?.in === "files") fix.apply(dir, here);
+    return readFileSync(join(dir, "vite.config.ts"), "utf8");
+  };
+  const ruled = config(`test: { exclude: ${written(exclude)} },`);
+  expect(drift(ruled)).toEqual([]);
+  // Vitest's own default `include` is `**/*.test.ts`, which reaches a worktree's tests.
+  expect(drift(config("plugins: [],"))).toEqual([`test.exclude isn't ${written(exclude)}`]);
+  expect(fixed(config("plugins: [],"))).toContain(`test: { exclude: ${written(exclude)} }`);
+  // Writing `exclude` replaces Vitest's defaults, so a list without them gains them too.
+  const own = config('test: { exclude: ["tests/**/e2e/**", "node_modules/**"] },');
+  expect(drift(own)).toHaveLength(1);
+  expect(fixed(own)).toContain(
+    'exclude: ["tests/**/e2e/**", "node_modules/**", "**/node_modules/**", "**/.git/**", ".claude/worktrees/**"]',
+  );
+  // A list that holds something the config works out keeps it.
+  const spread = config(
+    'test: { exclude: ["a/**", ...(process.env.BENCH ? [] : ["**/*.bench.test.ts"])] },',
+  );
+  expect(fixed(spread)).toContain('...(process.env.BENCH ? [] : ["**/*.bench.test.ts"])');
+  expect(fixed(spread)).toContain(".claude/worktrees/**");
+});

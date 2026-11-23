@@ -43,7 +43,7 @@ import { CRAFTZ, OWNER, VERSIONS, here, root } from "./reference.ts";
 import { writeSettings } from "./apply.ts";
 import { runBlock } from "./edit.ts";
 import { writeOutline } from "./gone.ts";
-import { RULED } from "./ruled.ts";
+import { type Config, RULED, written } from "./ruled.ts";
 import { type Run } from "./upgrade.ts";
 import { type FormatConfig, format } from "vite-plus/fmt";
 
@@ -189,6 +189,7 @@ ${[...(shape.package ? [pack] : []), runBlock(verified(shape))].join("\n")}
   test: {
     expect: { requireAssertions: true },
     include: ["tests/**/*.test.ts"],
+    exclude: ${written((RULED["test"] as Config)["exclude"])},
   },
 });
 `;
