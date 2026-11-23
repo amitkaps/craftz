@@ -53,7 +53,7 @@ const files = (root: string, dir = root, found: string[] = []): string[] => {
   return found;
 };
 
-const json = (path: string) => JSON.parse(readFileSync(path, "utf8")) as Record<string, any>;
+const json = (path: string) => JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
 
 /** Breaks a new repository of the shape one way at a time, and answers what no fix closed. */
 export async function holdFixes(shape: Start): Promise<string[]> {
@@ -72,7 +72,7 @@ export async function holdFixes(shape: Start): Promise<string[]> {
       const parsed = json(join(base, file));
       const drop = (path: string[]) => (dir: string) => {
         const doc = json(join(dir, file));
-        const holder = path.length > 1 ? doc[path[0] as string] : doc;
+        const holder = (path.length > 1 ? doc[path[0] as string] : doc) as Record<string, unknown>;
         delete holder[path.at(-1) as string];
         writeFileSync(join(dir, file), JSON.stringify(doc, null, 2));
       };
