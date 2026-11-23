@@ -1,7 +1,7 @@
 /** @prose
  * # What the rules set
  *
- * The values every Vite+ config writes out, from `tools-fmt` and `tools-lint`, the ones
+ * The values every Vite+ config writes out, from `tools-fmt`, `tools-lint` and `tools-test`, the ones
  * a Playwright config does, and the ones a package's `pack` does, from `releases-packing` and `releases-types`. They're stated once,
  * here. The checks compare a config's values with them, and the fixes write them in, spelled as
  * `written` spells them, which is how oxfmt lays out a short block.
@@ -23,6 +23,10 @@ export const RULED: Config = {
     options: { typeAware: true, typeCheck: true },
     rules: { "no-empty": "error" },
   },
+  // Naming `exclude` replaces Vitest's own, so its two stay. A worktree an agent works in sits
+  // under `.claude/worktrees/` with a copy of the tests, which an include like `**/*.test.ts`
+  // reaches and runs beside the repository's.
+  test: { exclude: ["**/node_modules/**", "**/.git/**", ".claude/worktrees/**"] },
 };
 
 /** What the rules set in a repository's `playwright.config.ts`, from `tools-playwright-config`. */

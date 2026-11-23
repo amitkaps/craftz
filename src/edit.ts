@@ -40,7 +40,7 @@ const compared = (value: unknown): string | undefined =>
 
 // Lists a repository may add to, like the plugins its own lint rules need. The rule asks that its
 // entries are there, and the fix keeps what else the list holds.
-const ADDITIVE = ["lint.plugins"];
+const ADDITIVE = ["lint.plugins", "test.exclude"];
 
 // What a path's value is to be, by what the config has. An additive list is the config's own with
 // the missing entries after it, or nothing where it holds them all.
@@ -73,6 +73,19 @@ function withKey(text: string, object: Node, key: string, value: string, top: bo
   return `${text.slice(0, after)}${comma ? "" : ","}${gap}${key}: ${value}${comma && multiline ? "," : ""}${text.slice(after)}`;
 }
 
+// An additive list with its missing entries written after its last one, so what the config works
+// out inside it, like a spread, stays. `undefined` where the node isn't an array of its own.
+function appended(text: string, node: Node, value: unknown): string | undefined {
+  const elements = node["elements"];
+  if (node.type !== "ArrayExpression" || !Array.isArray(elements) || !Array.isArray(value)) return;
+  const have = literal(node) as unknown[];
+  const missing = value.filter((it) => !have.includes(it)).map(written);
+  const last = (elements as Node[]).at(-1);
+  if (!missing.length) return text;
+  if (!last) return `${text.slice(0, node.start)}[${missing.join(", ")}]${text.slice(node.end)}`;
+  return `${text.slice(0, last.end)}, ${missing.join(", ")}${text.slice(last.end)}`;
+}
+
 // A config with `value` at `path`, or as it was where the path can't be reached.
 function withValue(text: string, path: string[], value: unknown): string {
   let object = exported(text);
@@ -84,6 +97,8 @@ function withValue(text: string, path: string[], value: unknown): string {
       return withKey(text, object, key, written(rest), i === 0);
     }
     if (i === path.length - 1) {
+      const added = ADDITIVE.includes(path.join(".")) ? appended(text, node, value) : undefined;
+      if (added !== undefined) return added;
       return `${text.slice(0, node.start)}${written(value)}${text.slice(node.end)}`;
     }
     object = node;

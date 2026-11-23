@@ -207,6 +207,14 @@ export const TOOLCHAIN_RULES: Rule[] = [
     fix: { in: "files", apply: (dir) => rule(dir, { fmt: RULED["fmt"] }) },
   },
   {
+    id: "tools-test",
+    check: ({ files, vitePlus: own }) => {
+      if (!own) return undefined;
+      return drifted(unruled(files["vite.config.ts"] ?? "", { test: RULED["test"] }));
+    },
+    fix: { in: "files", apply: (dir) => rule(dir, { test: RULED["test"] }) },
+  },
+  {
     id: "tools-playwright-config",
     check: ({ files }) => {
       const config = files["playwright.config.ts"];

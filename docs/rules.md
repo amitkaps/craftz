@@ -80,6 +80,7 @@ One `vite.config.ts`, run through `vp`, covers dev, build, format, lint, test an
 
 - [`tools-fmt`]{#tools-fmt}: `fmt` is oxfmt's defaults with `proseWrap: "never"`, so a changed Markdown paragraph shows as one line in a diff. Wrap `@prose` comments by hand at 100 characters, since no oxfmt setting wraps them.
 - [`tools-lint`]{#tools-lint}: `lint` is type-aware and type-checks, with `typescript`, `unicorn` and `import` among its `plugins`, so `check` covers types with no `tsc`. `no-empty` fails an empty block, so an empty `catch` says why in a comment inside it. The fix adds a missing plugin.
+- [`tools-test`]{#tools-test}: `test.exclude` lists `**/node_modules/**`, `**/.git/**` and `.claude/worktrees/**`, since naming `exclude` replaces Vitest's two. An agent works in a worktree under `.claude/worktrees/`, with a copy of the tests, and an include like `**/*.test.ts` runs them beside the repository's, so `verify` fails on another change's half-done test. The fix adds what's missing after the list's own entries.
 
   ```ts
   lint: {
@@ -354,6 +355,7 @@ A package's site is `prose build`, the repository read as a document. Docs are p
 
 - [`docs-agents`]{#docs-agents}: every `AGENTS.md` opens with [the reference's](../reference/AGENTS.md) two sections, word for word, and `CLAUDE.md` holds only `@AGENTS.md`.
 - [`docs-outline`]{#docs-outline}: `.gitignore` lists `outline.md`, which `pnpm outline`, `pr` and `gone` write, so two pull requests don't conflict on it. The fix adds it.
+- [`docs-worktrees`]{#docs-worktrees}: `.gitignore` lists `.claude/worktrees`, where Claude Code's agents work in a worktree of the repository, so `git status` and the stop hook's untracked-files check don't see another change's files. The fix adds it.
 - [`docs-claude`]{#docs-claude}: every repository has the reference's [.claude/settings.json](../reference/.claude/settings.json) and its hooks, [session-start.sh](../reference/.claude/hooks/session-start.sh) and [suggest-clear.sh](../reference/.claude/hooks/suggest-clear.sh), word for word. The fix writes them whole.
 
 The session-start hook installs, adds Chromium where the repository has Playwright, and prints one line on the session's Node, pnpm and browser. A cloud environment's setup is [cloud-setup.sh](../reference/cloud-setup.sh), pasted once. To see a page, run `pnpm craftz shot <url> <file.png>` and read the PNG.
