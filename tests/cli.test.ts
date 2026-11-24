@@ -90,7 +90,7 @@ test("a repository's browser workflow is compared with the reference's", () => {
   expect(craftz("check", dir).stdout).toContain(
     "github-browser: .github/workflows/browser.yml differs",
   );
-  writeFileSync(workflow, reference.replace("timeout-minutes: 4", "timeout-minutes: 9"));
+  writeFileSync(workflow, reference.replace("timeout-minutes: 8", "timeout-minutes: 9"));
   expect(craftz("check", dir).stdout).toContain(
     "github-browser: .github/workflows/browser.yml differs",
   );

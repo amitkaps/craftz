@@ -35,7 +35,7 @@ permissions:
 jobs:
   browser:
     runs-on: ubuntu-latest
-    timeout-minutes: 6
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -59,7 +59,7 @@ jobs:
         run: pnpm exec playwright install --only-shell chromium
 
       - name: test:browser
-        timeout-minutes: 4
+        timeout-minutes: 8
         run: pnpm run test:browser
 
       - name: Report
