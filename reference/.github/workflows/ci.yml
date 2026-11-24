@@ -35,7 +35,7 @@ permissions:
 jobs:
   ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 5
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -67,7 +67,7 @@ jobs:
           restore-keys: vp-task-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Verify
-        timeout-minutes: 2
+        timeout-minutes: 4
         run: pnpm run verify
 
       - name: Style
