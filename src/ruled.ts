@@ -1,9 +1,10 @@
 /** @prose
  * # What the rules set
  *
- * The values every Vite+ config writes out, from `tools-fmt`, `tools-lint` and `tools-test`, the ones
- * a Playwright config does, and the ones a package's `pack` does, from `releases-packing` and `releases-types`. They're stated once,
- * here. The checks compare a config's values with them, and the fixes write them in, spelled as
+ * The values every Vite+ config writes out, and the ones a Playwright config and a package's `pack` do.
+ * They're stated once, here, from `tools-fmt`, `tools-lint`, `tools-test`, `releases-packing` and `releases-types`.
+ *
+ * The checks compare a config's values with them, and the fixes write them in, spelled as
  * `written` spells them, which is how oxfmt lays out a short block.
  *
  * `craftz()` used to fill them in. A config that only read them through the plugin left them out
