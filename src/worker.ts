@@ -10,9 +10,10 @@
  * `workers.dev` and preview URLs, the folder it serves, and what it deploys. The addresses are
  * on unless the config says otherwise.
  *
- * What it deploys is the deploy axis in [the rules](../docs/design.md#axes). A Worker with code
- * of its own, cf's `entrypoint` or wrangler's `main`, is an app, and one without is a static
- * site, whatever builds its files.
+ * What it deploys is the deploy axis in [the rules](../docs/design.md#axes). A static site is a
+ * `cloudflare.config.ts` with no `entrypoint`, whatever builds its files, since that's what craftz
+ * uploads. Every other Worker is an app. A wrangler config is one even with no `main`, since a
+ * framework's adapter can set it, as SvelteKit's does for base.
  *
  * `cloudflare.config.ts` and `wrangler.jsonc` are parsed, as [config.ts](config.ts) reads every
  * config, so a key is found by where it sits. A config that still calls `site()` reads the same,
@@ -57,7 +58,6 @@ function toml(text: string): Config {
   const pattern = /pattern\s*=\s*"([^"]+)"/.exec(text)?.[1];
   return {
     name: value("name"),
-    main: value("main"),
     routes: pattern ? [{ pattern }] : [],
     workers_dev: off("workers_dev"),
     preview_urls: off("preview_urls"),
@@ -86,7 +86,7 @@ export function worker(files: Record<string, string | undefined>): Worker | unde
       workersDev: (config["workersDev"] ?? config["workers_dev"]) !== false,
       previewUrls: (config["previewUrls"] ?? config["preview_urls"]) !== false,
       directory: string(config.assets?.directory),
-      deploys: config["entrypoint"] || config["main"] ? "app" : "static",
+      deploys: file === "cloudflare.config.ts" && !config["entrypoint"] ? "static" : "app",
     };
   }
   return undefined;

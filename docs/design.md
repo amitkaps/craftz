@@ -55,7 +55,7 @@ What a repository must have follows from four axes. Each is read from where it a
 | repository | public or private    | GitHub                                                |
 
 - **Publish.** A package is published to npm, so its audience there is public. A private npm package would be a fifth value, and none is needed yet.
-- **Deploy.** A site deploys to a Cloudflare Worker. One whose config names code to run, wrangler's `main`, is an [app](rules.md#an-app). One without is static, whatever builds its files, like [a prose site](rules.md#a-static-site) or a Vite page.
+- **Deploy.** A site deploys to a Cloudflare Worker. One whose `cloudflare.config.ts` names no code to run is static, whatever builds its files, like [a prose site](rules.md#a-static-site) or a Vite page. cf's `entrypoint` makes it an [app](rules.md#an-app), and so does a wrangler config, since a framework's adapter can set wrangler's `main` itself.
 - **Audience.** A site is internal when Cloudflare Access covers its domain, as [Internal sites](rules.md#internal-sites) says. Audience applies only to a site.
 - **Repository.** Whether the code is public is separate from whether the site is. A private repository can have a public site, and a public repository an internal one.
 
