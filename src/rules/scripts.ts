@@ -8,7 +8,7 @@
 import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { type Pkg, isCraftz, readPkg, standard, read } from "../reference.ts";
-import { allRuns, uncached, withCached, withVerify } from "../edit.ts";
+import { allRuns, pinsRootDirs, uncached, withCached, withRootDirs, withVerify } from "../edit.ts";
 import { workerIn } from "../worker.ts";
 import type { Rule } from "../rules.ts";
 import { writePkg, drifted } from "./shared.ts";
@@ -71,9 +71,10 @@ export function chain(verify: string): { kept: string[]; own: string[]; late: [s
   return { kept, own, late };
 }
 
-// Where a SvelteKit repository's `build`, `preview` and `test` keep their generated files apart.
-// The config reads the task's folder as `outDir`. `verify` runs one sync first, then the tasks
-// whose Vite plugins may sync again, since SvelteKit 3 still writes a shared tsconfig for them.
+// Where a SvelteKit repository's `build`, `preview` and `test` keep their generated files, apart
+// from the `.svelte-kit` that `check` reads, and from each other. The config reads it as `outDir`.
+// `test` has its own because Vitest's SvelteKit plugin runs `svelte-kit sync` as `check` does.
+// The one file they still share is kept the same for all, as [edit.ts](../edit.ts) says.
 const OUT_DIRS: Record<string, string> = {
   build: "build",
   preview: "build",
@@ -84,6 +85,9 @@ export const sveltekitOut = (script: string): string =>
   `SVELTEKIT_OUT_DIR=.svelte-kit/${OUT_DIRS[script]}`;
 export const onSvelteKit = (pkg: Pkg): boolean =>
   Boolean(pkg.dependencies?.["@sveltejs/kit"] ?? pkg.devDependencies?.["@sveltejs/kit"]);
+// Install runs `prepare`, so the shared tsconfig is written before any task reads it.
+const preparesSync = (pkg: Pkg): boolean =>
+  steps(pkg.scripts?.prepare ?? "").some((step) => step.startsWith("svelte-kit sync"));
 const apart = (pkg: Pkg, name: string, script: string): string =>
   onSvelteKit(pkg) ? `${sveltekitOut(name)} ${script}` : script;
 
@@ -306,20 +310,22 @@ export const SCRIPT_RULES: Rule[] = [
     id: "scripts-sveltekit",
     check: ({ pkg, files }) => {
       if (!onSvelteKit(pkg)) return undefined;
-      const drift: string[] = [];
-      const check = pkg.scripts?.check;
-      if (check && steps(check)[0] === "svelte-kit sync")
-        drift.push("check runs svelte-kit sync, so it can rewrite the types beside another task");
-      drift.push(
-        ...SVELTEKIT_SCRIPTS.filter(
-          (name) => pkg.scripts?.[name] && !pkg.scripts[name].startsWith(`${sveltekitOut(name)} `),
-        ).map(
-          (name) =>
-            `${name} doesn't start with ${sveltekitOut(name)}, so it writes where check reads`,
-        ),
+      const drift = SVELTEKIT_SCRIPTS.filter(
+        (name) => pkg.scripts?.[name] && !pkg.scripts[name].startsWith(`${sveltekitOut(name)} `),
+      ).map(
+        (name) =>
+          `${name} doesn't start with ${sveltekitOut(name)}, so it writes where check reads`,
       );
       if (!files["vite.config.ts"]?.includes("process.env.SVELTEKIT_OUT_DIR"))
         drift.push("vite.config.ts doesn't set outDir from process.env.SVELTEKIT_OUT_DIR");
+      if (!pinsRootDirs(files["vite.config.ts"] ?? ""))
+        drift.push(
+          "vite.config.ts doesn't pin rootDirs in sveltekit's typescript.config, so each task rewrites the shared tsconfig",
+        );
+      if (!preparesSync(pkg))
+        drift.push(
+          "prepare doesn't run svelte-kit sync, so tasks may write the shared tsconfig together",
+        );
       return drifted(drift);
     },
     fix: {
@@ -327,16 +333,19 @@ export const SCRIPT_RULES: Rule[] = [
       apply: (dir) => {
         const pkg = readPkg(dir);
         if (!onSvelteKit(pkg)) return;
-        const check = pkg.scripts?.check;
-        if (check && steps(check)[0] === "svelte-kit sync") {
-          pkg.scripts = { ...pkg.scripts, check: steps(check).slice(1).join(" && ") };
-        }
         for (const name of SVELTEKIT_SCRIPTS) {
           const script = pkg.scripts?.[name];
           if (script && !script.startsWith(`${sveltekitOut(name)} `))
             pkg.scripts = { ...pkg.scripts, [name]: `${sveltekitOut(name)} ${script}` };
         }
+        if (!preparesSync(pkg)) {
+          const prepare = ["svelte-kit sync", pkg.scripts?.prepare].filter(Boolean).join(" && ");
+          pkg.scripts = { ...pkg.scripts, prepare };
+        }
         writePkg(dir, pkg);
+        const file = join(dir, "vite.config.ts");
+        const vite = existsSync(file) ? readFileSync(file, "utf8") : "";
+        if (vite && !pinsRootDirs(vite)) writeFileSync(file, withRootDirs(vite));
       },
     },
   },

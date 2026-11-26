@@ -88,6 +88,26 @@ export function literal(node: Node | undefined): unknown {
   }
 }
 
+/** Every node under `node`, itself first, in the order they're written. */
+export function within(node: Node): Node[] {
+  const children = Object.values(node).flatMap((value) =>
+    (Array.isArray(value) ? value : [value]).filter(
+      (it): it is Node => typeof (it as Node | null)?.type === "string",
+    ),
+  );
+  return [node, ...children.flatMap(within)];
+}
+
+/** The object a config passes to a call of `name`, like `sveltekit({…})`, wherever it's made. */
+export function passedTo(text: string, name: string): Node | undefined {
+  const program = parsed(text);
+  const call = (program ? within(program) : []).find(
+    (node) => node.type === "CallExpression" && (node["callee"] as Node)["name"] === name,
+  );
+  const first = nodes(call?.["arguments"])[0];
+  return first?.type === "ObjectExpression" ? first : undefined;
+}
+
 /** The value at a path of keys in the object a config exports. */
 export const valueAt = (text: string, path: string[]): unknown => literal(at(exported(text), path));
 

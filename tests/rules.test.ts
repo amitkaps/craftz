@@ -603,96 +603,6 @@ test("an all that runs test and build as scripts drifts, and the fix moves it to
   expect(after).toContain('"!.prose/**", "!dist/**"');
 });
 
-test("a SvelteKit all syncs once, then runs check, test and build in order", () => {
-  const dir = tmp("craftz-sveltekit-verify-");
-  const scripts = {
-    check: "svelte-kit sync && vp check && svelte-check",
-    test: "vp test --run",
-    build: "vp build",
-    site: "prose build",
-    verify: chained(),
-  };
-  writeFileSync(
-    join(dir, "package.json"),
-    JSON.stringify({
-      scripts,
-      devDependencies: { "@sveltejs/kit": "3.0.0", "vite-plus": "0.0.0" },
-    }),
-  );
-  writeFileSync(join(dir, "vite.config.ts"), VITE);
-  const verify = RULES.find((r) => r.id === "scripts-verify");
-  const sveltekit = RULES.find((r) => r.id === "scripts-sveltekit");
-  for (const rule of [verify, sveltekit])
-    for (let i = 0; i < 2; i++) if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
-  const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as Pkg;
-  const vite = readFileSync(join(dir, "vite.config.ts"), "utf8");
-  expect(pkg.scripts?.["check"]).toBe("vp check && svelte-check");
-  expect(vite).toContain('synced: { command: "svelte-kit sync", cache: false }');
-  expect(vite).toContain(
-    'checked: { command: "pnpm run check", dependsOn: ["synced"], cache: false }',
-  );
-  expect(vite).toContain(
-    'tested: { command: "pnpm run test", dependsOn: ["checked", "synced"], cache:',
-  );
-  expect(vite).toContain(
-    'built: { command: "pnpm run build", dependsOn: ["tested", "synced"], cache:',
-  );
-  expect(vite).toContain(
-    'all: { command: "true", cache: false, dependsOn: ["synced", "checked", "tested", "built", "site"] }',
-  );
-  expect(
-    verify?.check({
-      pkg,
-      files: { "vite.config.ts": vite },
-      vitePlus: "0.0.0",
-    } as unknown as Repo)?.drift,
-  ).toEqual([]);
-});
-
-test("the fix moves an existing SvelteKit all into the ordered sync tasks", () => {
-  const dir = tmp("craftz-sveltekit-cached-");
-  const scripts = {
-    check: "vp check && svelte-check",
-    test: "vp test --run",
-    build: "vp build",
-    verify: "vp run --log grouped all",
-  };
-  writeFileSync(
-    join(dir, "package.json"),
-    JSON.stringify({
-      scripts,
-      devDependencies: { "@sveltejs/kit": "3.0.0", "vite-plus": "0.0.0" },
-    }),
-  );
-  const old = `export default {
-  run: {
-    tasks: {
-      tested: { command: "pnpm run test", dependsOn: ["check"] },
-      built: { command: "pnpm run build", dependsOn: ["tested"] },
-      all: { command: "true", cache: false, dependsOn: ["check", "tested", "built"] },
-    },
-  },
-};
-`;
-  writeFileSync(join(dir, "vite.config.ts"), old);
-  const rule = RULES.find((r) => r.id === "scripts-verify");
-  for (let i = 0; i < 2; i++) if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
-  const vite = readFileSync(join(dir, "vite.config.ts"), "utf8");
-  expect(vite).toContain('synced: { command: "svelte-kit sync", cache: false }');
-  expect(vite).toContain(
-    'checked: { command: "pnpm run check", dependsOn: ["synced"], cache: false }',
-  );
-  expect(vite).toContain('tested: { command: "pnpm run test", dependsOn: ["checked", "synced"]');
-  expect(vite).toContain('built: { command: "pnpm run build", dependsOn: ["tested", "synced"]');
-  expect(
-    rule?.check({
-      pkg: JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as Pkg,
-      files: { "vite.config.ts": vite },
-      vitePlus: "0.0.0",
-    } as unknown as Repo)?.drift,
-  ).toEqual([]);
-});
-
 // A verify the fix moves as far as it can, with what the check says of the steps it leaves.
 function leftByHand(verify: string) {
   const dir = tmp("craftz-verify-");
@@ -737,14 +647,78 @@ test("a step that ran after one it may need is named, and left in the chain", ()
   ]);
 });
 
-test("SvelteKit scripts keep their output apart, and only verify syncs for check", () => {
+const UNPINNED =
+  "vite.config.ts doesn't pin rootDirs in sveltekit's typescript.config, so each task rewrites the shared tsconfig";
+const UNPREPARED =
+  "prepare doesn't run svelte-kit sync, so tasks may write the shared tsconfig together";
+const PINNED = `typescript: { config: (config: Record<string, object>) => ({ ...config, compilerOptions: { ...config["compilerOptions"], rootDirs: ["../..", "../../.svelte-kit/types"] } }) },`;
+// A config as base writes it, with sveltekit() called inside a lazy plugin.
+const sveltekitConfig = (more: string) => `export default defineConfig({
+  plugins: [
+    lazyPlugins(async () => {
+      const { sveltekit } = await import("@sveltejs/kit/vite");
+      return [sveltekit({ outDir: process.env.SVELTEKIT_OUT_DIR ?? ".svelte-kit", ${more} })];
+    }),
+  ],
+});
+`;
+
+test("the fix pins the shared tsconfig's rootDirs, and syncs first in prepare", () => {
+  const dir = tmp("craftz-sveltekit-pin-");
+  const scripts = { prepare: "wrangler types" };
+  writeFileSync(
+    join(dir, "package.json"),
+    JSON.stringify({ private: true, scripts, devDependencies: { "@sveltejs/kit": "3.0.0" } }),
+  );
+  const file = join(dir, "vite.config.ts");
+  writeFileSync(file, sveltekitConfig("adapter: adapter()"));
+  const rule = RULES.find((r) => r.id === "scripts-sveltekit");
+  const read = () => JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as Pkg;
+  const check = () =>
+    rule?.check({
+      pkg: read(),
+      files: { "vite.config.ts": readFileSync(file, "utf8") },
+    } as unknown as Repo)?.drift;
+  const fix = () => rule?.fix?.in === "files" && rule.fix.apply(dir, here);
+  expect(check()).toEqual([UNPINNED, UNPREPARED]);
+  fix();
+  expect(check()).toEqual([]);
+  expect(read().scripts?.["prepare"]).toBe("svelte-kit sync && wrangler types");
+  const fixed = readFileSync(file, "utf8");
+  expect(fixed).toContain("// oxlint-disable-next-line typescript/no-deprecated");
+  // SvelteKit types the argument as `any`, which a repository's lint may refuse to read.
+  expect(fixed).toContain("config: (config: Record<string, object>) => ({");
+  fix();
+  expect(readFileSync(file, "utf8")).toBe(fixed);
+
+  // A repository's own function may set it by assignment.
+  writeFileSync(
+    file,
+    sveltekitConfig(
+      'typescript: { config: (config) => { config.compilerOptions.rootDirs = ["../..", "../../.svelte-kit/types"]; } },',
+    ),
+  );
+  expect(check()).toEqual([]);
+
+  // A `typescript` option of the repository's own is left for a person, and so is other rootDirs.
+  const own = sveltekitConfig(
+    'typescript: { config: (config) => { config.compilerOptions.rootDirs = ["../.."]; } },',
+  );
+  writeFileSync(file, own);
+  fix();
+  expect(readFileSync(file, "utf8")).toBe(own);
+  expect(check()).toEqual([UNPINNED]);
+
+  // A pin in a comment, or outside sveltekit(), isn't one.
+  writeFileSync(file, sveltekitConfig(`/* ${PINNED} */`));
+  expect(check()).toEqual([UNPINNED]);
+  writeFileSync(file, `${sveltekitConfig("")}const other = { ${PINNED} };\n`);
+  expect(check()).toEqual([UNPINNED]);
+});
+
+test("a SvelteKit build, preview and test write apart from check, and the fix prefixes them", () => {
   const dir = tmp("craftz-sveltekit-");
-  const scripts = {
-    check: "svelte-kit sync && vp check && svelte-check",
-    build: "vp build",
-    preview: "vp preview",
-    test: "vp test --run",
-  };
+  const scripts = { build: "vp build", preview: "vp preview", test: "vp test --run" };
   const pkg = { private: true, scripts, devDependencies: { "@sveltejs/kit": "3.0.0" } };
   writeFileSync(join(dir, "package.json"), JSON.stringify(pkg));
   const rule = RULES.find((r) => r.id === "scripts-sveltekit");
@@ -754,21 +728,21 @@ test("SvelteKit scripts keep their output apart, and only verify syncs for check
   const out = "SVELTEKIT_OUT_DIR=.svelte-kit/build";
   const apart = "SVELTEKIT_OUT_DIR=.svelte-kit/test";
   expect(check({})).toEqual([
-    "check runs svelte-kit sync, so it can rewrite the types beside another task",
     `build doesn't start with ${out}, so it writes where check reads`,
     `preview doesn't start with ${out}, so it writes where check reads`,
     `test doesn't start with ${apart}, so it writes where check reads`,
     "vite.config.ts doesn't set outDir from process.env.SVELTEKIT_OUT_DIR",
+    UNPINNED,
+    UNPREPARED,
   ]);
   if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
   expect(read().scripts).toEqual({
-    check: "vp check && svelte-check",
     build: `${out} vp build`,
     preview: `${out} vp preview`,
     test: `${apart} vp test --run`,
+    prepare: "svelte-kit sync",
   });
-  const vite = { "vite.config.ts": "outDir: process.env.SVELTEKIT_OUT_DIR" };
-  expect(check(vite)).toEqual([]);
+  expect(check({ "vite.config.ts": sveltekitConfig(PINNED) })).toEqual([]);
   const other = { ...pkg, devDependencies: {} };
   writeFileSync(join(dir, "package.json"), JSON.stringify(other));
   expect(check({})).toBeUndefined();
