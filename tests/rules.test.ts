@@ -994,6 +994,24 @@ test("a static site SvelteKit builds keeps vp build, and the fix leaves it", () 
   expect(own().scripts).toEqual({ build: "vp build", verify });
 });
 
+test("an app on wrangler keeps wrangler, though an adapter sets its main", () => {
+  const dir = tmp("craftz-wrangler-");
+  const config = `name = "base"
+
+[assets]
+directory = ".svelte-kit/cloudflare"
+`;
+  writeFileSync(join(dir, "wrangler.toml"), config);
+  const pkg = JSON.stringify({ devDependencies: { "@sveltejs/kit": "3.0.0", wrangler: "4.0.0" } });
+  writeFileSync(join(dir, "package.json"), pkg);
+  const files = { "wrangler.toml": config };
+  expect(worker(files)?.deploys).toBe("app");
+  const rule = RULES.find((r) => r.id === "cloudflare-static");
+  expect(rule?.check({ worker: worker(files) } as unknown as Repo)).toBeUndefined();
+  if (rule?.fix?.in === "files") rule.fix.apply(dir, here);
+  expect(readFileSync(join(dir, "package.json"), "utf8")).toBe(pkg);
+});
+
 test("the betas this repository is on are the ones the rules name", () => {
   const deps = { ...standard.dependencies, ...standard.devDependencies };
   const pre = Object.keys(deps).filter((name) => /^\d+\.\d+\.\d+-/.test(deps[name] ?? ""));

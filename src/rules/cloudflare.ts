@@ -67,7 +67,7 @@ export const CLOUDFLARE_RULES: Rule[] = [
   {
     id: "cloudflare-static",
     check: ({ files, deps, pkg, worker: site }) => {
-      if (site?.file !== "cloudflare.config.ts" || site.deploys !== "static") return undefined;
+      if (site?.deploys !== "static") return undefined;
       const drift = CLOUDFLARE_TOOLS.filter((name) => deps[name]).map(
         (name) => `depends on ${name}, which a static site doesn't use`,
       );
