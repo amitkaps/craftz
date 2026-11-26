@@ -107,6 +107,6 @@ craftz releases the way every package does, as [the rules](rules.md#releases) se
 4. Ask what the release changes for every repository, and grep the reference for links outside craftz. Anything that changes everywhere goes in before the release, so it doesn't need a second round.
 5. Run `pnpm prose style` and fix what it finds, as [the rules](rules.md#releases) say every package does before a release. Do the same in markz, prose and pagez before each of their releases.
 6. Update [plan.md](plan.md) so its summary names the version and no step is ticked. `craftz release` stops otherwise.
-7. Run `pnpm craftz release X.Y.Z --notes "…"`, with what the candidate run left by hand as the notes. It opens the pull request that bumps `version`.
-8. Merge it. That is the release. Then approve the staged version on npmjs.com with 2FA.
+7. Run `pnpm craftz release X.Y.Z --notes "…"`, with what the candidate run left by hand as the notes. It opens the pull request that bumps `version`, with auto-merge on, so run it only when the release should go.
+8. It merges once CI passes, and that is the release. Then approve the staged version on npmjs.com with 2FA.
 9. Run `pnpm align`. It takes the release to every repository, and brings the checkouts beside this one to `main`.

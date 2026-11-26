@@ -9,10 +9,10 @@
 # doesn't deploy or release, and it's the same in every repository, so what a repository adds
 # goes in `verify`.
 #
-# A job that runs past three minutes is stopped, where GitHub's own limit is six hours. That's for
-# a job that hangs. The `verify` step is stopped at two minutes, four times its target, so a
-# `verify` that has slowed that far fails and gets fixed. One over the target but under the stop passes, and
-# `craftz status` notes it, as [the rules](https://craftz.amitkaps.com/docs/rules.md#ci) say.
+# The job and its `verify` step each have a time limit, where GitHub's own is six hours. A limit
+# guards against a hang, and it isn't `verify`'s target.
+# [The rules](https://craftz.amitkaps.com/docs/rules.md#ci) state both. A `verify` over the target
+# but under the limit passes, and `craftz status` notes it.
 #
 # On a pull request, `prose style` also gives its advice on the files the pull request changed,
 # shown beside their lines. An agent that opens one without `pnpm pr` sees it there. It's advice,
