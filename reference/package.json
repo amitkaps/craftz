@@ -23,7 +23,7 @@
     "@amitkaps/prose": "0.14.1",
     "@playwright/test": "1.63.0",
     "@types/node": "26.6.10",
-    "cf": "1.0.0-rc.1",
+    "cf": "1.0.0-rc.5",
     "publint": "0.3.25",
     "typescript": "7.0.2",
     "vite-plus": "1.8.0",
@@ -32,7 +32,7 @@
   "devEngines": {
     "packageManager": {
       "name": "pnpm",
-      "version": "12.21.0",
+      "version": "12.23.0",
       "onFail": "download"
     },
     "runtime": {
@@ -44,5 +44,5 @@
   "engines": {
     "node": ">=26.13.1"
   },
-  "packageManager": "pnpm@12.21.0"
+  "packageManager": "pnpm@12.23.0"
 }
