@@ -114,16 +114,18 @@ export const withValues = (vite: string, values: Config): string =>
  * # Running verify
  *
  * `verify` is `vp run --log grouped all`, and `all` is a task in `vite.config.ts` that runs the
- * repository's scripts side by side, one for each entry in its `dependsOn`.
+ * repository's scripts side by side, one for each entry in its `dependsOn`. SvelteKit's scripts
+ * are an exception: sync, check, test and build run in that order, since each Vite command may
+ * rewrite the shared `node_modules/$app/tsconfig.json`.
  *
  * `scripts-verify`'s fix moves a `verify` that chained them with `&&` into that list, and adds
  * the `run` block after the config's last key. A config that already has a `run` block comes
  * back unchanged, so the task is added by hand.
  *
  * Only `test` and `build` are cached, as the tasks `tested` and `built`, since everything they
- * read is a file. `all`, `check` and `site` stay uncached, because a cached step replays its
- * output without running, and `prose build` and `craftz check` read the last commit and GitHub,
- * which the cache can't see. `verify` is what CI, `pr` and a release trust.
+ * read is a file. `all`, `synced`, `checked` and `site` stay uncached, because a cached step
+ * replays its output without running, and `prose build` and `craftz check` read the last commit
+ * and GitHub, which the cache can't see. `verify` is what CI, `pr` and a release trust.
  */
 
 /** The scripts the config's `all` task depends on, or `undefined` without one. */
@@ -155,6 +157,7 @@ export function allRuns(vite: string): string[] | undefined {
 
 // The cached scripts, and the task each is run as, since a task can't share a script's name.
 const CACHED: Record<string, string> = { test: "tested", build: "built" };
+const SVELTEKIT: Record<string, string> = { check: "checked", ...CACHED };
 
 // What a cached task leaves out of its inputs: `.prose`, which `site` writes, `dist` for `tested`,
 // which `built` writes, and for a SvelteKit repository what `check` rewrites as they read it.
@@ -171,18 +174,39 @@ const left = (it: string, scripts: string[], kit: boolean): string[] => [
  */
 export const runBlock = (scripts: string[], kit = false): string => {
   const cached = scripts.filter((it) => CACHED[it]);
-  const tasks = cached.map((it) => {
+  const tasks = (kit ? [] : cached).map((it) => {
     const input = left(it, scripts, kit);
     const cache = input.length
       ? `, cache: { input: [{ auto: true }, ${input.map((i) => JSON.stringify(i)).join(", ")}] }`
       : "";
     return `      ${CACHED[it]}: { command: "pnpm run ${it}"${cache} },\n`;
   });
-  const names = scripts.map((it) => JSON.stringify(CACHED[it] ?? it)).join(", ");
+  if (kit) {
+    tasks.push(
+      '      synced: { command: "svelte-kit sync", cache: false },\n',
+      '      checked: { command: "pnpm run check", dependsOn: ["synced"], cache: false },\n',
+    );
+    let before = "checked";
+    for (const name of cached) {
+      const input = left(name, scripts, kit);
+      const cache = input.length
+        ? `, cache: { input: [{ auto: true }, ${input.map((i) => JSON.stringify(i)).join(", ")}] }`
+        : "";
+      const dependsOn = [before, "synced"].map((it) => JSON.stringify(it)).join(", ");
+      tasks.push(
+        `      ${CACHED[name]}: { command: "pnpm run ${name}", dependsOn: [${dependsOn}]${cache} },\n`,
+      );
+      before = CACHED[name]!;
+    }
+  }
+  const names = scripts.map((it) =>
+    JSON.stringify(kit ? (SVELTEKIT[it] ?? it) : (CACHED[it] ?? it)),
+  );
+  if (kit) names.unshift('"synced"');
   return `  run: {
     cache: { scripts: false, tasks: true },
     tasks: {
-${tasks.join("")}      all: { command: "true", cache: false, dependsOn: [${names}] },
+${tasks.join("")}      all: { command: "true", cache: false, dependsOn: [${names.join(", ")}] },
     },
   },
 `;
@@ -222,11 +246,23 @@ function cachedValues(vite: string, scripts: string[], kit: boolean): Config | u
     return task && typeof task === "object" ? task : {};
   };
   // `test` or `build` as the script, which no task of that name stands in for.
+  const taskName = (name: string): string =>
+    !defined[name] ? ((kit ? SVELTEKIT : CACHED)[name] ?? name) : name;
   const renamed = (list: unknown): string[] | undefined =>
-    Array.isArray(list) && list.some((it) => typeof it === "string" && CACHED[it] && !defined[it])
-      ? list.map((it: string) => (!defined[it] ? (CACHED[it] ?? it) : it))
+    Array.isArray(list) &&
+    list.some((it) => typeof it === "string" && (kit ? SVELTEKIT[it] : CACHED[it]) && !defined[it])
+      ? list.map((it: string) => taskName(it))
       : undefined;
   const tasks: Config = {};
+  if (kit) {
+    tasks["synced"] = { command: "svelte-kit sync", cache: false };
+    tasks["checked"] = {
+      command: "pnpm run check",
+      dependsOn: ["synced"],
+      cache: false,
+    };
+  }
+  const ordered = scripts.filter((it) => SVELTEKIT[it]);
   for (const script of Object.keys(CACHED)) {
     const task = CACHED[script]!;
     const runs = names.includes(script) || names.includes(task);
@@ -236,15 +272,32 @@ function cachedValues(vite: string, scripts: string[], kit: boolean): Config | u
     const input = left(script, scripts, kit);
     tasks[task] = {
       command: `pnpm run ${script}`,
+      ...(kit
+        ? {
+            dependsOn: [
+              SVELTEKIT[ordered[ordered.indexOf(script) - 1] ?? "check"] ?? "checked",
+              "synced",
+            ],
+          }
+        : {}),
       ...(input.length && own(task).cache === undefined
         ? { cache: { input: [{ auto: true }, ...input] } }
         : {}),
     };
   }
-  tasks["all"] = { cache: false, dependsOn: renamed(names) ?? names };
+  const all = renamed(names) ?? names;
+  tasks["all"] = {
+    cache: false,
+    dependsOn: kit ? ["synced", ...all.filter((it) => it !== "synced")] : all,
+  };
   for (const name of Object.keys(defined)) {
     const dependsOn = renamed(own(name).dependsOn);
-    if (name !== "all" && dependsOn) tasks[name] = { dependsOn };
+    if (
+      name !== "all" &&
+      dependsOn &&
+      !(kit && ["synced", ...Object.values(SVELTEKIT)].includes(name))
+    )
+      tasks[name] = { dependsOn };
   }
   return { run: { cache: CACHE, tasks } };
 }

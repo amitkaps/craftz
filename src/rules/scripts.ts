@@ -71,9 +71,9 @@ export function chain(verify: string): { kept: string[]; own: string[]; late: [s
   return { kept, own, late };
 }
 
-// Where a SvelteKit repository's `build`, `preview` and `test` keep their generated files, apart
-// from the `.svelte-kit` that `check` reads, and from each other. The config reads it as `outDir`.
-// `test` has its own because Vitest's SvelteKit plugin runs `svelte-kit sync` as `check` does.
+// Where a SvelteKit repository's `build`, `preview` and `test` keep their generated files apart.
+// The config reads the task's folder as `outDir`. `verify` runs one sync first, then the tasks
+// whose Vite plugins may sync again, since SvelteKit 3 still writes a shared tsconfig for them.
 const OUT_DIRS: Record<string, string> = {
   build: "build",
   preview: "build",
@@ -306,11 +306,17 @@ export const SCRIPT_RULES: Rule[] = [
     id: "scripts-sveltekit",
     check: ({ pkg, files }) => {
       if (!onSvelteKit(pkg)) return undefined;
-      const drift = SVELTEKIT_SCRIPTS.filter(
-        (name) => pkg.scripts?.[name] && !pkg.scripts[name].startsWith(`${sveltekitOut(name)} `),
-      ).map(
-        (name) =>
-          `${name} doesn't start with ${sveltekitOut(name)}, so it writes where check reads`,
+      const drift: string[] = [];
+      const check = pkg.scripts?.check;
+      if (check && steps(check)[0] === "svelte-kit sync")
+        drift.push("check runs svelte-kit sync, so it can rewrite the types beside another task");
+      drift.push(
+        ...SVELTEKIT_SCRIPTS.filter(
+          (name) => pkg.scripts?.[name] && !pkg.scripts[name].startsWith(`${sveltekitOut(name)} `),
+        ).map(
+          (name) =>
+            `${name} doesn't start with ${sveltekitOut(name)}, so it writes where check reads`,
+        ),
       );
       if (!files["vite.config.ts"]?.includes("process.env.SVELTEKIT_OUT_DIR"))
         drift.push("vite.config.ts doesn't set outDir from process.env.SVELTEKIT_OUT_DIR");
@@ -321,6 +327,10 @@ export const SCRIPT_RULES: Rule[] = [
       apply: (dir) => {
         const pkg = readPkg(dir);
         if (!onSvelteKit(pkg)) return;
+        const check = pkg.scripts?.check;
+        if (check && steps(check)[0] === "svelte-kit sync") {
+          pkg.scripts = { ...pkg.scripts, check: steps(check).slice(1).join(" && ") };
+        }
         for (const name of SVELTEKIT_SCRIPTS) {
           const script = pkg.scripts?.[name];
           if (script && !script.startsWith(`${sveltekitOut(name)} `))
