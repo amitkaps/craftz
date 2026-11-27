@@ -83,7 +83,8 @@ export function writeGitHub(repo: string): void {
  * The labels a package's release notes are grouped by, from
  * [.github/labels.json](../reference/.github/labels.json). Each is created, or updated when it exists.
  * Any other label is deleted, like the ones GitHub adds to a new repository, since no notes read
- * it. Any other repository is given none, so all of its labels go.
+ * it. Only a package's labels are written. Any other repository's are its own, as
+ * [`releases-labels`](../docs/rules.md#releases-labels) says.
  *
  * A label that was renamed, like `improved` to `changed`, is renamed on GitHub rather than written
  * again beside the old one, so the pull requests that carry it keep it under its new name.

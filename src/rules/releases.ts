@@ -100,18 +100,19 @@ export const RELEASES_RULES: Rule[] = [
   {
     id: "releases-labels",
     check: ({ pkg, labels }) => {
-      if (!labels) return undefined;
+      // Only a package's release notes read labels, so any other repository's are its own.
+      if (pkg.private || !labels) return undefined;
       if (labels instanceof Error) return unread(labels);
-      // Only a package's release notes read labels, so any other repository has none.
-      const want = pkg.private ? [] : labelNames;
       return drifted([
-        ...want.filter((n) => !labels.includes(n)).map((n) => `no ${n} label`),
-        ...labels.filter((n) => !want.includes(n)).map((n) => `label ${n}, which no notes read`),
+        ...labelNames.filter((n) => !labels.includes(n)).map((n) => `no ${n} label`),
+        ...labels
+          .filter((n) => !labelNames.includes(n))
+          .map((n) => `label ${n}, which no notes read`),
       ]);
     },
     fix: {
       in: "github",
-      apply: (repo, pkg) => writeLabels(repo, pkg.private ? [] : LABELS),
+      apply: (repo) => writeLabels(repo, LABELS),
     },
   },
 ];
