@@ -306,7 +306,7 @@ Before a release, run `pnpm prose style` and fix what it finds, where the rewrit
 
 There's no changelog file. Each pull request carries one label, which files it under a heading in the notes, and its title is its line.
 
-- [`releases-labels`]{#releases-labels}: a package has exactly the labels from [.github/labels.json](../reference/.github/labels.json), and any other repository has none, since only a package's notes read them. craftz's `align` writes them, and deletes the rest, like the ones GitHub adds to a new repository.
+- [`releases-labels`]{#releases-labels}: a package has exactly the labels from [.github/labels.json](../reference/.github/labels.json), since its notes are grouped by them. craftz's `align` writes them, and deletes the rest, like the ones GitHub adds to a new repository. Any other repository's labels are its own, like one its workflow files issues under, and craftz leaves them alone.
 
 | Label | Heading | For |
 | --- | --- | --- |

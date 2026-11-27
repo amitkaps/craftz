@@ -1101,7 +1101,7 @@ test("a packed candidate's tarball is not drift in tools-craftz, and anything el
   }
 });
 
-test("a package has exactly the release-notes labels, and any other repository none", () => {
+test("a package has exactly the release-notes labels, and any other repository's are its own", () => {
   const rule = RULES.find((r) => r.id === "releases-labels")!;
   const names = ["breaking", "added", "fixed", "changed", "docs", "internal"];
   const drift = (pkg: Pkg, labels: string[]) =>
@@ -1112,8 +1112,9 @@ test("a package has exactly the release-notes labels, and any other repository n
     "label improved, which no notes read",
     "label bug, which no notes read",
   ]);
-  expect(drift({ private: true }, [])).toEqual([]);
-  expect(drift({ private: true }, ["bug"])).toEqual(["label bug, which no notes read"]);
+  // A repository with no release notes keeps what it made, like a label its own workflow files under.
+  expect(drift({ private: true }, ["bug", "fuzz"])).toEqual([]);
+  expect(rule.check({ pkg: { private: true }, files: {}, deps: {}, labels: ["fuzz"] })).toBeUndefined();
 });
 
 test("tools-test keeps agents' worktrees out of the tests, and the fix keeps the list's own", () => {
