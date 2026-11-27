@@ -1114,7 +1114,9 @@ test("a package has exactly the release-notes labels, and any other repository's
   ]);
   // A repository with no release notes keeps what it made, like a label its own workflow files under.
   expect(drift({ private: true }, ["bug", "fuzz"])).toEqual([]);
-  expect(rule.check({ pkg: { private: true }, files: {}, deps: {}, labels: ["fuzz"] })).toBeUndefined();
+  expect(
+    rule.check({ pkg: { private: true }, files: {}, deps: {}, labels: ["fuzz"] }),
+  ).toBeUndefined();
 });
 
 test("tools-test keeps agents' worktrees out of the tests, and the fix keeps the list's own", () => {
